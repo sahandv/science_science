@@ -1,0 +1,1116 @@
+terms,clusters
+artificial neural networks,5
+genetic algorithm,3
+machine learning,1
+fuzzy logic,1
+expert system,7
+data mining,1
+expert,4
+reasoning,4
+support vector machine,1
+optimization,3
+simulation,5
+knowledge representation,4
+learning,1
+distributed artificial intelligence,5
+robotics,0
+pattern recognition,4
+ontology,2
+multi agent,5
+decision making,5
+multi agent system,7
+classification,1
+agent,0
+decision support,5
+natural language processing,4
+knowledge system,7
+reinforcement learning,1
+decision support system,7
+modeling,1
+planning,6
+fault diagnosis,5
+algorithm,3
+knowledge,2
+intelligent agent,7
+particle swarm optimization,3
+image processing,1
+decision tree,3
+prediction,1
+knowledge management,7
+intelligent system,7
+knowledge engineering,7
+diagnosis,4
+bayesian network,1
+genetic programming,1
+scheduling,6
+control,6
+human computer interaction,2
+computational intelligence,5
+forecasting,3
+modelling,1
+game,0
+robot,0
+computer vision,7
+evolutionary algorithm,3
+rough set,1
+heuristic,3
+anfis,8
+cybernetics,2
+knowledge base,4
+automation,7
+cognitive science,2
+multiagent system,7
+model,1
+semantic web,2
+evolutionary computation,1
+feature extraction,1
+database,4
+fuzzy set,8
+information retrieval,4
+computer aided,7
+uncertainty,5
+intelligent tutoring system,7
+education,0
+constraint satisfaction,5
+clustering,8
+virtual reality,0
+e learning,1
+multi layer perceptron,1
+swarm intelligence,5
+knowledge acquisition,4
+cognition,2
+big data,5
+sensor,6
+computer,2
+internet thing,0
+software engineering,7
+fuzzy control,3
+solving,3
+geographic information,7
+emotion,2
+intelligent control,7
+principal component analysis,1
+feature selection,1
+mobile robot,0
+intelligence,4
+game theory,4
+internet,0
+ant colony optimization,3
+self organizing map,4
+intelligent,7
+soft computing,5
+tabu search,5
+logic programming,1
+rule,1
+architecture,7
+information system,7
+fuzzy system,5
+logic,1
+ambient intelligence,7
+identification,1
+process control,6
+monitoring,0
+artificial intelligence technique,4
+fuzzy inference,1
+convolutional neural networks,1
+autonomous agent,0
+consciousness,2
+application,7
+simulated annealing,3
+information,7
+smart grid,0
+information technology,7
+semantics,2
+knowledge discovery,4
+search,3
+adaptive neuro fuzzy inference,1
+artificial life,4
+optimisation,3
+condition monitoring,5
+management,0
+evaluation,1
+component,5
+signal processing,5
+turing test,5
+bioinformatics,2
+computer game,7
+technology,0
+integration,5
+text mining,4
+time series,3
+argumentation,4
+heuristic search,3
+wireless sensor network,6
+deep learning,1
+human robot interaction,2
+support vector regression,1
+representation,1
+neuro fuzzy,1
+context,2
+creativity,2
+wavelet transform,8
+cloud computing,6
+security,0
+multiagent,7
+fuzzy neural network,1
+fault detection,5
+fuzzy,8
+autonomy,0
+speech recognition,4
+computer science,2
+negotiation,7
+intrusion detection,5
+user interface,7
+remote sensing,7
+network,5
+methodology,5
+communication,7
+power system,6
+complexity,3
+real time,6
+computer aided diagnosis,7
+temporal reasoning,4
+system,0
+evolution,5
+adaptive control,3
+object oriented programming,5
+machine vision,5
+power,9
+manufacturing,0
+hybrid system,5
+performance,3
+induction motor,1
+intelligent tutoring,7
+embodiment,4
+probability,1
+graph theory,1
+social network analysis,4
+image analysis,1
+artificial intelligence application expert system,4
+coordination,7
+computer simulation,5
+language,2
+affective computing,5
+artificial immune,4
+software,0
+computational complexity,5
+path planning,6
+hidden markov model,1
+web,2
+perception,4
+supply chain management,6
+medical informatics,2
+engineering,7
+cooperation,0
+cognitive computing,4
+breast cancer,2
+object oriented,5
+distributed system,6
+learning system,4
+visualization,4
+data analysis,1
+cellular automaton,5
+operation,6
+dynamic programming,5
+hybrid,3
+information extraction,4
+programming,1
+unsupervised learning,1
+statistic,1
+combinatorial optimization,3
+fpga,9
+semantic network,4
+image segmentation,1
+metaheuristics,5
+psychology,2
+theory,4
+project management,7
+medical diagnosis,7
+power quality,5
+dynamic,5
+cognitive architecture,4
+qualitative reasoning,1
+reliability,3
+complex system,5
+pattern classification,1
+power transformer,3
+radial basis function,1
+parallel processing,5
+control system,6
+cognitive informatics,2
+distributed control,6
+load forecasting,3
+innovation,7
+ethic,2
+constraint programming,3
+training,1
+maintenance,6
+linear programming,3
+intelligent robot,7
+production,6
+data fusion,1
+differential evolution,1
+automated reasoning,4
+finite element,1
+rough set theory,1
+petri net,5
+collaborative,7
+review,2
+web service,0
+prognosis,4
+natural language,2
+software agent,7
+renewable energy,6
+image classification,1
+gene expression programming,1
+multi objective optimization,3
+multimedia,7
+analysis,1
+back propagation,3
+diagnostics,7
+epistemology,2
+markov decision process,5
+video game,0
+forecast,3
+process planning,6
+graph,1
+adaptation,1
+adaptive,3
+local search,3
+strategy,6
+human factor,7
+collective intelligence,4
+qsar,1
+serious game,7
+risk,0
+computer application,7
+adaptive system,5
+artificial intelligence method,4
+information communication technology,7
+least square support vector machine,1
+manufacturing system,0
+regression,8
+self organization,7
+behavior,7
+cbr,4
+quality control,3
+development,7
+fuzzy set theory,1
+wavelet,8
+quality,5
+stability,3
+semantic similarity,4
+energy management,6
+computer assisted diagnosis,7
+information theory,4
+world wide web,7
+philosophy,2
+mobile agent,0
+application expert system,7
+mind,2
+interaction,2
+logistic regression,8
+model diagnosis,5
+framework,5
+frame,5
+rule system,7
+extreme learning machine,1
+emergence,7
+collaborative learning,4
+artificial intelligence application,4
+routing,9
+rule reasoning,4
+satisfiability,1
+quality service,0
+cognitive radio,2
+face recognition,4
+computational linguistics,4
+abduction,1
+bp neural network,1
+cognitive model,4
+flexible manufacturing system,0
+fuzzy reasoning,1
+cognitive system,7
+energy,9
+computer graphic,7
+concurrent engineering,7
+model reasoning,1
+regression analysis,8
+risk assessment,5
+parallel computing,5
+distributed,6
+backpropagation,8
+automated planning,6
+classifier,8
+radial basis function neural network,1
+q learning,1
+membership function,1
+search engine,3
+mathematical model,1
+inference engine,1
+fuzzy logic control,5
+dissolved gas analysis,1
+process,6
+information fusion,4
+network security,7
+fuzzy cognitive map,1
+smart home,0
+concept,2
+context awareness,7
+java,0
+association rule,1
+real time system,0
+collaboration,7
+artificial intelligence medicine,4
+surface roughness,5
+evolutionary programming,1
+supervised learning,1
+short term load forecasting,3
+optimal control,6
+agent technology,0
+inference,1
+connectionism,4
+prolog,5
+anomaly detection,1
+graphical model,1
+autonomous system,0
+hybrid model,1
+safety,0
+cancer,2
+survey,2
+cluster analysis,1
+knowledge representation reasoning,4
+crowdsourcing,7
+mathematics,4
+approximate reasoning,1
+explanation,4
+measurement,1
+constraint,3
+brain,2
+segmentation,1
+search algorithm,3
+knowledge representation formalism method,4
+memory,6
+ubiquitous computing,7
+supervisory control,6
+decision theory,5
+fuzzy logic controller,3
+ambient assisted living,7
+intelligent transportation system,0
+humanoid robot,0
+preference,4
+relational database,4
+entropy,8
+photovoltaic,6
+machine intelligence,4
+user modeling,4
+recurrent neural networks,1
+back propagation neural network,1
+parameter estimation,3
+recognition,4
+personalization,7
+mechatronics,7
+business intelligence,7
+wastewater treatment,0
+maximum power point tracking,3
+embedded system,7
+sentiment analysis,4
+matlab,5
+fuzzy clustering,8
+agent modeling,4
+denotational mathematics,4
+discriminant analysis,1
+economics,0
+distance learning,1
+nonmonotonic reasoning,4
+answer set programming,5
+verification,1
+probabilistic neural network,1
+smart city,0
+transformer,3
+finance,7
+artificial intelligence education,7
+distributed generation,6
+distributed computing,6
+recommender system,7
+marketing,7
+autonomous vehicle,0
+sensor fusion,5
+fuzzy rule,1
+neuroscience,2
+blackboard,7
+chatbot,0
+phenomenology,2
+optimization method,3
+credit scoring,5
+intelligent manufacturing system,0
+automatic control,5
+obstacle avoidance,6
+natural intelligence,4
+real time computer system,7
+teaching,2
+conceptual,4
+kalman filter,3
+dialogue,2
+action,7
+artificial intelligence general,4
+clinical decision support,5
+statistical analysis,1
+knowledge sharing,7
+performance evaluation,1
+job shop scheduling,6
+risk management,0
+abstract intelligence,4
+decision analysis,1
+vision,2
+electrocardiogram,5
+agent architecture,7
+non monotonic reasoning,1
+random forest,3
+modal logic,4
+unmanned aerial vehicle,6
+electroencephalogram,1
+learning style,4
+rfid,0
+optical character recognition,4
+testing,1
+discrete event system,5
+quantum computing,5
+supply chain,6
+navigation,0
+disease,2
+economic dispatch,6
+construction,5
+multi agent simulation,5
+logistics,6
+resource allocation,6
+computer integrated manufacturing,7
+sat,9
+surveillance,0
+network management,7
+markov chain,3
+medicine,2
+intelligent manufacturing,0
+vehicle routing,6
+granular computing,5
+time series analysis,1
+symbol grounding,4
+computational model,1
+literature review,2
+autonomous robot,0
+cognitive robotics,2
+aiml,2
+interoperability,7
+assessment,5
+virtual environment,0
+meta heuristic,1
+man machine interface,7
+learning algorithm,1
+image understanding,4
+computer aided engineering,7
+sensor network,5
+music,2
+evolutionary computing,5
+history,2
+electricity market,6
+behaviour,7
+transportation,0
+artificial intelligent,7
+validation,1
+computation,3
+grinding,5
+reverse engineering,7
+optimization technique,3
+telemedicine,0
+similarity,1
+qualitative simulation,1
+chaos,3
+ensemble,8
+image recognition,4
+computational modeling,1
+nuclear power plant,6
+analogy,4
+fuzzy controller,3
+heuristic algorithm,3
+rehabilitation,7
+distribution,3
+medical imaging,4
+organization,7
+android,7
+flexible manufacturing,6
+robocup,0
+abstraction,4
+augmented reality,7
+retrieval,1
+trust,7
+control theory,5
+global optimization,3
+environment,0
+cognitive modeling,4
+technique,1
+associative memory,1
+software tool,0
+groundwater,6
+detection,1
+efficiency,3
+distribution network,5
+grid computing,6
+flood forecasting,3
+construction management,5
+k nearest neighbor,8
+functionalism,4
+text analysis,4
+pid,9
+turing machine,4
+influence diagram,4
+experiment,1
+energy efficiency,3
+vibration,3
+artificial intelligence planning,5
+test,8
+object recognition,4
+virtual world,0
+rule induction,1
+belief network,5
+categorization,1
+embodied artificial intelligence,4
+inductive learning,1
+science fiction,2
+time,9
+software architecture,7
+monte carlo tree search,3
+estimation,8
+philosophy mind,2
+temporal logic,4
+fuzzy c mean,8
+formal language,2
+capp,0
+geographic information system,7
+failure detection,5
+electronic commerce,0
+embodied cognition,2
+applied artificial intelligence,5
+formal concept analysis,4
+e commerce,0
+natural language understanding,2
+object tracking,5
+logic artificial intelligence,4
+singularity,1
+neural network model,1
+artificial bee colony,5
+sustainability,7
+information security,7
+narrative,2
+artificial intelligence algorithm,5
+intelligent environment,7
+captcha,7
+distributed solving,5
+ds,0
+integer programming,1
+text classification,1
+competition,7
+information processing,5
+personality,2
+intelligent machine,7
+bayesian inference,1
+non player character,4
+response surface methodology,5
+adaptive learning,1
+water quality,6
+agriculture,0
+pattern,4
+question answering,2
+bankruptcy prediction,5
+hybrid intelligent system,5
+interface,0
+feed forward neural network,5
+emotion recognition,4
+activity recognition,4
+cooperative system,7
+agent modelling,7
+cognitive psychology,2
+sensitivity analysis,1
+robustness,1
+cognitive process,4
+social robot,0
+pid controller,3
+dempster shafer theory,1
+linguistic geometry,4
+clinical decision support system,7
+intentionality,4
+parallel algorithm,3
+blackboard architecture,5
+traffic control,6
+computational artificial intelligence,5
+metadata,7
+real time control,6
+knowledge extraction,4
+functional network,5
+database management,7
+conflict resolution,5
+algebra,1
+energy consumption,6
+transient stability,3
+k mean clustering,1
+optimal power flow,6
+decomposition,8
+science,2
+gps,9
+back propagation algorithm,3
+software development,7
+stock market,0
+filtering,8
+prediction model,1
+biomimetics,7
+photovoltaic system,6
+description logic,4
+modeling simulation,1
+service oriented architecture,7
+pattern matching,1
+information management,7
+power protection,6
+deep belief network,5
+chess,0
+machine translation,1
+solar energy,6
+artificial general intelligence,4
+event,0
+health care,0
+electronic nose,0
+intuition,2
+artificial immune system,5
+synthetic biology,2
+inertial navigation,6
+adaptive network fuzzy inference,1
+radial basis function network,1
+lisp,7
+pedagogical agent,7
+real time strategy game,7
+firefly algorithm,3
+bayesian belief network,1
+collision avoidance,6
+generalization,1
+decision,5
+model checking,1
+mechanism,7
+product development,7
+self learning,1
+diabetes,2
+tool wear,7
+defeasible reasoning,4
+concrete,5
+neuro fuzzy system,5
+similarity measure,1
+culture,2
+ensemble learning,1
+wordnet,2
+particle swarm optimization algorithm,3
+meaning,2
+mammography,4
+qualitative spatial reasoning,4
+multivariate statistic,8
+linear regression,8
+computing methodology,5
+constraint satisfaction problem,5
+kdd,2
+taguchi,1
+melanoma,4
+first order logic,4
+computational biology,4
+task allocation,6
+solar radiation,6
+cognitive,2
+production system,6
+mapping,1
+topology,5
+data processing,5
+analytic hierarchy process,5
+risk analysis,1
+future,0
+agent oriented software engineering,7
+naive bayes,8
+wind energy,6
+facial expression,4
+jade,0
+tacit knowledge,2
+partial discharge,5
+structure activity relationship,4
+space,3
+motion planning,5
+rule base,1
+productivity,6
+nonlinear system,3
+active power filter,5
+metaheuristic,3
+resource management,0
+planning scheduling,6
+bot,0
+intelligent decision support,5
+epidemiology,2
+mathematical modelling,1
+permeability,1
+autism,2
+implementation,5
+wind power,6
+indexing,1
+epilepsy,4
+workflow,7
+multiobjective optimization,3
+data,5
+agency,0
+chinese room,2
+evolutionary robotics,5
+possibility theory,4
+assembly,6
+neural network application,5
+learning object,4
+credit risk,7
+study,4
+data acquisition,5
+tool,0
+robot navigation,0
+gpu,9
+belief revision,4
+man machine system,7
+dynamic system,6
+emergency management,0
+computational neuroscience,4
+pi controller,3
+wavelet analysis,1
+mppt,9
+biometrics,4
+online learning,1
+fault location,6
+knowledge discovery database,4
+online dispute resolution,5
+image,1
+virtual agent,0
+taxonomy,2
+production scheduling,6
+constraint propagation,3
+computing,5
+protection,6
+student modeling,4
+classification algorithm,1
+direct torque control,3
+machining,3
+computational creativity,5
+harmonic,3
+corba,7
+fault classification,1
+software testing,5
+tracking,3
+analysis algorithm,1
+web mining,4
+ant colony algorithm,3
+demand forecasting,3
+temperature,3
+graphical user interface,7
+computer assisted,7
+social medium,0
+autonomous mobile robot,0
+information storage retrieval,5
+pid control,6
+character recognition,4
+discrete wavelet transform,8
+computer control,7
+data warehouse,7
+alzheimer disease,2
+complex,5
+technical analysis,4
+intelligent building,7
+agent model,7
+dimensionality reduction,1
+propositional logic,1
+atm,6
+product,0
+inductive inference,1
+privacy,7
+feedback,5
+load balancing,6
+risk factor,5
+goal,0
+cyborg,2
+humanoid,0
+kinect,7
+metaphor,2
+mobile robotics,0
+fuzzy model,8
+monte carlo simulation,3
+mathematical programming,1
+system engineering,7
+strategic planning,6
+cnc,6
+branch bound,3
+inductive logic programming,1
+linear discriminant analysis,8
+cim,0
+machine ethic,4
+mobile device,0
+backtracking,3
+digital library,7
+mpeg,3
+rule extraction,1
+xml,2
+supervised classification,1
+probabilistic reasoning,1
+computing methodology artificial intelligence,5
+mathematical modeling,1
+programming language,4
+conceptual graph,4
+subtractive clustering,1
+causal reasoning,4
+interactive learning environment,7
+agent system,0
+simulator,6
+paraconsistent logic,1
+nuclear magnetic resonance,1
+artificial intelligence law,4
+experimentation,1
+fuzzy theory,1
+induction,1
+drilling,6
+mechanical property,5
+energy saving,6
+interactive,7
+assembly line balancing,3
+machine learning algorithm,1
+multi robot,7
+flood,6
+telecommunication,0
+model management,7
+multiple linear regression,8
+lung cancer,2
+morphometry,1
+bayes theorem,8
+uncertainty analysis,1
+conversational agent,7
+quantitative structure activity relationship,4
+educational data mining,7
+algorithm discovery,1
+computational geometry,1
+architectural,5
+legal reasoning,4
+condition maintenance,6
+defect,5
+operational,6
+neuron,1
+automaton,5
+poker,0
+clustering algorithm,8
+opponent modeling,5
+metacognition,4
+operation management,6
+healthcare,0
+game tree search,5
+expert shell,7
+multilayer perceptrons,1
+motivation,2
+constraint logic programming,5
+protocol,6
+complexity theory,1
+web service composition,7
+transmission line,6
+turning,5
+image retrieval,1
+statistical,1
+cyberspace,0
+boolean satisfiability,1
+positron emission tomography,5
+air pollution,6
+vector control,3
+markov process,3
+human intelligence,2
+owl,2
+selection,8
+time series prediction,1
+iso,3
+data compression,1
+nanotechnology,0
+heart rate variability,5
+simulation modeling application,5
+data structure,5
+pattern analysis,1
+robot soccer,0
+porosity,5
+electronic health record,7
+distance education,5
+gait analysis,1
+automated theorem proving,5
+nash equilibrium,6
+monte carlo,3
+data base,4
+pervasive computing,7
+machine tool,5
+fm,3
+student model,4
+rbf neural network,1
+induction machine,1
+cyber physical system,7
+semantic web service,7
+pedagogy,2
+law,0
+semantic analysis,4
+primary language,2
+fuzzy modelling,1
+artificial intelligence model,4
+qualitative modeling,1
+structure,1
+spiking neural network,1
+formal method,1
+feature,1
+gmdh,1
+clinical guideline,4
+standardization,5
+artificial bee colony algorithm,5
+compressive strength,1
+industry,0
+statistical learning,1
+constructivism,4
+statistical method,1
+transhumanism,7
+multidisciplinary,7
+convergence,3
+crossover,3
+micro grid,6
+trend,0
+calibration,3
+engineering education,7
+k mean,1
+fixture,5
+avatar,0
+npc,7
+correlation,1
+spatial reasoning,4
+state estimation,1
+cam,0
+supervision,5
+power operation,6
+electric vehicle,6
+shortest path,6
+hypermedia,4
+situated cognition,2
+brain computer interface,7
+grid,6
+wind turbine,6
+vegetative state,5
+lattice,1
+production planning,6
+service,0
+hybrid algorithm,3
+anticipation,7
+religion,2
+gaming,0
+bankruptcy,5
+classification regression tree,8
+complex adaptive system,5
+ecology,0
+method data analysis,1
+scenario,7
+informatics,2
+curriculum,0
+differential evolution algorithm,1
+perceptron,1
+medical decision making,7
+predictive model,1
+hydrology,7
+boosting,8
+attribute reduction,1
+blackboard system,7
+dynamic scheduling,6
+power plant,6
+assistive technology,0
+pruning,3
+chemical industry,7
+computer technology,0
+blackboard model,5
+psychoanalysis,4
+human resource management,7
+pmsm,3
+auditing,7
+posthumanism,2
+intelligent user interface,7
+high performance computing,5
+ergonomics,7
+nonlinear,8
+fitness function,5
+geographical information system,7
+tool condition monitoring,5
+heuristic programming,3
+image god,4
+automatic classification,1
+wireless communication,0
+game engine,0
+microgrid,6
+fault tolerance,3
+semiotics,2
+evidence medicine,2
+requirement engineering,7
+free,5
+word sense disambiguation,4
+chemometrics,1
+text processing,4
+bridge,7
+corrosion,5
+discrete event simulation,1
+incremental learning,1
+computer science education,2
+search method,1
+heat transfer,5
+action recognition,4
+vibration analysis,1
+simulation modeling,1
+fuzzy expert,1
+synthesis,1
+cultural heritage,2
+adaptive neuro fuzzy,1
+missing data,5
+solving control method search,5
+arc consistency,1
+learning process,1
+tutoring,2
+argumentation theory,4
+conflict,7
+opinion mining,2
+global positioning,5
+ant algorithm,3
+quantum computation,1
+relation,4
+learning automaton,1
+parallelism,5
+edge detection,1
+gene expression,4
+manufacturing process,6
+cognitive modelling,4
+probabilistic logic,1
+open source,0
+nondestructive testing,1
+svr,8
+statistical process control,5
+remote monitoring,0
+particle filter,3
+teleoperation,0
+computer education,7
+concept algebra,4
+inference mechanism,5
+distributed cognition,5
+fitting,8
+quality life,7
+co ordination,5
+neuro fuzzy network,1
+causality,4
+mutation,3
+service composition,7
+facility layout,6
+parsing,1
+standard,1
+traffic management,6
+artificial intelligence knowledge representation formalism method,4
+protein,4
+intellectual capital,7
+pathology,2
+ship,6
+deep neural network,1
+autonomous,0
+uncertainty management,5
+intelligent knowledge system,7

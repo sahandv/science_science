@@ -1,0 +1,150 @@
+0,1,2,3,4
+expert,artificial neural networks,genetic algorithm,data mining,machine learning
+knowledge system,expert system,fuzzy logic,pattern recognition,reasoning
+agent,distributed artificial intelligence,simulation,classification,knowledge representation
+decision support,decision support system,optimization,fault diagnosis,learning
+decision making,multi agent,support vector machine,diagnosis,ontology
+knowledge,robotics,modeling,image processing,knowledge engineering
+knowledge management,multi agent system,reinforcement learning,database,natural language processing
+decision tree,planning,heuristic,information retrieval,knowledge base
+rough set,intelligent agent,algorithm,geographic information,computer aided
+prediction,scheduling,modelling,identification,cybernetics
+constraint satisfaction,intelligent system,model,monitoring,cognitive science
+automation,control,fuzzy set,sensor,knowledge acquisition
+uncertainty,multiagent system,bayesian network,representation,computer
+forecasting,robot,genetic programming,feature selection,human computer interaction
+software engineering,process control,evolutionary algorithm,principal component analysis,computer vision
+information system,game,evolutionary computation,signal processing,semantic web
+education,computational intelligence,solving,remote sensing,logic
+rule,virtual reality,tabu search,feature extraction,cognition
+management,fuzzy control,logic programming,parallel processing,self organizing map
+information,intelligent control,fuzzy system,intrusion detection,knowledge discovery
+integration,intelligent tutoring system,clustering,speech recognition,temporal reasoning
+negotiation,internet,object oriented programming,computer assisted diagnosis,object oriented
+manufacturing,mobile robot,search,statistic,consciousness
+information technology,artificial intelligence application expert system,particle swarm optimization,machine vision,emotion
+operation,intelligence,heuristic search,computer aided diagnosis,context
+real time,artificial life,ant colony optimization,graph,turing test
+autonomy,architecture,optimisation,qsar,user interface
+supply chain management,intelligent,computer simulation,multimedia,qualitative reasoning
+coordination,autonomous agent,network,medical diagnosis,embodiment
+complexity,hybrid system,simulated annealing,model diagnosis,medical informatics
+evaluation,multiagent,methodology,data analysis,e learning
+cooperation,power system,fuzzy inference,fault detection,bioinformatics
+concurrent engineering,soft computing,petri net,data fusion,semantics
+engineering,adaptive control,multi layer perceptron,prognosis,learning system
+computer application,application,programming,analysis,semantic network
+probability,condition monitoring,fuzzy neural network,frame,creativity
+training,distributed control,hybrid,image analysis,language
+performance,application expert system,fuzzy,information extraction,game theory
+production,evolution,anfis,diagnostics,computer science
+constraint,software agent,process,discriminant analysis,graph theory
+project management,world wide web,support vector regression,visualization,psychology
+time series,system,combinatorial optimization,breast cancer,approximate reasoning
+satisfiability,ambient intelligence,hidden markov model,text mining,model reasoning
+communication,process planning,computational complexity,image segmentation,epistemology
+maintenance,artificial intelligence technique,neuro fuzzy,failure detection,fuzzy set theory
+adaptation,swarm intelligence,dynamic programming,pattern classification,perception
+behavior,agent technology,finite element,wireless sensor network,rough set theory
+power,rule system,backpropagation,sensor fusion,computer graphic
+development,flexible manufacturing system,local search,medical imaging,relational database
+decision analysis,manufacturing system,evolutionary programming,vision,mind
+forecast,real time computer system,linear programming,abstraction,natural language
+self organization,artificial immune,dynamic,detection,knowledge representation formalism method
+qualitative simulation,computer game,logistic regression,geographic information system,decision theory
+human factor,web service,inference engine,brain,nonmonotonic reasoning
+load forecasting,prolog,unsupervised learning,anomaly detection,information theory
+emergence,artificial intelligence general,back propagation,cluster analysis,rule reasoning
+risk assessment,supervisory control,metaheuristics,wavelet transform,collaborative
+grinding,control system,fuzzy rule,wavelet,human robot interaction
+reliability,mobile agent,radial basis function,nuclear magnetic resonance,man machine interface
+stability,quality control,cellular automaton,music,abduction
+explanation,blackboard,bayesian belief network,kalman filter,argumentation
+validation,wastewater treatment,optimization method,segmentation,cognitive informatics
+finance,software,constraint programming,experiment,user modeling
+performance evaluation,computer integrated manufacturing,inductive learning,cancer,connectionism
+association rule,complex system,chaos,retrieval,automated reasoning
+organization,artificial intelligence application,fuzzy logic control,pattern,cognitive model
+transportation,artificial intelligence medicine,discrete event system,event,computer aided engineering
+verification,web,differential evolution,optical character recognition,image understanding
+quality service,intelligent tutoring,probabilistic neural network,sensor network,concept
+action,distributed system,affective computing,supervision,review
+interaction,flexible manufacturing,rule induction,data structure,knowledge sharing
+teaching,intelligent manufacturing,integer programming,morphometry,philosophy
+marketing,distributed,induction motor,data base,ethic
+entropy,java,constraint propagation,recognition,modal logic
+memory,real time system,computational model,data processing,conceptual
+time,mechatronics,transformer,data acquisition,influence diagram
+parameter estimation,network management,associative memory,,fuzzy reasoning
+database management,agent architecture,component,,cbr
+economics,blackboard architecture,learning algorithm,,theory
+power quality,artificial intelligence method,fuzzy clustering,,temporal logic
+production system,belief network,simulation modeling application,,phenomenology
+security,adaptive,bp neural network,,medicine
+quality,intelligent manufacturing system,regression,,cognitive modeling
+safety,strategy,convolutional neural networks,,collaborative learning
+preference,automatic control,global optimization,,formal language
+collaboration,robocup,search algorithm,,analogy
+transient stability,ubiquitous computing,inductive inference,,graphical model
+flood forecasting,parallel computing,radial basis function neural network,,expert shell
+qualitative modeling,nuclear power plant,mathematical programming,,paraconsistent logic
+credit scoring,markov chain,automaton,,q learning
+telecommunication,autonomous system,analysis algorithm,,mathematics
+construction,optimal control,hybrid model,,possibility theory
+intentionality,routing,parallel algorithm,,knowledge discovery database
+distance learning,technology,discrete event simulation,,functionalism
+agent modelling,network security,cnc,,symbol grounding
+agent modeling,software architecture,computation,,dialogue
+assessment,logic artificial intelligence,model checking,,structure activity relationship
+testing,intelligent machine,nonlinear system,,personalization
+efficiency,path planning,framework,,survey
+constraint satisfaction problem,intelligent robot,constraint logic programming,,dempster shafer theory
+risk management,capp,multiobjective optimization,,clinical guideline
+protection,distributed computing,,,meaning
+product development,search engine,,,philosophy mind
+cognitive computing,strategic planning,,,probabilistic reasoning
+system engineering,computer control,,,denotational mathematics
+context awareness,vehicle routing,,,pedagogical agent
+behaviour,distributed solving,,,non monotonic reasoning
+power operation,adaptive system,,,cognitive system
+water quality,electronic nose,,,cognitive psychology
+membership function,job shop scheduling,,,semantic similarity
+risk,economic dispatch,,,metaphor
+co ordination,cim,,,graphical user interface
+measurement,supply chain,,,turing machine
+agency,markov decision process,,,causal reasoning
+,electronic commerce,,,science
+,atm,,,
+,real time control,,,
+,cooperative system,,,
+,autonomous robot,,,
+,telemedicine,,,
+,embedded system,,,
+,traffic control,,,
+,computing methodology artificial intelligence,,,
+,abstract intelligence,,,
+,neural network application,,,
+,lisp,,,
+,e commerce,,,
+,assembly,,,
+,autonomous vehicle,,,
+,natural intelligence,,,
+,environment,,,
+,embodied artificial intelligence,,,
+,programming language,,,
+,artificial intelligent,,,
+,applied artificial intelligence,,,
+,solving control method search,,,
+,intelligent transportation system,,,
+,corba,,,
+,short term load forecasting,,,
+,granular computing,,,
+,blackboard model,,,
+,chemical industry,,,
+,humanoid robot,,,
+,man machine system,,,
+,humanoid,,,
+,dynamic scheduling,,,
+,multi robot,,,
+,blackboard system,,,
+,computing,,,
