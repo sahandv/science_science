@@ -1,6 +1,6 @@
 numpy
 tqdm
-pandas==0.24.0
+pandas
 nltk
 spacy
 scikit-learn
