@@ -106,3 +106,9 @@ venv.bak/
 *.md~
 
 *.csv~
+
+data/models/FastText_15D/15D/fasttext-scopus_wos-merged-310k_docs-gensim 15D.model
+
+data/models/FastText_15D/15D/fasttext-scopus_wos-merged-310k_docs-gensim 15D.model.trainables.vectors_ngrams_lockf.npy
+
+data/models/FastText_15D/15D/fasttext-scopus_wos-merged-310k_docs-gensim 15D.model.wv.vectors_ngrams.npy
