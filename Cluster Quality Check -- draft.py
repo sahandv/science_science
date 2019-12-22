@@ -74,8 +74,8 @@ sim_A_to_B = []
 for idx_A,vector_A in cluster_centers.iterrows():
     inner_similarity_scores = []
     inner_similarity_scores.append(idx_A)
-    for idx_B,vector_B in keyword_vectors:
-        distance_tmp = spatial.distance.cosine(vector_A.values, vector_B.values)
+    for idx_B,vector_B in enumerate(keyword_vectors):
+        distance_tmp = spatial.distance.cosine(vector_A.values, vector_B)
         similarity_tmp = 1 - distance_tmp
 
         inner_similarity_scores.append(idx_B)
