@@ -70,8 +70,8 @@ start=2
 limit=40
 step=2
 
-year_from = 2014
-year_to = 2017
+year_from = 1990
+year_to = 2005
 period = str(year_from)+'-'+str(year_to-1)
 
 data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
@@ -93,7 +93,7 @@ print("\nForming trigrams\n")
 # # Build the bigram and trigram models
 # =============================================================================
 bigram = gensim.models.Phrases(data_words, min_count=7, threshold=70) # higher threshold fewer phrases.
-trigram = gensim.models.Phrases(bigram[data_words], threshold=30)  
+trigram = gensim.models.Phrases(bigram[data_words], threshold=30)
 
 # Faster way to get a sentence clubbed as a trigram/bigram
 bigram_mod = gensim.models.phrases.Phraser(bigram)
