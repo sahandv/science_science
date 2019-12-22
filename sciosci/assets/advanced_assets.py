@@ -240,7 +240,7 @@ def distance_matrix_from_points(points):
 #           |0.1 0.1 0.9 0.1 |
 #                           where each row is a vector for a record
 #    
-#    distances matrix will be a square and symmetrical matrix with zero diag
+#    Distances matrix will be a square and symmetrical matrix with zero diag
 # =============================================================================
     from scipy import spatial
     

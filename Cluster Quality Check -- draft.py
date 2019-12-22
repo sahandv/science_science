@@ -62,8 +62,30 @@ keywords_list = keywords['keyword'].values.tolist()
 gensim_model_address = '/home/sahand/GoogleDrive/Data/FastText Models/50D/fasttext-scopus_wos-merged-310k_docs-gensim 50D.model'
 model = fasttext_gensim.load(gensim_model_address)
 
-# Save in a dict
-output_dict = {}
+# Save in a list
+keyword_vectors = []
 for token in tqdm(keywords_list[:],total=len(keywords_list[:])):
-    output_dict[token] = str(model.wv[token])
+    keyword_vectors.append(model.wv[token])
 
+# Cosine distance of the cluster centers and keywords to find the closest keywords to clusters
+names = []
+names.append('cluster_1')
+sim_A_to_B = []
+for idx_A,vector_A in cluster_centers.iterrows():
+    inner_similarity_scores = []
+    inner_similarity_scores.append(idx_A)
+    for idx_B,vector_B in keyword_vectors:
+        distance_tmp = spatial.distance.cosine(vector_A.values, vector_B.values)
+        similarity_tmp = 1 - distance_tmp
+
+        inner_similarity_scores.append(idx_B)
+        inner_similarity_scores.append(similarity_tmp)
+
+        if idx_A == 0:
+            names.append('cluster_2_'+str(idx_B))
+            names.append('similarity_'+str(idx_B))
+
+    sim_A_to_B.append(inner_similarity_scores)
+        # print('cluster of A:',idx_A,'to cluster of B:',idx_B,'similarity',similarity_tmp)
+
+sim_A_to_B = pd.DataFrame(sim_A_to_B,columns=names)
