@@ -70,8 +70,8 @@ start=2
 limit=40
 step=2
 
-year_from = 2017
-year_to = 2019
+year_from = 2014
+year_to = 2017
 period = str(year_from)+'-'+str(year_to-1)
 
 data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
@@ -89,7 +89,9 @@ print("\nTokenizing docs for trigram-generation\n")
 data_words = [re.split('\ |,|\(|\)|:|;|\[|\]|\.|\?|\!',abst) for abst in corpus_sentences]
 
 print("\nForming trigrams\n")
-# Build the bigram and trigram models
+# =============================================================================
+# # Build the bigram and trigram models
+# =============================================================================
 bigram = gensim.models.Phrases(data_words, min_count=7, threshold=70) # higher threshold fewer phrases.
 trigram = gensim.models.Phrases(bigram[data_words], threshold=30)  
 
@@ -110,13 +112,15 @@ data_words_with_trigrams = make_trigrams(data_words)
 print("\nMaking new corpus with n-grams\n")
 data_words_with_trigrams_corpus = [' '.join(x) for x in data_words_with_trigrams]
 
-# Make abstract corpus
+# =============================================================================
+# # Make abstract corpus
+# =============================================================================
 abstract_indices_articles = []
 abstracts = []
 buffer_idx = None
 buffer_abstract = ''
 first_flag = True
-for idx,idx_article in tqdm(enumerate(corpus_article_indices)):
+for idx,idx_article in tqdm(enumerate(corpus_article_indices),total=len(corpus_article_indices)):
 #    if data_words_with_trigrams_corpus[idx] != '':
     if idx_article == buffer_idx:
         # this is the same article
@@ -131,7 +135,9 @@ for idx,idx_article in tqdm(enumerate(corpus_article_indices)):
     first_flag = False
     buffer_idx = idx_article
 
-# Write to disk
+# =============================================================================
+# # Write to disk
+# =============================================================================
 data_with_meta_data = data_filtered.loc[abstract_indices_articles,:]
 data_with_meta_data['processed_abstracts'] = abstracts
 data_with_meta_data.to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_abstract-sentences_separated/meta/'+period+'  meta and data.csv',header=False,index=True)
@@ -140,4 +146,26 @@ data_words_with_trigrams_corpus = pd.DataFrame(data_words_with_trigrams_corpus)
 data_words_with_trigrams_corpus.to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_abstract-sentences_separated/with n-grams/'+period+'  corpus sentences abstract - with n-grams',header=False,index=False)
 
 
+# =============================================================================
+# # TF-IDF
+# =============================================================================
+print("TF-IDF calculation")
+max_features = 1000000
+cv=CountVectorizer(max_df=0.8,stop_words=stop_words, max_features=max_features, ngram_range=(1,1))
+X=cv.fit_transform(abstracts)
+keys = list(cv.vocabulary_.keys())[:1000]
+feature_names=cv.get_feature_names()
 
+tfidf_transformer=TfidfTransformer(smooth_idf=True,use_idf=True)
+tfidf_transformer.fit(X)
+
+keywords_tfidf = []
+keywords_sorted = []
+for doc in tqdm(abstracts,total=len(abstracts)):
+    tf_idf_vector=tfidf_transformer.transform(cv.transform([doc]))
+    sorted_items=kw.sort_coo(tf_idf_vector.tocoo())
+    keywords_sorted.append(sorted_items)
+    keywords_tfidf.append(kw.extract_topn_from_vector(feature_names,sorted_items,20))
+
+with open('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_abstract-sentences_separated/TFIDF/'+period+'tf-idf-keywords-concatenated.json', 'w') as json_file:
+    json.dump(keywords_tfidf, json_file)
