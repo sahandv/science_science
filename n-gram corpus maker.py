@@ -140,7 +140,7 @@ for idx,idx_article in tqdm(enumerate(corpus_article_indices),total=len(corpus_a
 # =============================================================================
 data_with_meta_data = data_filtered.loc[abstract_indices_articles,:]
 data_with_meta_data['processed_abstracts'] = abstracts
-data_with_meta_data.to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_abstract-sentences_separated/meta/'+period+'  meta and data.csv',header=False,index=True)
+data_with_meta_data.to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_abstract-sentences_separated/meta/'+period+'  meta and data.csv',header=True,index=True)
 
 data_words_with_trigrams_corpus = pd.DataFrame(data_words_with_trigrams_corpus)
 data_words_with_trigrams_corpus.to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_abstract-sentences_separated/with n-grams/'+period+'  corpus sentences abstract - with n-grams',header=False,index=False)
