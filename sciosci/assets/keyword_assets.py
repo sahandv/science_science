@@ -282,7 +282,7 @@ def sort_coo(coo_matrix):
 
 def extract_topn_from_vector(feature_names, sorted_items, topn=10):
 # =============================================================================
-# Get the feature names and tf-idf score of top n items Credits to https://medium.com/analytics-vidhya/automated-keyword-extraction-from-articles-using-nlp-bfd864f41b34
+# Get the feature names and tf-idf score of top n items
 # =============================================================================
     #use only topn items from vector
     sorted_items = sorted_items[:topn]
