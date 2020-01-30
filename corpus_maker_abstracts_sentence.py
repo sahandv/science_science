@@ -100,6 +100,35 @@ if make_normal_corpus is False:
     sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
 
 # =============================================================================
+#   Get word frequency in sentence corpus -- OPTIONAL
+# =============================================================================
+
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+
+file = root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title'#'/home/sahand/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
+file = pd.read_csv(file)
+size = 500000
+unique = []
+for data_start_point in tqdm(np.arange(0,file.shape[0],size)):
+    if data_start_point+size<file.shape[0]:
+        end_point = data_start_point+size
+    else:
+        end_point = file.shape[0]-1
+#    print(data_start_point,end_point)
+    str_split = list(file.sentence[data_start_point:end_point].str.split())
+    str_flat = pd.DataFrame([item for sublist in str_split for item in sublist])
+    str_flat.columns = ['words']
+    str_flat.head()
+
+    unique = unique+list(str_flat.words.unique())
+
+unique = pd.DataFrame(unique)
+unique.columns = ['words']
+unique = list(unique.words.unique())
+len(unique)
+# =============================================================================
 # Tokenize (Author Keywords and Abstracts+Titles)
 # =============================================================================
 abstracts = []
