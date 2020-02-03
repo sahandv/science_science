@@ -64,11 +64,22 @@ np.random.seed(50)
 import warnings
 warnings.filterwarnings('ignore')
 
-period = '1990-2004'
+period = '2017-2018'
 corpus = pd.read_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_thesaurus/'+period+' corpus abstract-title',header=None)
 corpus.columns = ['abstracts']
 corpus = corpus.fillna('')
 corpus_list = corpus['abstracts'].tolist()
+
+# =============================================================================
+# Pre-process
+# =============================================================================
+print('\nPre-processing '+period+' ...')
+corpus_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in corpus_list]
+
+# =============================================================================
+# Process
+# =============================================================================
+print('\nProcessing...')
 data_words = [re.split('\ |,|\(|\)|:|;|\[|\]|\.|\?|\!',abst) for abst in corpus_list]
 bigram = gensim.models.Phrases(data_words, min_count=7, threshold=70) # higher threshold fewer phrases.
 trigram = gensim.models.Phrases(bigram[data_words], threshold=30)
@@ -82,15 +93,16 @@ def make_bigrams(texts):
 def make_trigrams(texts):
     return [trigram_mod[bigram_mod[doc]] for doc in texts]
 
-print("\nForming dictionary\n")
+print("\nForming dictionary...")
 data_words_with_trigrams = make_trigrams(data_words)
 
 # Make sentence corpus
-print("\nMaking new corpus with n-grams\n")
+print("\nMaking new corpus with n-grams...")
 data_words_with_trigrams_corpus = [' '.join(x) for x in data_words_with_trigrams]
 
 # =============================================================================
 # Write to disk
 # =============================================================================
-
+print('\nWiting to disk...')
 pd.DataFrame(data_words_with_trigrams_corpus).to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_thesaurus/n-grams/'+period+' corpus abstract-title',header=False,index=False)
+print('\nDone!')
