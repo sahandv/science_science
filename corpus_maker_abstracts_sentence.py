@@ -31,7 +31,7 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 #data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/WoS/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
-data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Scopus/AI/ALL/processed/AI ALL 1900-2019 -reformat'
+data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Scopus/AI/ALL/processed/AI ALL 1900-2019 - reformat'
 data_full_relevant = pd.read_csv(data_path_rel)
 
 root_dir = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Scopus/AI/ALL/processed/'
@@ -43,6 +43,7 @@ subdir = 'improved_copyr_lemmatized_stopword_removed_thesaurus_sep/' # no_lemmat
 #   Following tags requires WoS format. Change them otherwise.
 # =============================================================================
 data_filtered = data_full_relevant.copy()
+data_filtered = data_filtered[pd.notnull(data_filtered['PY'])]
 
 data_filtered = data_filtered[data_filtered['PY'].astype('int')>year_from-1]
 data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
@@ -59,7 +60,7 @@ year_list.to_csv(root_dir+str(year_from)+'-'+str(year_to-1)+' corpus years',inde
 # Sentence maker
 # =============================================================================
 if make_sentence_corpus is True:
-    thesaurus = pd.read_csv('thesaurus_for_ai_keyword_with_().csv')
+    thesaurus = pd.read_csv('data/thesaurus/thesaurus_for_ai_keyword_with_().csv')
     thesaurus = thesaurus.fillna('')
     print("\nSentence maker and thesaurus matching. \nThis will take some time...")
     
