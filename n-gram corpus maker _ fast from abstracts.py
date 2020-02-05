@@ -70,19 +70,20 @@ corpus.columns = ['abstracts']
 corpus = corpus.fillna('')
 corpus_list = corpus['abstracts'].tolist()
 
+#pd.DataFrame(corpus_list).to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_thesaurus/_1990-2018 corpus abstract-title',header=False,index=False)
 # =============================================================================
 # Pre-process
 # =============================================================================
 print('\nPre-processing '+period+' ...')
-corpus_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in corpus_list]
+corpus_list_p = [kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in corpus_list]
 
 # =============================================================================
-# Process
+# Process : Gensim method
 # =============================================================================
 print('\nProcessing...')
-data_words = [re.split('\ |,|\(|\)|:|;|\[|\]|\.|\?|\!',abst) for abst in corpus_list]
-bigram = gensim.models.Phrases(data_words, min_count=7, threshold=70) # higher threshold fewer phrases.
-trigram = gensim.models.Phrases(bigram[data_words], threshold=30)
+data_words = [re.split('\ |,|\(|\)|:|;|\[|\]|\.|\?|\!',abst) for abst in corpus_list_p]
+bigram = gensim.models.Phrases(data_words, min_count=100, threshold=5) # higher threshold fewer phrases.
+trigram = gensim.models.Phrases(bigram[data_words], threshold=10)
 
 bigram_mod = gensim.models.phrases.Phraser(bigram)
 trigram_mod = gensim.models.phrases.Phraser(trigram)
@@ -100,9 +101,31 @@ data_words_with_trigrams = make_trigrams(data_words)
 print("\nMaking new corpus with n-grams...")
 data_words_with_trigrams_corpus = [' '.join(x) for x in data_words_with_trigrams]
 
+## =============================================================================
+## Process : scikit learn method
+## =============================================================================
+#def get_abstract_keywords(corpus):
+#    cv=CountVectorizer(max_df=0.999,min_df=20,stop_words=stop_words, ngram_range=(1,3))
+#    X=cv.fit_transform(corpus)
+#    # get feature names
+#    feature_names=cv.get_feature_names()
+#    tfidf_transformer=TfidfTransformer(smooth_idf=True,use_idf=True)
+#    tfidf_transformer.fit(X)
+#    keywords_tfidf = []
+#    keywords_sorted = []
+#    for doc in tqdm(corpus,total=len(corpus)):
+#        tf_idf_vector=tfidf_transformer.transform(cv.transform([doc]))
+#        sorted_items=kw.sort_coo(tf_idf_vector.tocoo())
+#        keywords_sorted.append(sorted_items)
+#        keywords_tfidf.append(kw.extract_topn_from_vector(feature_names,sorted_items,len(feature_names)))
+#    return keywords_tfidf
+#
+#kws = get_abstract_keywords(corpus_list)
+
 # =============================================================================
 # Write to disk
 # =============================================================================
 print('\nWiting to disk...')
 pd.DataFrame(data_words_with_trigrams_corpus).to_csv('/home/sahand/GoogleDrive/Data/corpus/improved_copyr_thesaurus/n-grams/'+period+' corpus abstract-title',header=False,index=False)
+#start = len(corpus_list)+start #data_words_with_trigrams_corpus[start:len(corpus_list)+start]
 print('\nDone!')
