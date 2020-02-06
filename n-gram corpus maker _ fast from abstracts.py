@@ -4,6 +4,8 @@
 Created on Thu Jan 30 17:34:51 2020
 
 @author: github.com/sahandv
+
+Pro tip: use all data for better results
 """
 
 from os import path
