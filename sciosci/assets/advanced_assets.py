@@ -60,15 +60,41 @@ class TfidfEmbeddingVectorizer(object):
                 
                 
 def topic_label_maker(terms,scores,ratio=2,prefix='',limit=None):
-# =============================================================================
-#     Get 2 topic modeling tables of term-topic as 2 dataframes with identical dimensions
-#     Outputs a list of the most important keywords for each column based on the scores
-#     each column (topic/cluster) should be named sequentialy, starting from 0, as string
-#     ratio: the threshold of keyword score ratio to the top keyword score [default = 2]
-#    
-#     For the method to work properly, make sure the column names for scores and 
-#     terms are int
-# =============================================================================
+    """
+    Get 2 topic modeling tables of term-topic as 2 dataframes with identical 
+    dimensions
+    
+    Outputs a list of the most important keywords for each column based on the 
+    scores each column (topic/cluster) should be named sequentialy, starting 
+    from 0, as string ratio: the threshold of keyword score ratio to the top 
+    keyword score
+    
+    For the method to work properly, make sure the column names for scores and 
+    terms are int
+    ----------
+    
+    Parameters
+    ----------
+    terms : Pandas Dataframe of size n*m
+        DESCRIPTION.
+    scores : Pandas Dataframe of size n*m
+        DESCRIPTION.
+    ratio : TYPE, optional
+        DESCRIPTION. The default is 2.
+    prefix : TYPE, optional
+        DESCRIPTION. The default is ''.
+    limit : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Returns List
+    -------
+    None.
+    
+    -------
+    For the method to work properly, make sure the column names for scores and terms are int
+
+    """
+
     import pandas as pd
     from tqdm import tqdm
     
@@ -96,20 +122,53 @@ def draw_graph_from_csr(sparse_mat,size=(10, 10),dpi = 100,fname="graph_out.png"
                         node_color_palette=None,edge_color='c',groups=None,
                         min_degree=3,pos_g='spring_layout',rad=3,node_frequency=None,
                         node_size_variation=0,node_size_minimum=20,edge_weight_thresh=False):
-# =============================================================================
-#    min_degree : min_degree<3 means all isolated nodes will be removed
-#    alpha : alph band for drawing
-#    labels : lables for the nodes to draw
-#    save : save the figure to disk
-#    sparse_mat : scipy sparse matrix
-#    size : figue size
-#    dpi : figure save dpi
-#    edge_color / node_color : color for drawing nodes and edges. 
-#    rad : radius of the circle for gropuing nodes
-#    node_color_palette : a 2D list of RGB colors in range of 0 to 1. Can be created by color_palette_maker. (number of rows == number of gropus)
-#    node_size_minimum : minimum size for the node in pixels
-#    node_size_variation : a float value between 0 to 10, 0 means no variation
-# =============================================================================
+    """
+    
+    Parameters
+    ----------
+    sparse_mat : TYPE
+        DESCRIPTION.
+    size : TYPE, optional
+        DESCRIPTION. The default is (10, 10). Figue size
+    dpi : TYPE, optional
+        DESCRIPTION. The default is 100.
+    fname : TYPE, optional
+        DESCRIPTION. The default is "graph_out.png".
+    save : TYPE, optional
+        DESCRIPTION. The default is False. Save the figure to disk.
+    labels : TYPE, optional
+        DESCRIPTION. The default is False.
+    alpha : TYPE, optional
+        DESCRIPTION. The default is 0.8.
+    node_color : TYPE, optional
+        DESCRIPTION. The default is None.
+    node_color_palette : 2D list, optional
+        DESCRIPTION. The default is None. RGB colors in range of 0 to 1. Can be created by color_palette_maker. (number of rows == number of gropus)
+    edge_color : TYPE, optional
+        DESCRIPTION. The default is 'c'.
+    groups : TYPE, optional
+        DESCRIPTION. The default is None.
+    min_degree : TYPE, optional
+        DESCRIPTION. The default is 3. Values <3 means all isolated nodes will be removed
+    pos_g : TYPE, optional
+        DESCRIPTION. The default is 'spring_layout'.
+    rad : TYPE, optional
+        DESCRIPTION. The default is 3.
+    node_frequency : TYPE, optional
+        DESCRIPTION. The default is None.
+    node_size_variation : TYPE, optional
+        DESCRIPTION. The default is 0. A value between 0 to 10, 0 means no variation.
+    node_size_minimum : TYPE, optional
+        DESCRIPTION. The default is 20. Minimum size for the node in pixels.
+    edge_weight_thresh : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
+
     import networkx as nx
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -231,17 +290,27 @@ def draw_graph_from_csr(sparse_mat,size=(10, 10),dpi = 100,fname="graph_out.png"
 
 
 def distance_matrix_from_points(points):
-# =============================================================================
-#    Get a list of vectors or 2D vector (each row is a vector) and return distance matrix
-#    Example:
-#    points=|0.2 0.1 0.3 0.5 |
-#           |0.6 0.7 0.4 0.0 |
-#           |0.8 0.2 0.3 0.9 |
-#           |0.1 0.1 0.9 0.1 |
-#                           where each row is a vector for a record
-#    
-#    Distances matrix will be a square and symmetrical matrix with zero diag
-# =============================================================================
+    """
+    
+
+    Parameters
+    ----------
+    points : 2D List
+        List of vectors or 2D vector (each row is a vector).
+        Each row is a vector for a record.
+        
+        Example:
+            points=|0.2 0.1 0.3 0.5 |
+                    |0.6 0.7 0.4 0.0 |
+                    |0.8 0.2 0.3 0.9 |
+                    |0.1 0.1 0.9 0.1 |
+
+    Returns distance matrix
+    -------
+    None.
+
+    """
+
     from scipy import spatial
     
     distances = []
