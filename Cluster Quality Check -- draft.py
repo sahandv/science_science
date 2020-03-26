@@ -3,7 +3,7 @@
 """
 Created on Fri Dec 20 11:55:00 2019
 
-@author: sahand
+@author: github.com/sahandv
 """
 
 import sys
