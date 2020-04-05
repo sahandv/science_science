@@ -135,9 +135,11 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
 # =============================================================================
 abstracts = []
 keywords = []
+keywords_index = []
 abstracts_pure = []
 for index,paper in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
     keywords_str = paper['DE']
+    keywords_index_str = paper['ID']
     abstract_str = paper['AB']
     title_str = paper['TI']
     abstract_dic = word_tokenize(title_str+' '+abstract_str)
@@ -148,6 +150,10 @@ for index,paper in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.s
         abstract_dic.extend(keywords_dic)
     else:
         keywords.append([])
+    if pd.notnull(paper['ID']):
+        keywords_index.append(keywords_index_str.split(';'))
+    else:
+        keywords_index.append([])
     abstracts.append(abstract_dic)
     abstracts_pure.append(abstract_dic_pure)
 
@@ -164,9 +170,11 @@ abstracts_pure = [list(map(str.lower, x)) for x in abstracts_pure]
 abstracts = [list(map(str.strip, x)) for x in abstracts]
 abstracts = [list(map(str.lower, x)) for x in abstracts]
 
-
 keywords = [list(map(str.strip, x)) for x in keywords]
 keywords = [list(map(str.lower, x)) for x in keywords]
+
+keywords_index = [list(map(str.strip, x)) for x in keywords_index]
+keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 # =============================================================================
 # Pre Process 
 # =============================================================================
@@ -194,6 +202,16 @@ for string_list in tqdm(keywords, total=len(keywords)):
         tmp_list.append(' '.join([kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tmp_sub_list]))
     tmp_data.append(tmp_list)
 keywords = tmp_data.copy()
+del tmp_data
+
+tmp_data = []
+for string_list in tqdm(keywords_index, total=len(keywords_index)):
+    tmp_list = []
+    for string in string_list:
+        tmp_sub_list = string.split()
+        tmp_list.append(' '.join([kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tmp_sub_list]))
+    tmp_data.append(tmp_list)
+keywords_index = tmp_data.copy()
 del tmp_data
 
 #tmp_data = []
@@ -226,6 +244,32 @@ for string_list in tqdm(keywords, total=len(keywords)):
 keywords = tmp_data.copy()
 del tmp_data
 
+tmp_data = []
+for string_list in tqdm(keywords_index, total=len(keywords_index)):
+    tmp_data.append([x for x in string_list if x!=''])
+keywords_index = tmp_data.copy()
+del tmp_data
+# =============================================================================
+# Break-down abstracts again
+# =============================================================================
+tmp_data = []
+for abstract in tqdm(abstracts):
+    words = []
+    for word in abstract:
+        words = words+word.split()
+    tmp_data.append(words)
+abstracts = tmp_data.copy()
+del tmp_data
+
+tmp_data = []
+for abstract in tqdm(abstracts_pure):
+    words = []
+    for word in abstract:
+        words = words+word.split()
+    tmp_data.append(words)
+abstracts_pure = tmp_data.copy()
+del tmp_data
+
 # =============================================================================
 # Thesaurus matching
 # =============================================================================
@@ -234,10 +278,17 @@ print("\nThesaurus matching")
 abstracts_backup = abstracts.copy()
 abstracts_pure_backup = abstracts_pure.copy()
 keywords_backup = keywords.copy()
+keywords_index_backup = keywords_index.copy()
+
+abstracts = abstracts_backup.copy()
+abstracts_pure = abstracts_pure_backup.copy()
+keywords = keywords_backup.copy()
+keywords_index = keywords_index_backup.copy()
 
 abstracts = kw.thesaurus_matching(abstracts)
 abstracts_pure = kw.thesaurus_matching(abstracts_pure)
 keywords = kw.thesaurus_matching(keywords)
+keywords_index = kw.thesaurus_matching(keywords_index)
 
 # =============================================================================
 # Term to string corpus for co-word analysis
@@ -254,6 +305,10 @@ for words in tqdm(abstracts_pure, total=len(abstracts_pure)):
 corpus_keywords = []
 for words in tqdm(keywords, total=len(keywords)):
     corpus_keywords.append(';'.join(words))
+    
+corpus_keywords_index = []
+for words in tqdm(keywords_index, total=len(keywords_index)):
+    corpus_keywords_index.append(';'.join(words))
 
 
 # =============================================================================
@@ -279,6 +334,12 @@ corpus_keywords_tr = []
 for paragraph in tqdm(corpus_keywords, total=len(corpus_keywords)):
     paragraph = kw.filter_string(paragraph,thesaurus)
     corpus_keywords_tr.append(paragraph)
+    
+corpus_keywords_index_tr = []
+for paragraph in tqdm(corpus_keywords_index, total=len(corpus_keywords_index)):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    corpus_keywords_index_tr.append(paragraph)
+    
 # =============================================================================
 # Final clean-up (double space and leading space)
 # =============================================================================
@@ -325,6 +386,21 @@ for paragraph in tqdm(corpus_keywords_tr, total=len(corpus_keywords_tr)):
     tmp_data.append(paragraph)
 corpus_keywords_tr = tmp_data.copy()
 del tmp_data
+tmp_data = []
+for paragraph in tqdm(corpus_keywords_index, total=len(corpus_keywords_index)):
+    paragraph = ' '.join(paragraph.split(' '))
+    paragraph = ';'.join(paragraph.split(';'))
+    tmp_data.append(paragraph)
+corpus_keywords_index = tmp_data.copy()
+del tmp_data
+
+tmp_data = []
+for paragraph in tqdm(corpus_keywords_index_tr, total=len(corpus_keywords_index_tr)):
+    paragraph = ' '.join(paragraph.split(' '))
+    paragraph = ';'.join(paragraph.split(';'))
+    tmp_data.append(paragraph)
+corpus_keywords_index_tr = tmp_data.copy()
+del tmp_data
 
 # =============================================================================
 # Write to disk
@@ -335,10 +411,14 @@ corpus_abstract_pure = pd.DataFrame(corpus_abstract_pure,columns=['words'])
 corpus_abstract_pure_tr = pd.DataFrame(corpus_abstract_pure_tr,columns=['words'])
 corpus_keywords = pd.DataFrame(corpus_keywords,columns=['words'])
 corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
+corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
+corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
 corpus_abstract.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys',index=False,header=False)
 corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
 corpus_abstract_pure.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title',index=False,header=False)
 corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
-corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
+corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
+corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
+corpus_keywords_index.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords_index',index=False,header=False)
+corpus_keywords_index_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords_index-terms_removed',index=False,header=False)
