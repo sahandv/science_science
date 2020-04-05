@@ -76,11 +76,26 @@ def lemmatization_spacy(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
         texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
     return texts_out
 
+def get_wordnet_pos(word,download_nltk=False):
+    """Map POS tag to first character lemmatize() accepts"""
+    import nltk
+    if download_nltk is True:
+        nltk.download('wordnet')
+        nltk.download('averaged_perceptron_tagger')
+    from nltk.corpus import wordnet
+    
+    
+    tag = nltk.pos_tag([word])[0][1][0].upper()
+    tag_dict = {"J": wordnet.ADJ,
+                "N": wordnet.NOUN,
+                "V": wordnet.VERB,
+                "R": wordnet.ADV}
 
+    return tag_dict.get(tag, wordnet.NOUN)
 
 def string_pre_processing(input_str,stemming_method='PorterStemmer',stop_words_extra=None,
                           punctuation_removal=True,lowercase=True,tag_removal=True,special_char_removal=True,
-                          stop_word_removal=True,lemmatization=False,download_nltk=True,verbose=False):
+                          stop_word_removal=True,lemmatization=False,download_nltk=True,verbose=False,pos=False):
 # =============================================================================
 # NLTK text pre processing helper
 # =============================================================================
@@ -89,7 +104,7 @@ def string_pre_processing(input_str,stemming_method='PorterStemmer',stop_words_e
         nltk.download('wordnet')
         nltk.download('punkt')
         nltk.download('stopwords')
-    
+        nltk.download('averaged_perceptron_tagger')
     import re
     from nltk.stem import PorterStemmer, LancasterStemmer
     from nltk.tokenize import word_tokenize
@@ -133,8 +148,8 @@ def string_pre_processing(input_str,stemming_method='PorterStemmer',stop_words_e
     if lemmatization is True:
         if verbose is True: print("\nPerforming lemmatization on ",input_str)
         lemmatizer=WordNetLemmatizer()
-        input_str = [lemmatizer.lemmatize(word) for word in input_str]
-    
+#        input_str = [lemmatizer.lemmatize(word) for word in input_str]
+        input_str = [lemmatizer.lemmatize(w, get_wordnet_pos(w)) for w in input_str]
 # Stemming stage
     if stemming_method=='LancasterStemmer':
         if verbose is True: print("\nPerforming Lancaster Stemming method on",input_str)
@@ -154,7 +169,7 @@ def string_pre_processing(input_str,stemming_method='PorterStemmer',stop_words_e
     
     return input_str
 
-def thesaurus_matching(iterable_of_iterabls,thesaurus_file='thesaurus_for_ai_keyword_with_().csv',have_n_grams=False,verbose=0):
+def thesaurus_matching(iterable_of_iterabls,thesaurus_file='data/thesaurus/thesaurus_for_ai_keyword_with_().csv',have_n_grams=False,verbose=0):
 # =============================================================================
 #     Matching thesaurus
 # =============================================================================
