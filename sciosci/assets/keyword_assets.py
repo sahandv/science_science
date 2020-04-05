@@ -182,8 +182,14 @@ def thesaurus_matching(iterable_of_iterabls,thesaurus_file='data/thesaurus/thesa
         doc = []
         for word in row:
             if have_n_grams is False:
-                if thesaurus['alt'].str.match(word).any():
-                    word = thesaurus[thesaurus['alt'].str.match(word)]['original'].values.tolist()[0]
+#                if thesaurus['alt'].str.match(word).any():
+                if word in thesaurus['alt'].values.tolist():
+                    if verbose > 0:
+                        tmp_word = word
+                    word = thesaurus[thesaurus['alt']==word]['original'].values.tolist()[0]
+                    if verbose > 0:
+                        if tmp_word!=word:
+                            print(tmp_word,'->',word)
                 doc.append(word)
             else:
                 tmp_grams = word.split(' ')
