@@ -23,7 +23,7 @@ tqdm.pandas()
 year_from = 1900
 year_to = 2020
 
-MAKE_SENTENCE_CORPUS = False
+MAKE_SENTENCE_CORPUS = True
 MAKE_REGULAR_CORPUS = True
 GET_WORD_FREQ_IN_SENTENCE = False
 
@@ -32,7 +32,7 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
-#data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Scopus/AI/ALL/processed/AI ALL 1900-2019 - reformat'
+#data_path_rel = '/home/sahand/GoogleDrive/Data/improved_copyr wos_scopus_merged sentences abstract_title further processed.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
