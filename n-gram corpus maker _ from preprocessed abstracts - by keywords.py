@@ -25,16 +25,12 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 np.random.seed(50)
 
-year_from = 1990
-year_to = 2005
-period = str(year_from)+'-'+str(year_to-1)
-
 root_path = '/home/sahand/GoogleDrive/Data/Corpus/copyr_lemmatized_stopword_removed_thesaurus/'
 data_abstracts = pd.read_csv(root_path+'1900-2019 abstract_title',names=['abstracts'])
 data_years = pd.read_csv(root_path+'1900-2019 years')
 data_keywords = pd.read_csv(root_path+'n-gram author and index keyword taxonomy.csv')
 
-wanted_grams = [2,3,4,5] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
+wanted_grams = [2,3,4,5,6] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
 periods = [[1990,2005],[2005,2008],[2008,2011],[2011,2014],[2014,2017],[2017,2019]]
 thesaurus = []
 
@@ -85,7 +81,7 @@ print('\nWriting to disk...')
 for i,period in tqdm(enumerate(period_names)):
     pd.DataFrame(corpora[i]).to_csv(root_path+'by period/n-gram by 2 repetition keywords/'+period+' abstract_title n_grams',index=False,header=False)
 
-
+pd.DataFrame(data_abstracts['abstracts_thesaurus'].values.tolist()).to_csv(root_path+'1900-2019 n-gram by 2 repetition keywords',index=False,header=False)
 
 
 
