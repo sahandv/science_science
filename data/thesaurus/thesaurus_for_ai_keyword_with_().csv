@@ -17,13 +17,10 @@ artificial neural network,ann
 ,(ann)
 artificial neural network,anns
 ,(anns)
-artificial neural network,nn
 artificial neural network,artificial neural networks
 artificial neural network,artificial neural networks ann
 artificial neural network,artificial neural network
 artificial neural network,artificial neural network ann
-artificial neural network,neural network
-artificial neural network,neural networks
 convolutional neural network,convolutional neural networks
 convolutional neural network,convolutional neural network cnn
 convolutional neural network,convolutional neural networks cnn
@@ -31,6 +28,8 @@ convolutional neural network,cnn
 ,(cnn)
 convolutional neural network,cnns
 ,(cnns)
+neural network,nn
+neural network,neural network nn
 ,(svm)
 support vector machine,support vector machine svm
 support vector machine,svm
