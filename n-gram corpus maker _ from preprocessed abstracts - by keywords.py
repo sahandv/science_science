@@ -19,7 +19,7 @@ data_abstracts = pd.read_csv(root_path+'1900-2019 abstract_title',names=['abstra
 data_years = pd.read_csv(root_path+'1900-2019 years')
 data_keywords = pd.read_csv(root_path+'n-gram author keyword taxonomy.csv')
 
-wanted_grams = [2,3,4,5,6] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
+wanted_grams = [2,3,4,5,6,7] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
 periods = [[1990,2005],[2005,2008],[2008,2011],[2011,2014],[2014,2017],[2017,2019]]
 thesaurus = []
 
@@ -36,10 +36,7 @@ data_keywords = data_keywords[data_keywords['count']>1]
 print('\nPreparing thesaurus...')
 idx = 0
 for grams_count in tqdm(wanted_grams):
-    if idx == len(wanted_grams) - 1:
-        data_keywords_tmp = data_keywords[(data_keywords.grams >= wanted_grams[idx])]
-    else:
-        data_keywords_tmp = data_keywords[(data_keywords.grams>=wanted_grams[idx]) & (data_keywords.grams<wanted_grams[idx+1])]
+    data_keywords_tmp = data_keywords[data_keywords.grams>=wanted_grams[idx]]
     keywords_underscored = data_keywords_tmp.keywords.str.lower().str.strip().str.replace(' ','_').str.upper().values.tolist()
     keywords_spaced = data_keywords_tmp.keywords.str.lower().str.strip().values.tolist()
     thesaurus.append(dict(zip(keywords_spaced,keywords_underscored)))
