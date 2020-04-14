@@ -6,6 +6,7 @@ Created on Mon Aug 26 19:28:36 2019
 @author: github.com/sahandv
 """
 import sys
+import gc
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
@@ -39,8 +40,8 @@ data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 data_full_relevant = pd.read_csv(data_path_rel)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
-subdir = 'AL ALL improved_copyr_lemmatized_stopword_removed_thesaurus_sep/' # no_lemmatization_no_stopwords
-
+subdir = 'AL ALL lemmatized_stopword_removed_thesaurus_sep/' # no_lemmatization_no_stopwords
+gc.collect()
 # =============================================================================
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
@@ -57,17 +58,19 @@ data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan)
+gc.collect()
 abstracts = []
 for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
     numbers = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
     for number in numbers:
         abstract = kw.find_and_remove_term(abstract,number)
     abstracts.append(abstract)
-data_with_abstract['AB'] = abstracts
+data_with_abstract['AB'] = abstracts.copy()
+del  abstracts
 
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
-
 year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
+gc.collect()
 # =============================================================================
 # Sentence maker
 # =============================================================================
@@ -111,7 +114,7 @@ if MAKE_SENTENCE_CORPUS is True:
 
 if MAKE_REGULAR_CORPUS is False:
     sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
-
+gc.collect()
 # =============================================================================
 # Sentence maker -- Advanced -- 
 # =============================================================================
@@ -174,7 +177,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     sentence_df['year'] = years
     sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
     
-    
+gc.collect()
 # =============================================================================
 #   Get word frequency in sentence corpus -- OPTIONAL
 # =============================================================================
