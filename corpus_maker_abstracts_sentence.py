@@ -23,21 +23,23 @@ tqdm.pandas()
 year_from = 1900
 year_to = 2020
 
-MAKE_SENTENCE_CORPUS = True
-MAKE_REGULAR_CORPUS = True
-GET_WORD_FREQ_IN_SENTENCE = False
+MAKE_SENTENCE_CORPUS = False
+MAKE_SENTENCE_CORPUS_ADVANCED = True
+MAKE_REGULAR_CORPUS = False
+GET_WORD_FREQ_IN_SENTENCE = True
+
 
 stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this']
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
-#data_path_rel = '/home/sahand/GoogleDrive/Data/improved_copyr wos_scopus_merged sentences abstract_title further processed.csv'
+
+#data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/WoS/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
+data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 data_full_relevant = pd.read_csv(data_path_rel)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
-subdir = 'copyr_lemmatized_stopword_removed_thesaurus/' # no_lemmatization_no_stopwords
-
+subdir = 'AL ALL improved_copyr_lemmatized_stopword_removed_thesaurus_sep/' # no_lemmatization_no_stopwords
 
 # =============================================================================
 # Initial Pre-Processing : 
@@ -53,10 +55,19 @@ data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
 data_with_keywords = data_filtered[pd.notnull(data_filtered['DE'])]
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
+# Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan)
+abstracts = []
+for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
+    numbers = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
+    for number in numbers:
+        abstract = kw.find_and_remove_term(abstract,number)
+    abstracts.append(abstract)
+data_with_abstract['AB'] = abstracts
 
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
-year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' years',index=False) # Save year indices to disk for further use
+
+year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
 # =============================================================================
 # Sentence maker
 # =============================================================================
@@ -104,7 +115,7 @@ if MAKE_REGULAR_CORPUS is False:
 # =============================================================================
 # Sentence maker -- Advanced -- 
 # =============================================================================
-if make_sentence_corpus_advanced is True:
+if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
     data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
     data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
