@@ -102,6 +102,69 @@ if MAKE_REGULAR_CORPUS is False:
     sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
 
 # =============================================================================
+# Sentence maker -- Advanced -- 
+# =============================================================================
+if make_sentence_corpus_advanced is True:
+    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
+    
+    sentences = []
+    years = []
+    indices = []
+    for index,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+        abstract_str = row['AB']
+        abstract_sentences = re.split('(\. |\? |\\n)',abstract_str)
+        title_str = row['TI']
+        sentences.append(abstract_sentences+[abstract_sentences])
+        year = row['PY']
+        years = years+[year for x in range(len(abstract_sentences+[abstract_sentences]))]
+        indices = indices+[index for x in range(len(abstract_sentences+[abstract_sentences]))]
+    
+    tmp = []
+    for sentence in tqdm(sentences):
+        tmp.append(word_tokenize(sentence))
+    sentences = tmp.copy()
+    del tmp
+
+    print("\nString pre processing for abstracts: lower and strip")
+    sentences = [list(map(str.lower, x)) for x in sentences]
+    sentences = [list(map(str.strip, x)) for x in sentences]
+    
+    tmp = []
+    print("\nString pre processing for abstracts: lemmatize and stop word removal")
+    for string_list in tqdm(sentences, total=len(sentences)):
+        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+        tmp.append(tmp_list)
+    sentences = tmp.copy()
+    del tmp
+    
+    tmp = []
+    print("\nString pre processing for abstracts: null word removal")
+    for string_list in tqdm(sentences, total=len(sentences)):
+        tmp.append([x for x in string_list if x!=''])
+    sentences = tmp.copy()
+    del tmp
+    
+    print("\nThesaurus matching")
+    sentences = kw.thesaurus_matching(sentences)
+    
+    print("\nStitiching words")
+    tmp = []
+    for words in tqdm(sentences, total=len(sentences)):
+        tmp.append(' '.join(words))
+    sentences = tmp.copy()
+    del tmp
+    
+    sentence_df = pd.DataFrame(indices,columns=['article_index'])
+    sentence_df['sentence'] = sentences
+    sentence_df['year'] = years
+    sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
+    
+    
+# =============================================================================
 #   Get word frequency in sentence corpus -- OPTIONAL
 # =============================================================================
 if GET_WORD_FREQ_IN_SENTENCE is True:
