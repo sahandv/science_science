@@ -57,7 +57,7 @@ data_with_keywords = data_filtered[pd.notnull(data_filtered['DE'])]
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
-data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
 gc.collect()
 abstracts = []
 for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
@@ -112,31 +112,32 @@ if MAKE_SENTENCE_CORPUS is True:
     
     sentence_corpus.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
 
-if MAKE_REGULAR_CORPUS is False:
-    sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
 gc.collect()
 # =============================================================================
 # Sentence maker -- Advanced -- 
 # =============================================================================
 if MAKE_SENTENCE_CORPUS_ADVANCED is True:
-    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
     
+    # data_with_abstract['AB'][1:10]
+    print("\nSentence extraction")
     sentences = []
     years = []
     indices = []
     for index,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
         abstract_str = row['AB']
-        abstract_sentences = re.split('(\. |\? |\\n)',abstract_str)
-        title_str = row['TI']
-        sentences.append(abstract_sentences+[abstract_sentences])
+        title_str = row['TI'].lower()
         year = row['PY']
+        abstract_sentences = re.split('\. |\? |\\n',abstract_str)
+        sentences = sentences + abstract_sentences + [title_str]
         years = years+[year for x in range(len(abstract_sentences+[abstract_sentences]))]
         indices = indices+[index for x in range(len(abstract_sentences+[abstract_sentences]))]
     
+    print("\nTokenizing")
     tmp = []
     for sentence in tqdm(sentences):
         tmp.append(word_tokenize(sentence))
@@ -178,6 +179,9 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
     
 gc.collect()
+
+if MAKE_REGULAR_CORPUS is False:
+    sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
 # =============================================================================
 #   Get word frequency in sentence corpus -- OPTIONAL
 # =============================================================================
