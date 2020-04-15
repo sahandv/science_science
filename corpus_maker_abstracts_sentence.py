@@ -130,12 +130,11 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     indices = []
     for index,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
         abstract_str = row['AB']
-        title_str = row['TI'].lower()
         year = row['PY']
         abstract_sentences = re.split('\. |\? |\\n',abstract_str)
-        sentences = sentences + abstract_sentences + [title_str]
-        years = years+[year for x in range(len(abstract_sentences+[abstract_sentences]))]
-        indices = indices+[index for x in range(len(abstract_sentences+[abstract_sentences]))]
+        sentences = sentences + abstract_sentences + [row['TI'].lower()]  if pd.notnull(row['TI']) else sentences + abstract_sentences
+        years = years+[year for x in range(len(abstract_sentences+[abstract_sentences]))] if pd.notnull(row['TI']) else years+[year for x in range(len(abstract_sentences))]
+        indices = indices+[index for x in range(len(abstract_sentences+[abstract_sentences]))] if pd.notnull(row['TI']) else indices+[index for x in range(len(abstract_sentences))]
     
     print("\nTokenizing")
     tmp = []
