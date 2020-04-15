@@ -58,7 +58,7 @@ data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
-gc.collect()
+# gc.collect()
 abstracts = []
 for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
     numbers = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
@@ -121,20 +121,30 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
     data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
     data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
+    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
     data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
+    data_with_abstract['TI_AB'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
+    data_fresh = data_with_abstract[['TI_AB','PY']].copy()
+    del data_with_abstract
+    gc.collect()
     
-    # data_with_abstract['AB'][1:10]
+    data_tmp = data_fresh[1:10]
+    data_fresh[-2:-1]
+
     print("\nSentence extraction")
     sentences = []
     years = []
     indices = []
-    for index,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
-        abstract_str = row['AB']
+    for index,row in tqdm(data_fresh.iterrows(),total=data_fresh.shape[0]):
+        abstract_str = row['TI_AB']
         year = row['PY']
         abstract_sentences = re.split('\. |\? |\\n',abstract_str)
-        sentences = sentences + abstract_sentences + [row['TI'].lower()]  if pd.notnull(row['TI']) else sentences + abstract_sentences
-        years = years+[year for x in range(len(abstract_sentences+[abstract_sentences]))] if pd.notnull(row['TI']) else years+[year for x in range(len(abstract_sentences))]
-        indices = indices+[index for x in range(len(abstract_sentences+[abstract_sentences]))] if pd.notnull(row['TI']) else indices+[index for x in range(len(abstract_sentences))]
+        length = len(abstract_sentences)
+        
+        sentences = sentences + abstract_sentences
+        years = years+[year for x in range(length)]
+        indices = indices+[index for x in range(length)]
+        
     
     print("\nTokenizing")
     tmp = []
