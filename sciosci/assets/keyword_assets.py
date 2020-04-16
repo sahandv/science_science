@@ -44,11 +44,12 @@ def tokenize_series_fast(data,delimiter=None,flatten=False): # Not accurate, but
     else:
         result = data.progress_apply(lambda x: str(x).split(delimiter))
         
-    result = pd.DataFrame(result)
+    result = pd.DataFrame(result,columns=['string'])
+    
     if flatten is True:
         flatten = []
         for index, row in tqdm(result.iterrows(),total = result.shape[0]):
-            flatten.extend(row['abstract']) #= flatten+list(row['abstract'])
+            flatten.extend(row[data.name]) #= flatten+list(row['abstract'])
             
             
     flatten = pd.DataFrame(flatten,columns=['tokens'])
