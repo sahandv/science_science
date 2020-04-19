@@ -65,7 +65,7 @@ def topic_label_maker(terms,scores,ratio=2,prefix='',limit=None):
     dimensions
     
     Outputs a list of the most important keywords for each column based on the 
-    scores each column (topic/cluster) should be named sequentialy, starting 
+    scores of each column (topic/cluster) should be named sequentialy, starting 
     from 0, as string ratio: the threshold of keyword score ratio to the top 
     keyword score
     
