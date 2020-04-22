@@ -14,9 +14,9 @@ from tqdm import tqdm
 print('\nInitializing...')
 np.random.seed(50)
 
-root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI ALL lemmatized_stopword_removed_thesaurus/'
-data_abstracts = pd.read_csv(root_path+'1900-2019 title abstract sentences')
-data_years = data_abstracts['year'] #pd.read_csv(root_path+'1900-2019 years')
+root_path = '/home/sahand/GoogleDrive/Data/Corpus/copyr_deflem_stopword_removed_thesaurus/'
+data_abstracts = pd.read_csv(root_path+'1900-2019 abstract_title',names=['abstracts'])
+data_years = pd.read_csv(root_path+'1900-2019 corpus years') #data_abstracts['year'] #
 data_keywords = pd.read_csv(root_path+'../Taxonomy/n-gram author keyword taxonomy 300k.csv')
 
 wanted_grams = [2,3,4,5,6,7] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
@@ -46,7 +46,7 @@ for grams_count in tqdm(wanted_grams):
 # Replace by the thesaurus
 # =============================================================================
 print('\nApplying thesaurus...')
-data_abstracts['abstracts_thesaurus'] = data_abstracts['sentence']#abstracts
+data_abstracts['abstracts_thesaurus'] = data_abstracts['abstracts']#sentence
 for thesaurus_gram in tqdm(list(reversed(thesaurus))):
     data_abstracts['abstracts_thesaurus'] = data_abstracts['abstracts_thesaurus'].replace(thesaurus_gram, regex=True)
 
