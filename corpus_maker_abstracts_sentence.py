@@ -21,26 +21,26 @@ tqdm.pandas()
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 1900
-year_to = 2020
+year_from = 2017
+year_to = 2019
 
 MAKE_SENTENCE_CORPUS = False
-MAKE_SENTENCE_CORPUS_ADVANCED = True
-MAKE_REGULAR_CORPUS = False
-GET_WORD_FREQ_IN_SENTENCE = True
-
+MAKE_SENTENCE_CORPUS_ADVANCED = False
+MAKE_REGULAR_CORPUS = True
+GET_WORD_FREQ_IN_SENTENCE = False
+PROCESS_KEYWORDS = False
 
 stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this']
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 
-#data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/WoS/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
-data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 data_full_relevant = pd.read_csv(data_path_rel)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
-subdir = 'AL ALL lemmatized_stopword_removed_thesaurus_sep/' # no_lemmatization_no_stopwords
+subdir = 'copyr_deflem_stopword_removed_thesaurus/' # no_lemmatization_no_stopwords
 gc.collect()
 # =============================================================================
 # Initial Pre-Processing : 
@@ -58,6 +58,13 @@ data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
+
 # gc.collect()
 abstracts = []
 for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
@@ -141,11 +148,10 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
         abstract_sentences = re.split('\. |\? |\\n',abstract_str)
         length = len(abstract_sentences)
         
-        sentences = sentences + abstract_sentences
-        years = years+[year for x in range(length)]
-        indices = indices+[index for x in range(length)]
+        sentences.extend(abstract_sentences)
+        years.extend([year for x in range(length)])
+        indices.extend([index for x in range(length)])
         
-    
     print("\nTokenizing")
     tmp = []
     for sentence in tqdm(sentences):
@@ -187,7 +193,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     sentence_df['year'] = years
     sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
     
-gc.collect()
+# gc.collect()
 
 if MAKE_REGULAR_CORPUS is False:
     sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
@@ -271,38 +277,39 @@ keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 tmp_data = []
 print("\nString pre processing for abstracts")
 for string_list in tqdm(abstracts, total=len(abstracts)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts = tmp_data.copy()
 del tmp_data
 
 tmp_data = []
 for string_list in tqdm(abstracts_pure, total=len(abstracts_pure)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts_pure = tmp_data.copy()
 del tmp_data
 
-print("\nString pre processing for keywords")
-tmp_data = []
-for string_list in tqdm(keywords, total=len(keywords)):
-    tmp_list = []
-    for string in string_list:
-        tmp_sub_list = string.split()
-        tmp_list.append(' '.join([kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tmp_sub_list]))
-    tmp_data.append(tmp_list)
-keywords = tmp_data.copy()
-del tmp_data
-
-tmp_data = []
-for string_list in tqdm(keywords_index, total=len(keywords_index)):
-    tmp_list = []
-    for string in string_list:
-        tmp_sub_list = string.split()
-        tmp_list.append(' '.join([kw.string_pre_processing(x,stemming_method='None',lemmatization=True,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tmp_sub_list]))
-    tmp_data.append(tmp_list)
-keywords_index = tmp_data.copy()
-del tmp_data
+if PROCESS_KEYWORDS is True:
+    print("\nString pre processing for keywords")
+    tmp_data = []
+    for string_list in tqdm(keywords, total=len(keywords)):
+        tmp_list = []
+        for string in string_list:
+            tmp_sub_list = string.split()
+            tmp_list.append(' '.join([kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tmp_sub_list]))
+        tmp_data.append(tmp_list)
+    keywords = tmp_data.copy()
+    del tmp_data
+    
+    tmp_data = []
+    for string_list in tqdm(keywords_index, total=len(keywords_index)):
+        tmp_list = []
+        for string in string_list:
+            tmp_sub_list = string.split()
+            tmp_list.append(' '.join([kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tmp_sub_list]))
+        tmp_data.append(tmp_list)
+    keywords_index = tmp_data.copy()
+    del tmp_data
 
 #tmp_data = []
 #for string_list in tqdm(keywords, total=len(keywords)):
@@ -377,8 +384,9 @@ keywords_index = keywords_index_backup.copy()
 
 abstracts = kw.thesaurus_matching(abstracts)
 abstracts_pure = kw.thesaurus_matching(abstracts_pure)
-keywords = kw.thesaurus_matching(keywords)
-keywords_index = kw.thesaurus_matching(keywords_index)
+if PROCESS_KEYWORDS is True:
+    keywords = kw.thesaurus_matching(keywords)
+    keywords_index = kw.thesaurus_matching(keywords_index)
 
 # =============================================================================
 # Term to string corpus for co-word analysis
@@ -504,11 +512,11 @@ corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
-corpus_abstract.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys',index=False,header=False)
-corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
+# corpus_abstract.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys',index=False,header=False)
+# corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
 corpus_abstract_pure.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title',index=False,header=False)
-corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
-corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
-corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
-corpus_keywords_index.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords_index',index=False,header=False)
-corpus_keywords_index_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords_index-terms_removed',index=False,header=False)
+# corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
+# corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
+# corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
+# corpus_keywords_index.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords_index',index=False,header=False)
+# corpus_keywords_index_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords_index-terms_removed',index=False,header=False)
