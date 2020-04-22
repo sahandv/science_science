@@ -146,11 +146,16 @@ def string_pre_processing(input_str,stemming_method='PorterStemmer',stop_words_e
             
         
 # Lemmatization stage
-    if lemmatization is True:
+    if lemmatization is not False:
         if verbose is True: print("\nPerforming lemmatization on ",input_str)
         lemmatizer=WordNetLemmatizer()
 #        input_str = [lemmatizer.lemmatize(word) for word in input_str]
-        input_str = [lemmatizer.lemmatize(w, get_wordnet_pos(w)) for w in input_str]
+        if lemmatization=='ALL':
+            input_str = [lemmatizer.lemmatize(w, get_wordnet_pos(w)) for w in input_str]
+        if lemmatization=='DEF':
+            input_str = [lemmatizer.lemmatize(w) for w in input_str]
+        else:
+            input_str = [lemmatizer.lemmatize(w, lemmatization) for w in input_str]
 # Stemming stage
     if stemming_method=='LancasterStemmer':
         if verbose is True: print("\nPerforming Lancaster Stemming method on",input_str)
