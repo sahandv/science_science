@@ -123,15 +123,11 @@ gc.collect()
 # =============================================================================
 # Sentence maker -- Advanced -- 
 # =============================================================================
-if MAKE_SENTENCE_CORPUS_ADVANCED is True:
-    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
-    data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
+if MAKE_SENTENCE_CORPUS_ADVANCED is True:    
     data_with_abstract['TI_AB'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
     data_fresh = data_with_abstract[['TI_AB','PY']].copy()
+    data_fresh['TI_AB'] = data_fresh['TI_AB'].str.lower()
+    
     del data_with_abstract
     gc.collect()
     
@@ -166,7 +162,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     tmp = []
     print("\nString pre processing for abstracts: lemmatize and stop word removal")
     for string_list in tqdm(sentences, total=len(sentences)):
-        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
         tmp.append(tmp_list)
     sentences = tmp.copy()
     del tmp
