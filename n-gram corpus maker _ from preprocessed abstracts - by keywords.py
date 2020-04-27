@@ -6,9 +6,12 @@ Created on Tue Apr  7 14:16:39 2020
 @author: github.com/sahandv
 """
 import sys
+import re
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+tqdm.pandas()
+
 # =============================================================================
 # Init
 # =============================================================================
@@ -48,13 +51,16 @@ for grams_count in tqdm(wanted_grams):
 # =============================================================================
 if sentence_replacer is True:
     i = 0
-    sentences = data_abstracts[i:i+2000000].copy()
+    sentences = data_abstracts[i:i+100000].copy()
     del data_abstracts
     for thesaurus_gram in list(reversed(thesaurus)):
-        rep = list(reversed(thesaurus))[0]
-        sentences['sentence'] = sentences['sentence'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
+        rep = thesaurus_gram
+        
+        pattern = re.compile("|".join(rep.keys()))
+        sentences = pd.DataFrame(sentences)
+        sentences['sentence'] = sentences['sentence'].progress_apply(lambda x: pattern.sub(lambda m: rep[re.escape(m.group(0))], x)).str.lower()
 
-        sentences['sentence'] = sentences['sentence'].replace(thesaurus_gram, regex=True).values.tolist()
+        # sentences['sentence'] = sentences['sentence'].replace(thesaurus_gram, regex=True).values.tolist()
     
     pd.DataFrame(sentences).to_csv(root_path+'1900-2019 n-gram by 2 repetition keywords '+str(i),index=False,header=False)
     sys.exit('Did not continue to create normal corpus. If you want a corpus, set sentence_replacer to False at init section.')
