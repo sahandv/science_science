@@ -5,6 +5,7 @@ Created on Tue Apr  7 14:16:39 2020
 
 @author: github.com/sahandv
 """
+import sys
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -13,13 +14,13 @@ from tqdm import tqdm
 # =============================================================================
 print('\nInitializing...')
 np.random.seed(50)
-
-root_path = '/home/sahand/GoogleDrive/Data/Corpus/copyr_deflem_stopword_removed_thesaurus/'
-data_abstracts = pd.read_csv(root_path+'1900-2019 abstract_title',names=['abstracts'])
-data_years = pd.read_csv(root_path+'1900-2019 corpus years') #data_abstracts['year'] #
+sentence_replacer = True
+root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI ALL lemmatized_stopword_removed_thesaurus/'
+data_abstracts = pd.read_csv(root_path+'1900-2019 title abstract sentences')#,names=['abstracts'])
+data_years = pd.read_csv(root_path+'1900-2019 years') #data_abstracts['year'] #
 data_keywords = pd.read_csv(root_path+'../Taxonomy/n-gram author keyword taxonomy 300k.csv')
 
-wanted_grams = [2,3,4,5,6,7] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
+wanted_grams = [2,3,4,5,6] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
 periods = [[1990,2005],[2005,2008],[2008,2011],[2011,2014],[2014,2017],[2017,2019]]
 thesaurus = []
 
@@ -43,10 +44,28 @@ for grams_count in tqdm(wanted_grams):
     idx+=1
 
 # =============================================================================
+# Sentence replacer -- Fast -- if yes, skip the rest
+# =============================================================================
+if sentence_replacer is True:
+    i = 0
+    sentences = data_abstracts[i:i+2000000].copy()
+    del data_abstracts
+    for thesaurus_gram in list(reversed(thesaurus)):
+        rep = list(reversed(thesaurus))[0]
+        sentences['sentence'] = sentences['sentence'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
+
+        sentences['sentence'] = sentences['sentence'].replace(thesaurus_gram, regex=True).values.tolist()
+    
+    pd.DataFrame(sentences).to_csv(root_path+'1900-2019 n-gram by 2 repetition keywords '+str(i),index=False,header=False)
+    sys.exit('Did not continue to create normal corpus. If you want a corpus, set sentence_replacer to False at init section.')
+
+
+# =============================================================================
 # Replace by the thesaurus
 # =============================================================================
 print('\nApplying thesaurus...')
-data_abstracts['abstracts_thesaurus'] = data_abstracts['abstracts']#sentence
+data_abstracts['abstracts_thesaurus'] = data_abstracts['sentence']#abstracts
+
 for thesaurus_gram in tqdm(list(reversed(thesaurus))):
     data_abstracts['abstracts_thesaurus'] = data_abstracts['abstracts_thesaurus'].replace(thesaurus_gram, regex=True)
 
@@ -68,8 +87,6 @@ for i,period in tqdm(enumerate(period_names)):
     pd.DataFrame(corpora[i]).to_csv(root_path+'by period/n-gram by 2 repetition keywords/'+period+' abstract_title n_grams',index=False,header=False)
 
 pd.DataFrame(data_abstracts['abstracts_thesaurus'].values.tolist()).to_csv(root_path+'1900-2019 n-gram by 2 repetition keywords',index=False,header=False)
-
-
 
 
 

@@ -88,3 +88,5 @@ optical character recognition,ocr
 genetic algorithm,ga
 particle swarm optimization,pso
 differential evolution,de
+adaptive neuro fuzzy inference system,anfis
+,(anfis)

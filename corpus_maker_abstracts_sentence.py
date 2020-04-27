@@ -21,8 +21,8 @@ tqdm.pandas()
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 2017
-year_to = 2019
+year_from = 1900
+year_to = 2020
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED = False
@@ -35,12 +35,12 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
-# data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
+data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 data_full_relevant = pd.read_csv(data_path_rel)
 
-root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
-subdir = 'copyr_deflem_stopword_removed_thesaurus/' # no_lemmatization_no_stopwords
+root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI ALL/'
+subdir = 'AI ALL nolem stopword removed thesaurus/' # no_lemmatization_no_stopwords
 gc.collect()
 # =============================================================================
 # Initial Pre-Processing : 
