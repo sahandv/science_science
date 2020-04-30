@@ -212,6 +212,30 @@ def thesaurus_matching(iterable_of_iterabls,thesaurus_file='data/thesaurus/thesa
         tmp_data.append(doc)
     return tmp_data
 
+def multiple_replace(string, rep_dict):
+    """
+    Parameters
+    ----------
+    string : string
+        input string.
+    rep_dict : dictionary
+        thesaurus dictionary.
+
+    Returns
+    -------
+    string
+     
+    
+    USAGE
+    -------
+    multiple_replace("Do you like cafe? No, I prefer tea.", {'cafe':'tea', 'tea':'cafe', 'like':'prefer'})
+    >>>> 'Do you prefer tea? No, I prefer cafe.'
+
+    """
+    import re
+    pattern = re.compile("|".join([re.escape(k) for k in sorted(rep_dict,key=len,reverse=True)]), flags=re.DOTALL)
+    return pattern.sub(lambda x: rep_dict[x.group(0)], string)
+
 def find_and_remove_c(text):
 # =============================================================================
 # Text preprocessing 
