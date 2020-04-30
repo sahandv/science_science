@@ -16,3 +16,4 @@ pyLDAvis
 networkx
 netgraph
 yellowbrick
+plotly
