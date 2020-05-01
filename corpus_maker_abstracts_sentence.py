@@ -17,12 +17,13 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 tqdm.pandas()
-
+nltk.download('wordnet')
+nltk.download('punkt')
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 1900
-year_to = 2020
+year_from = 1990
+year_to = 2005
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED = False
@@ -35,12 +36,12 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 
-# data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
-data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 data_full_relevant = pd.read_csv(data_path_rel)
 
-root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI ALL/'
-subdir = 'AI ALL nolem stopword removed thesaurus/' # no_lemmatization_no_stopwords
+root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
+subdir = 'AI WOS deflem/' # no_lemmatization_no_stopwords
 gc.collect()
 # =============================================================================
 # Initial Pre-Processing : 
@@ -201,7 +202,7 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
     import numpy as np
     from tqdm import tqdm
     
-    file = root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title'#'/home/sahand/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
+    file = root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus abstract-title'#'/home/sahand/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
     file = pd.read_csv(file)
     size = 500000
     unique = []
@@ -271,16 +272,16 @@ keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 # Pre Process 
 # =============================================================================
 tmp_data = []
-print("\nString pre processing for abstracts")
+print("\nString pre processing for ababstracts_purestracts")
 for string_list in tqdm(abstracts, total=len(abstracts)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts = tmp_data.copy()
 del tmp_data
 
 tmp_data = []
 for string_list in tqdm(abstracts_pure, total=len(abstracts_pure)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts_pure = tmp_data.copy()
 del tmp_data
