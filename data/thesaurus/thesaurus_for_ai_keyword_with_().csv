@@ -1,7 +1,11 @@
-original,alt
+ ,alt
+,i
+,ii
 artificial intelligence,ai
 ,(ai)
 artificial intelligence,artificial intelligence ai
+information technology,information technology it
+,(it)
 social network analysis,sna
 ,(sna)
 social network analysis,social network analysis sna
@@ -9,6 +13,9 @@ machine learning,ml
 ,(ml)
 machine learning,machine learning ml
 machine learning,machine learn ml
+deep learning,dl
+,(dl)
+deep learning,deep learning dl
 reinforcement learning,rl
 ,(rl)
 reinforcement learning,reinforcement learn rl
@@ -84,9 +91,34 @@ unmanned aerial vehicle,uav
 ,et
 ,al
 information communication technology,ict
+information communication technology,information communication technology ict
+,(ict)
 optical character recognition,ocr
 genetic algorithm,ga
 particle swarm optimization,pso
 differential evolution,de
 adaptive neuro fuzzy inference system,anfis
 ,(anfis)
+case based reasoning,cbr
+,(cbr)
+case based reasoning,case based reasoning cbr
+geographic information system,gis
+,(gis)
+geographic information system,geographic information system gis
+maximum power point tracker,mppt
+,(mppt)
+maximum power point tracker,maximum power point tracker mppt
+grid interfaced photovoltaic,gpv
+,(gpv)
+grid interfaced photovoltaic,grid interfaced photovoltaic gpv
+problem based learning,pbl
+,(pbl)
+problem based learning,problem based learning pbl
+monte carlo tree search,mcts
+,(mcts)
+monte carlo tree search,monte carlo tree search mcts
+question answering,qa
+,(qa)
+question answering,question answering qa
+satisfiability problem,sat
+satisfiability problem,satisfiability problem sat

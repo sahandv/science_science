@@ -23,7 +23,7 @@ nltk.download('punkt')
 # Read data and Initialize
 # =============================================================================
 year_from = 1990
-year_to = 2005
+year_to = 2019
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED = False
