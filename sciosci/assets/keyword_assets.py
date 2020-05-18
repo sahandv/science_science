@@ -470,7 +470,7 @@ def load_vectors_lowmemory_df(fname):
     dataset_vector_df = dataset_vector_df[['token','vector']]
     
     return dataset_vector_df
-    
+
 def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3,score_parameter='c_v'):
 # =============================================================================
 #     Compute c_v coherence for various number of topics
@@ -509,3 +509,8 @@ def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3,s
         coherence_values.append(coherencemodel.get_coherence())
 
     return model_list, coherence_values
+
+def replace_british_american(text, mydict):
+    for gb, us in mydict.items():
+        text = text.replace(us, gb)
+    return text
