@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 import re
 from sciosci.assets import keyword_assets as kw
+from sciosci.assets import keyword_dictionaries as kd
 
 import nltk
 from nltk.corpus import stopwords
@@ -22,10 +23,11 @@ nltk.download('punkt')
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 1990
+year_from = 2017
 year_to = 2019
 
 MAKE_SENTENCE_CORPUS = False
+MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
 MAKE_SENTENCE_CORPUS_ADVANCED = False
 MAKE_REGULAR_CORPUS = True
 GET_WORD_FREQ_IN_SENTENCE = False
@@ -38,11 +40,16 @@ stop_words = list(set(stopwords.words("english")))+stops
 
 data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
+# data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
+# data_full_relevant.columns = ['TI','DE','AB','PY']
+sample = data_full_relevant.sample(4)
 
-root_dir = '/home/sahand/GoogleDrive/Data/Corpus/'
-subdir = 'AI WOS deflem/' # no_lemmatization_no_stopwords
+root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI 37k/'
+subdir = 'copyr_deflem_stopword_removed_thesaurus_update/' # no_lemmatization_no_stopwords
 gc.collect()
+
 # =============================================================================
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
@@ -83,7 +90,7 @@ gc.collect()
 # Sentence maker
 # =============================================================================
 if MAKE_SENTENCE_CORPUS is True:
-    thesaurus = pd.read_csv('data/thesaurus/thesaurus_for_ai_keyword_with_().csv')
+    thesaurus = pd.read_csv('data/thesaurus/thesaurus_for_ai_keyword_with_() (training).csv')
     thesaurus = thesaurus.fillna('')
     print("\nSentence maker and thesaurus matching. \nThis will take some time...")
     
@@ -163,8 +170,99 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     tmp = []
     print("\nString pre processing for abstracts: lemmatize and stop word removal")
     for string_list in tqdm(sentences, total=len(sentences)):
-        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
         tmp.append(tmp_list)
+    sentences = tmp.copy()
+    del tmp
+    gc.collect()
+    
+    tmp = []
+    print("\nString pre processing for abstracts: null word removal")
+    for string_list in tqdm(sentences, total=len(sentences)):
+        tmp.append([x for x in string_list if x!=''])
+    sentences = tmp.copy()
+    del tmp
+    
+    print("\nThesaurus matching")
+    sentences = kw.thesaurus_matching(sentences,thesaurus_file='data/thesaurus/thesaurus_for_ai_keyword_with_() (training).csv')
+    
+    print("\nStitiching tokens")
+    tmp = []
+    for words in tqdm(sentences, total=len(sentences)):
+        tmp.append(' '.join(words))
+    sentences = tmp.copy()
+    del tmp
+    
+    print("\nGB to US")
+    tmp = []
+    for sentence in tqdm(sentences, total=len(sentences)):
+        tmp.append(kw.replace_british_american(sentence,kd.gb2us))
+    sentences = tmp.copy()
+    del tmp
+    
+    sentence_df = pd.DataFrame(indices,columns=['article_index'])
+    sentence_df['sentence'] = sentences
+    sentence_df['year'] = years
+    sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
+    
+# =============================================================================
+# Keyword Extractor
+# =============================================================================
+if MAKE_SENTENCE_CORPUS_ADVANCED_KW is True:    
+    data_with_abstract['TI_AB'] = data_with_abstract.AB
+    data_fresh = data_with_abstract[['TI_AB','PY']].copy()
+    data_fresh['TI_AB'] = data_fresh['TI_AB'].str.lower()
+    
+    del data_with_abstract
+    gc.collect()
+    
+    data_tmp = data_fresh[1:10]
+    data_fresh[-2:-1]
+
+    print("\nSentence extraction")
+    sentences = []
+    years = []
+    indices = []
+    for index,row in tqdm(data_fresh.iterrows(),total=data_fresh.shape[0]):
+        abstract_str = row['TI_AB']
+        year = row['PY']
+        abstract_sentences = re.split('\\n',abstract_str)
+        length = len(abstract_sentences)
+        
+        sentences.extend(abstract_sentences)
+        years.extend([year for x in range(length)])
+        indices.extend([index for x in range(length)])
+        
+    print("\nTokenizing")
+    tmp = []
+    for sentence in tqdm(sentences):
+        tmp.append(word_tokenize(sentence))
+    sentences = tmp.copy()
+    del tmp
+
+    print("\nString pre processing for abstracts: lower and strip")
+    sentences = [list(map(str.lower, x)) for x in sentences]
+    sentences = [list(map(str.strip, x)) for x in sentences]
+    
+    tmp = []
+    print("\nString pre processing for abstracts: lemmatize and stop word removal")
+    for string_list in tqdm(sentences, total=len(sentences)):
+        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+        tmp.append(tmp_list)
+    sentences = tmp.copy()
+    del tmp
+    gc.collect()
+        
+    tmp = []
+    print("\nString pre processing ")
+    for string_list in tqdm(sentences, total=len(sentences)):
+        string_tmp = []
+        for token in string_list:
+            if token == '':
+                string_tmp.append(' | ')
+            else:
+                string_tmp.append(token)
+        tmp.append(string_tmp)
     sentences = tmp.copy()
     del tmp
     
@@ -176,12 +274,19 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     del tmp
     
     print("\nThesaurus matching")
-    sentences = kw.thesaurus_matching(sentences)
+    sentences = kw.thesaurus_matching(sentences,thesaurus_file='data/thesaurus/thesaurus_for_ai_keyword_with_() (testing).csv')
     
-    print("\nStitiching words")
+    print("\nStitiching tokens")
     tmp = []
     for words in tqdm(sentences, total=len(sentences)):
         tmp.append(' '.join(words))
+    sentences = tmp.copy()
+    del tmp
+    
+    print("\nGB to US")
+    tmp = []
+    for sentence in tqdm(sentences, total=len(sentences)):
+        tmp.append(kw.replace_british_american(sentence,kd.gb2us))
     sentences = tmp.copy()
     del tmp
     
@@ -190,7 +295,6 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     sentence_df['year'] = years
     sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
     
-# gc.collect()
 
 if MAKE_REGULAR_CORPUS is False:
     sys.exit('Did not continue to create normal corpus. If you want a corpus, set it to True at init section.')
@@ -223,6 +327,7 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
     unique.columns = ['words']
     unique = list(unique.words.unique())
     len(unique)
+
 # =============================================================================
 # Tokenize (Author Keywords and Abstracts+Titles)
 # =============================================================================
@@ -379,8 +484,8 @@ abstracts_pure = abstracts_pure_backup.copy()
 keywords = keywords_backup.copy()
 keywords_index = keywords_index_backup.copy()
 
-abstracts = kw.thesaurus_matching(abstracts)
-abstracts_pure = kw.thesaurus_matching(abstracts_pure)
+abstracts = kw.thesaurus_matching(abstracts,thesaurus_file='data/thesaurus/thesaurus_for_ai_keyword_with_() (testing).csv')
+abstracts_pure = kw.thesaurus_matching(abstracts_pure,thesaurus_file='data/thesaurus/thesaurus_for_ai_keyword_with_() (testing).csv')
 if PROCESS_KEYWORDS is True:
     keywords = kw.thesaurus_matching(keywords)
     keywords_index = kw.thesaurus_matching(keywords_index)
