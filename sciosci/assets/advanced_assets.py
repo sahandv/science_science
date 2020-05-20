@@ -394,10 +394,15 @@ def fancy_dendrogram(*args, **kwargs):
         figsize = kwargs.pop('figsize', None)
         plt.figure(figsize=figsize)
         
+    if 'title_top' in kwargs:
+        title_top = kwargs.pop('title_top', None)
+        plt.title(title_top)
+    else
+        plt.title('Hierarchical Clustering Dendrogram (truncated)')
+        
     ddata = sch.dendrogram(*args, **kwargs)
 
     if not kwargs.get('no_plot', False):
-        plt.title('Hierarchical Clustering Dendrogram (truncated)')
         plt.xlabel('sample index or (cluster size)')
         plt.ylabel('distance')
         for i, d, c in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
