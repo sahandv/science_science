@@ -18,10 +18,10 @@ tqdm.pandas()
 print('\nInitializing...')
 np.random.seed(50)
 sentence_replacer = False
-root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI 37k/copyr_deflem_stopword_removed_thesaurus_update/'
+root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI 37k/copyr_deflem_stopword_removed_thesaurus May 16/'
 data_abstracts = pd.read_csv(root_path+'1990-2018 abstract_title',names=['abstracts'])
 data_years = pd.read_csv(root_path+'1990-2018 corpus years') #data_abstracts['year'] #
-data_keywords = pd.read_csv(root_path+'../../Taxonomy/1980-2019 300k n-gram author keyword taxonomy.csv')
+data_keywords = pd.read_csv(root_path+'../../Taxonomy/1980-2019 300k n-gram author keyword taxonomy - 95percentile and cleaned.csv')
 
 wanted_grams = [2,3,4,5,6] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
 periods = [[1990,2005],[2005,2008],[2008,2011],[2011,2014],[2014,2017],[2017,2019]]
@@ -90,9 +90,9 @@ for period in tqdm(periods):
 # =============================================================================
 print('\nWriting to disk...')
 for i,period in tqdm(enumerate(period_names)):
-    pd.DataFrame(corpora[i]).to_csv(root_path+'by period/n-gram by 2 repetition keywords/'+period+' abstract_title n_grams',index=False,header=False)
+    pd.DataFrame(corpora[i]).to_csv(root_path+'by period/n-gram by 6 repetition keywords/'+period+' abstract_title n_grams',index=False,header=False)
 
-pd.DataFrame(data_abstracts['abstracts_thesaurus'].values.tolist()).to_csv(root_path+'1900-2019 n-gram by 2 repetition keywords',index=False,header=False)
+pd.DataFrame(data_abstracts['abstracts_thesaurus'].values.tolist()).to_csv(root_path+'1900-2019 n-gram by 6 repetition keywords',index=False,header=False)
 
 
 
