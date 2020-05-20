@@ -397,7 +397,7 @@ def fancy_dendrogram(*args, **kwargs):
     if 'title_top' in kwargs:
         title_top = kwargs.pop('title_top', None)
         plt.title(title_top)
-    else
+    else:
         plt.title('Hierarchical Clustering Dendrogram (truncated)')
         
     ddata = sch.dendrogram(*args, **kwargs)
