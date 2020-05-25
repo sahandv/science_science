@@ -42,7 +42,8 @@ idx = 0
 for grams_count in tqdm(wanted_grams):
     data_keywords_tmp = data_keywords[data_keywords.grams>=wanted_grams[idx]]
     keywords_underscored = data_keywords_tmp.keywords.str.lower().str.strip().str.replace(' ','_').str.upper().values.tolist()
-    keywords_spaced = data_keywords_tmp.keywords.str.lower().str.strip().values.tolist()
+    keywords_underscored = [' '+x+' ' for x in keywords_underscored]
+    keywords_spaced = data_keywords_tmp.keywords.str.lower().values.tolist() #.str.strip()
     thesaurus.append(dict(zip(keywords_spaced,keywords_underscored)))
     idx+=1
 
@@ -90,7 +91,7 @@ for period in tqdm(periods):
 # =============================================================================
 print('\nWriting to disk...')
 for i,period in tqdm(enumerate(period_names)):
-    pd.DataFrame(corpora[i]).to_csv(root_path+'by period/n-gram by 6 repetition keywords/'+period+' abstract_title n_grams',index=False,header=False)
+    pd.DataFrame(corpora[i]).to_csv(root_path+'by period/n-gram by 6 repetition keywords/'+period+' abstract_title',index=False,header=False)
 
 pd.DataFrame(data_abstracts['abstracts_thesaurus'].values.tolist()).to_csv(root_path+'1900-2019 n-gram by 6 repetition keywords',index=False,header=False)
 

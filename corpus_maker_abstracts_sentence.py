@@ -23,7 +23,7 @@ nltk.download('punkt')
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 2017
+year_from = 1990
 year_to = 2019
 
 MAKE_SENTENCE_CORPUS = False
@@ -47,7 +47,7 @@ data_full_relevant = pd.read_csv(data_path_rel)
 sample = data_full_relevant.sample(4)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI 37k/'
-subdir = 'copyr_deflem_stopword_removed_thesaurus_update/' # no_lemmatization_no_stopwords
+subdir = 'copyr_deflem_stopword_removed_thesaurus May 16/' # no_lemmatization_no_stopwords
 gc.collect()
 
 # =============================================================================
@@ -82,6 +82,9 @@ for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
     abstracts.append(abstract)
 data_with_abstract['AB'] = abstracts.copy()
 del  abstracts
+
+source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
+source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
 
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
 year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
