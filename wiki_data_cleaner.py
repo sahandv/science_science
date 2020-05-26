@@ -29,8 +29,8 @@ nltk.download('punkt')
 # =============================================================================
 # Input
 # =============================================================================
-pages_dir = str(Path.home())+'/GoogleDrive/Data/Corpus/AI Wiki Classifications/approaches/'
-root_dir = str(Path.home())+'/GoogleDrive/Data/Corpus/AI Wiki Classifications/approaches/'
+pages_dir = str(Path.home())+'/GoogleDrive/Data/Corpus/AI Wiki Classifications/applications/'
+root_dir = str(Path.home())+'/GoogleDrive/Data/Corpus/AI Wiki Classifications/applications/'
 subdir = 'clean/'
 
 # =============================================================================
