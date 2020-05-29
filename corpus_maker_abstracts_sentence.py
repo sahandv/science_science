@@ -23,8 +23,8 @@ nltk.download('punkt')
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 1990
-year_to = 2019
+year_from = 2017
+year_to = 2020
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
@@ -38,7 +38,7 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/Relevant Results _ DOI duplication - scopus keywords - document types - 31 july.csv'
+data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
@@ -46,9 +46,18 @@ data_full_relevant = pd.read_csv(data_path_rel)
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
-root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI 37k/'
-subdir = 'copyr_deflem_stopword_removed_thesaurus May 16/' # no_lemmatization_no_stopwords
+root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/'
+subdir = 'copyr_deflem_stopword_removed_thesaurus May 28/' # no_lemmatization_no_stopwords
 gc.collect()
+
+
+data_full_relevant['PY'] = data_full_relevant['Year']
+data_full_relevant['AB'] = data_full_relevant['Abstract']
+data_full_relevant['TI'] = data_full_relevant['Title']
+data_full_relevant['DE'] = data_full_relevant['Author Keywords']
+data_full_relevant['ID'] = data_full_relevant['Index Keywords']
+data_full_relevant['SO'] = data_full_relevant['Source title']
+
 
 # =============================================================================
 # Initial Pre-Processing : 
@@ -173,7 +182,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     tmp = []
     print("\nString pre processing for abstracts: lemmatize and stop word removal")
     for string_list in tqdm(sentences, total=len(sentences)):
-        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+        tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
         tmp.append(tmp_list)
     sentences = tmp.copy()
     del tmp

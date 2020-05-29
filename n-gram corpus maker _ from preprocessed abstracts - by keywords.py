@@ -18,13 +18,13 @@ tqdm.pandas()
 print('\nInitializing...')
 np.random.seed(50)
 sentence_replacer = False
-root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI 37k/copyr_deflem_stopword_removed_thesaurus May 16/'
-data_abstracts = pd.read_csv(root_path+'1990-2018 abstract_title',names=['abstracts'])
-data_years = pd.read_csv(root_path+'1990-2018 corpus years') #data_abstracts['year'] #
+root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/copyr_deflem_stopword_removed_thesaurus May 28/'
+data_abstracts = pd.read_csv(root_path+'1990-2019 abstract_title',names=['abstracts'])
+data_years = pd.read_csv(root_path+'1990-2019 corpus years') #data_abstracts['year'] #
 data_keywords = pd.read_csv(root_path+'../../Taxonomy/1980-2019 300k n-gram author keyword taxonomy - 95percentile and cleaned.csv')
 
 wanted_grams = [2,3,4,5,6] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
-periods = [[1990,2005],[2005,2008],[2008,2011],[2011,2014],[2014,2017],[2017,2019]]
+periods = [[1990,2005],[2005,2008],[2008,2011],[2011,2014],[2014,2017],[2017,2020]]
 thesaurus = []
 
 # =============================================================================
