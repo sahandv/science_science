@@ -514,3 +514,62 @@ def replace_british_american(text, mydict):
     for gb, us in mydict.items():
         text = text.replace(us, gb)
     return text
+
+def get_abstract_keywords(corpus,keywords_wanted,max_df=0.9,max_features=None):
+    """
+    Parameters
+    ----------
+    corpus : list
+        An iterable list of  of tokens like: ['token1','token2',...]
+    keywords_wanted : int
+        Number of wanted keywords
+    max_df : float, optional
+        TF-iDF max_df. The default is 0.9.
+    max_features : int, optional
+        The max number of vectorizer volcabulary features. The default is None.
+
+    Returns
+    -------
+    keywords_tfidf : list
+        A list of important words for the list of words given.
+
+    """
+    cv=CountVectorizer(max_df=max_df,stop_words=stop_words, max_features=max_features, ngram_range=(1,1))
+    X=cv.fit_transform(corpus)
+    # get feature names
+    feature_names=cv.get_feature_names()
+    tfidf_transformer=TfidfTransformer(smooth_idf=True,use_idf=True)
+    tfidf_transformer.fit(X)
+    keywords_tfidf = []
+    keywords_sorted = []
+    for doc in tqdm(corpus,total=len(corpus)):
+        tf_idf_vector=tfidf_transformer.transform(cv.transform([doc]))
+        sorted_items=kw.sort_coo(tf_idf_vector.tocoo())
+        keywords_sorted.append(sorted_items)
+        keywords_tfidf.append(kw.extract_topn_from_vector(feature_names,sorted_items,keywords_wanted))
+    return keywords_tfidf
+
+def get_corpus_top_keywords(abstract_keywords_dict=None):
+    """
+    Parameters
+    ----------
+    abstract_keywords_dict : dictionary
+        A dict input in form of tokens and their scores.
+
+    Returns
+    -------
+    Dataframe
+        Dataframe with columns of terms and scores, sorted by scores.
+
+    """
+    if abstract_keywords_dict == None:
+        print("keywords should be provided")
+        return False
+    terms = []
+    values = []
+    for doc in abstract_keywords_dict:
+        if doc != None:
+            terms = terms+list(doc.keys())
+            values = values+list(doc.values())
+    terms_df = pd.DataFrame({'terms':terms,'value':values}).groupby('terms').sum().sort_values('value',ascending=False)
+    return terms_df
