@@ -66,8 +66,7 @@ def topic_label_maker(terms,scores,ratio=2,prefix='',limit=None):
     
     Outputs a list of the most important keywords for each column based on the 
     scores of each column (topic/cluster) should be named sequentialy, starting 
-    from 0, as string ratio: the threshold of keyword score ratio to the top 
-    keyword score
+    from 0, as string
     
     For the method to work properly, make sure the column names for scores and 
     terms are int
@@ -75,20 +74,21 @@ def topic_label_maker(terms,scores,ratio=2,prefix='',limit=None):
     
     Parameters
     ----------
-    terms : Pandas Dataframe of size n*m
-        DESCRIPTION.
-    scores : Pandas Dataframe of size n*m
-        DESCRIPTION.
-    ratio : TYPE, optional
-        DESCRIPTION. The default is 2.
-    prefix : TYPE, optional
-        DESCRIPTION. The default is ''.
-    limit : TYPE, optional
-        DESCRIPTION. The default is None.
+    terms : Pandas Dataframe
+        Pandas Dataframe of size n*m.
+    scores : Pandas Dataframe
+        Pandas Dataframe of size n*m.
+    ratio : float, optional
+        Cut-off ratio for scores. the Threshold of keyword score ratio to the top 
+    keyword score The default is 2.
+    prefix : string, optional
+        Label prefix. The default is ''.
+    limit : int, optional
+        Maximum number of label sections. The default is None, which is no limit.
 
     Returns List
     -------
-    None.
+    List of strings for with size n.
     
     -------
     For the method to work properly, make sure the column names for scores and terms are int

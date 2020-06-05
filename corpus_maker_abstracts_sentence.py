@@ -23,8 +23,8 @@ nltk.download('punkt')
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 2017
-year_to = 2020
+year_from = 1900
+year_to = 1990
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
@@ -37,7 +37,6 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-
 data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
@@ -47,9 +46,8 @@ data_full_relevant = pd.read_csv(data_path_rel)
 sample = data_full_relevant.sample(4)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/'
-subdir = 'copyr_deflem_stopword_removed_thesaurus May 28/' # no_lemmatization_no_stopwords
+subdir = 'copyr_deflem_stopword_removed_thesaurus May 28/by period/' # no_lemmatization_no_stopwords
 gc.collect()
-
 
 data_full_relevant['PY'] = data_full_relevant['Year']
 data_full_relevant['AB'] = data_full_relevant['Abstract']
@@ -58,7 +56,10 @@ data_full_relevant['DE'] = data_full_relevant['Author Keywords']
 data_full_relevant['ID'] = data_full_relevant['Index Keywords']
 data_full_relevant['SO'] = data_full_relevant['Source title']
 
-
+# 
+data_wrong = data_full_relevant[data_full_relevant['AB'].str.contains("abstract available")].index
+data_wrong = list(data_wrong)
+data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
 # =============================================================================
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
