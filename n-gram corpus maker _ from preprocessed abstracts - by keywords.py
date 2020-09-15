@@ -19,14 +19,17 @@ print('\nInitializing...')
 np.random.seed(50)
 sentence_replacer = False
 root_path = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/copyr_deflem_stopword_removed_thesaurus May 28/'
-data_abstracts = pd.read_csv(root_path+'by period/1900-2004 abstract_title',names=['abstracts'])
-data_years = pd.read_csv(root_path+'by period/1900-2004 corpus years') #data_abstracts['year'] #
+data_abstracts = pd.read_csv(root_path+'by period/1900-2019 abstract_title',names=['abstracts'])
+data_years = pd.read_csv(root_path+'by period/1900-2019 corpus years') #data_abstracts['year'] #
 data_keywords = pd.read_csv(root_path+'../../Taxonomy/1980-2019 300k n-gram author keyword taxonomy - 95percentile and cleaned.csv')
 
 wanted_grams = [2,3,4,5,6] # Statistically, 5 seems to be a proper cutting point as the frequency table suggests. Refer to : "Get statsitic of n in n-grams of corpus" block in drafts.
-periods = [[1900,1990],[1990,1995],[1995,2000],[2000,2005]]
+periods = [[1900,2020]]#,[1990,1995],[1995,2000],[2000,2005]]
 thesaurus = []
 
+data_years.hist(figsize=(15,5),bins=50,color='orange')#,cumulative=True)
+data_keywords.grams.hist(figsize=(8,5),color='orange')
+data_keywords[data_keywords['grams']>=6]
 # =============================================================================
 # Prepare keywords
 # =============================================================================
