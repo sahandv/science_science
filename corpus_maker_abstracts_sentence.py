@@ -24,7 +24,7 @@ nltk.download('punkt')
 # Read data and Initialize
 # =============================================================================
 year_from = 1900
-year_to = 1990
+year_to = 2020
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
@@ -37,7 +37,8 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
+data_path_rel = '/home/sahand/GoogleDrive/Data/embedding_benchmark/kpris_data.csv'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
