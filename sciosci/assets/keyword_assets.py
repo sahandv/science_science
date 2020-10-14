@@ -77,6 +77,28 @@ def lemmatization_spacy(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
         texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
     return texts_out
 
+
+def indexed_text_to_string(indexed_text_dict,text_length):
+    """
+    Parameters
+    ----------
+    indexed_text_dict : Dict
+        Indexed text dictionary
+    text_length : Int
+
+    Returns
+    -------
+    String
+        Concatenated string
+    """
+    import numpy as np
+
+    string_text = np.array(['']*(text_length),dtype='U100')
+    for key in indexed_text_dict.keys():
+        string_text[indexed_text_dict[key]] = key
+    return ' '.join(list(string_text))
+
+
 def get_wordnet_pos(word,download_nltk=False):
     """Map POS tag to first character lemmatize() accepts"""
     import nltk
