@@ -11,7 +11,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import re
-from sciosci.assets import keyword_assets as kw
+from sciosci.assets import text_assets as kw
 from sciosci.assets import keyword_dictionaries as kd
 
 import nltk
@@ -23,7 +23,7 @@ nltk.download('punkt')
 # =============================================================================
 # Read data and Initialize
 # =============================================================================
-year_from = 1900
+year_from = 0
 year_to = 2020
 
 MAKE_SENTENCE_CORPUS = False
@@ -33,29 +33,29 @@ MAKE_REGULAR_CORPUS = True
 GET_WORD_FREQ_IN_SENTENCE = False
 PROCESS_KEYWORDS = False
 
-stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this']
+stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this','...']
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/embedding_benchmark/kpris_data.csv'
-# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
-# data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
-# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
+data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/embedding_benchmark/kpris_data.csv'
+# data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
+# data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+# data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
-root_dir = '/home/sahand/GoogleDrive/Data/embedding_benchmark/'
+root_dir = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/embedding_benchmark/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
 gc.collect()
 
-data_full_relevant['PY'] = 0
+data_full_relevant['PY'] = 2018
 data_full_relevant['AB'] = data_full_relevant['abstract']
 data_full_relevant['TI'] = ''
-data_full_relevant['DE'] = data_full_relevant['Author Keywords']
-data_full_relevant['ID'] = data_full_relevant['Index Keywords']
-data_full_relevant['SO'] = data_full_relevant['Source title']
+data_full_relevant['DE'] = np.nan
+data_full_relevant['ID'] = ''
+data_full_relevant['SO'] = ''
 
 # 
 data_wrong = data_full_relevant[data_full_relevant['AB'].str.contains("abstract available")].index
@@ -75,7 +75,7 @@ data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
 data_with_keywords = data_filtered[pd.notnull(data_filtered['DE'])]
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
-# Remove numbers from abstracts to eliminate decimal points and other unnecessary data
+# Remove special chars and strings from abstracts
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
@@ -84,6 +84,7 @@ data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
 
+# Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 # gc.collect()
 abstracts = []
 for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
@@ -320,7 +321,7 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
     import numpy as np
     from tqdm import tqdm
     
-    file = root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus abstract-title'#'/home/sahand/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
+    file = root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus abstract-title'#'/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
     file = pd.read_csv(file)
     size = 500000
     unique = []
@@ -397,14 +398,14 @@ keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 tmp_data = []
 print("\nString pre processing for ababstracts_purestracts")
 for string_list in tqdm(abstracts, total=len(abstracts)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='PorterStemmer',lemmatization='ALL',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts = tmp_data.copy()
 del tmp_data
 
 tmp_data = []
 for string_list in tqdm(abstracts_pure, total=len(abstracts_pure)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts_pure = tmp_data.copy()
 del tmp_data
@@ -511,7 +512,7 @@ if PROCESS_KEYWORDS is True:
 # =============================================================================
 # Term to string corpus for co-word analysis
 # =============================================================================
-print("\nTerm to string corpus for co-word analysis")
+print("\nTerm to string corpus")
 corpus_abstract = []
 for words in tqdm(abstracts, total=len(abstracts)):
     corpus_abstract.append(' '.join(words))
@@ -632,9 +633,9 @@ corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
-# corpus_abstract.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys',index=False,header=False)
+corpus_abstract.to_csv(root_dir+subdir+'abstract_title',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+''+' abstract_title',index=False,header=False)
+corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title lemm stem',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)

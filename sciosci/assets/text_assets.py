@@ -173,11 +173,11 @@ def string_pre_processing(input_str,stemming_method='PorterStemmer',stop_words_e
         lemmatizer=WordNetLemmatizer()
 #        input_str = [lemmatizer.lemmatize(word) for word in input_str]
         if lemmatization=='ALL':
-            print('lemmatizing All words in',input_str)
+            # print('lemmatizing All words in',input_str)
             input_str = [lemmatizer.lemmatize(w, get_wordnet_pos(w)) for w in input_str]
-            print('done')
+            # print('done')
         elif lemmatization=='DEF':
-            print('lemmatizing Default words (i.e. nouns)')
+            # print('lemmatizing Default words (i.e. nouns)')
             input_str = [lemmatizer.lemmatize(w) for w in input_str]
         else:
             input_str = [lemmatizer.lemmatize(w, lemmatization) for w in input_str]
