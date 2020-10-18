@@ -24,7 +24,7 @@ nltk.download('punkt')
 # Read data and Initialize
 # =============================================================================
 year_from = 0
-year_to = 2020
+year_to = 2021
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
@@ -37,7 +37,7 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/embedding_benchmark/kpris_data.csv'
+data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/KPRIS/kpris_data.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
@@ -46,7 +46,7 @@ data_full_relevant = pd.read_csv(data_path_rel)
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
-root_dir = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/embedding_benchmark/'
+root_dir = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/KPRIS/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
 gc.collect()
 
@@ -398,7 +398,7 @@ keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 tmp_data = []
 print("\nString pre processing for ababstracts_purestracts")
 for string_list in tqdm(abstracts, total=len(abstracts)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='PorterStemmer',lemmatization='ALL',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts = tmp_data.copy()
 del tmp_data
@@ -633,9 +633,9 @@ corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
-corpus_abstract.to_csv(root_dir+subdir+'abstract_title',index=False,header=False)
+corpus_abstract.to_csv(root_dir+subdir+'abstract_title deflemm',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title lemm stem',index=False,header=False)
+# corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title lemm stem',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)

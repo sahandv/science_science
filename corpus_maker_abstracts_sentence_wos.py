@@ -11,7 +11,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import re
-from sciosci.assets import keyword_assets as kw
+from sciosci.assets import text_assets as kw
 from sciosci.assets import keyword_dictionaries as kd
 
 import nltk
@@ -28,7 +28,7 @@ year_to = 2021
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
-MAKE_SENTENCE_CORPUS_ADVANCED = True
+MAKE_SENTENCE_CORPUS_ADVANCED = False
 MAKE_REGULAR_CORPUS = True
 GET_WORD_FREQ_IN_SENTENCE = False
 PROCESS_KEYWORDS = False
@@ -622,9 +622,9 @@ corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
-# corpus_abstract.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys',index=False,header=False)
+corpus_abstract.to_csv(root_dir+subdir+'abstract_title stem lemm',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title',index=False,header=False)
+# corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
