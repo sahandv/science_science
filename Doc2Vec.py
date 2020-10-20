@@ -25,9 +25,11 @@ model.save(fname)
 # =============================================================================
 # Test Model
 # =============================================================================
-fname = '/home/sahand/GoogleDrive/Data/embedding_benchmark/clean/models/doc2vec/benchmark_train_300'
+fname = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Doc2Vec Models/patent corpus'
 model = Doc2Vec.load(fname)
 
+fname = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/KPRIS/clean/abstract_title'
+texts = pd.read_csv('/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Unsupervised Training/Docs/patent_wos',names=['abstract'])['abstract'].values.tolist()
 test_docs = [doc.lower().split() for doc in texts]
 
 start_alpha=0.01
@@ -36,4 +38,4 @@ X=[]
 for d in tqdm(test_docs):
     X.append( model.infer_vector(d, alpha=start_alpha, steps=infer_epoch))
 X_df = pd.DataFrame(X)
-X_df.to_csv('/home/sahand/GoogleDrive/Data/embedding_benchmark/clean/Document Embedding/doc2vec/x300.csv',index=False)
+X_df.to_csv('/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/KPRIS/embeddings/Doc2Vec patent corpus',index=False)
