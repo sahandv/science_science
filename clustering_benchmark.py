@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from random import randint
 
 from sklearn.decomposition import PCA
-from sklearn.cluster import AgglomerativeClustering, KMeans, SpectralClustering, AffinityPropagation
+from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
 from sklearn import metrics
 from sklearn.metrics.cluster import silhouette_score,homogeneity_score,adjusted_rand_score
 from sklearn.metrics.cluster import normalized_mutual_info_score,adjusted_mutual_info_score
@@ -49,34 +49,85 @@ X_task_1 = vectors_task_1.values
 Y_task_1 = labels_task_1_f[0]
 n_clusters_task_1 = 2
 
-results = pd.DataFrame([],columns=['Silhouette','Homogeneity','NMI','AMI','ARI'])
+results = pd.DataFrame([],columns=['Method','Silhouette','Homogeneity','NMI','AMI','ARI'])
 rand_states = []
 method_names = []
+# =============================================================================
+# Evaluation method
+# =============================================================================
+def evaluate(X,Y,predicted_labels):
+    
+    df = pd.DataFrame(predicted_labels,columns=['label'])
+    if len(df.groupby('label').groups)<2:
+        return [0,0,0,0,0]
+    
+    return [silhouette_score(X, predicted_labels, metric='euclidean'),
+                    homogeneity_score(Y, predicted_labels),
+                    normalized_mutual_info_score(Y, predicted_labels),
+                    adjusted_mutual_info_score(Y, predicted_labels),
+                    adjusted_rand_score(Y, predicted_labels)]
 # =============================================================================
 # K-means
 # =============================================================================
 for fold in tqdm(range(20)):
     seed = randint(0,10**5)
     rand_states.append(seed)
-    method_names.append('k-means')
-    kmeans = KMeans(n_clusters=n_clusters, random_state=seed).fit(X)
-    predicted_labels = kmeans.labels_
-    kmeans_results = [silhouette_score(X, predicted_labels, metric='euclidean'),
-                    homogeneity_score(Y, predicted_labels),
-                    normalized_mutual_info_score(Y, predicted_labels),
-                    adjusted_mutual_info_score(Y, predicted_labels),
-                    adjusted_rand_score(Y, predicted_labels)]
-    kmeans_results = pd.Series(kmeans_results, index = results.columns)
-    results = results.append(kmeans_results, ignore_index=True)
+    model = KMeans(n_clusters=n_clusters, random_state=seed).fit(X)
+    predicted_labels = model.labels_
+    tmp_results = ['k-means']+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
-max = results.max(axis=0)
-
+maxx = results.max(axis=0)
+print('k-means')
+print(mean)
+print(maxx)
+# =============================================================================
+# K-means with init='k-means++'
+# =============================================================================
+for fold in tqdm(range(20)):
+    seed = randint(0,10**5)
+    rand_states.append(seed)
+    model = KMeans(n_clusters=n_clusters,init='k-means++', random_state=seed).fit(X)
+    predicted_labels = model.labels_
+    tmp_results = ['k-means++']+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print('k-means')
+print(mean)
+print(maxx)
 # =============================================================================
 # Agglomerative
 # =============================================================================
-
-
-
+for fold in tqdm(range(4)):
+    model = AgglomerativeClustering(n_clusters=n_clusters,linkage='ward').fit(X)
+    predicted_labels = model.labels_
+    tmp_results = ['Agglomerative']+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print('Agglomerative')
+print(mean)
+print(maxx)
+# =============================================================================
+# DBSCAN
+# =============================================================================
+eps=0.000001
+for fold in tqdm(range(19)):
+    eps = eps+0.05
+    model = DBSCAN(eps=eps, min_samples=10,n_jobs=15).fit(X)
+    predicted_labels = model.labels_
+    tmp_results = ['DBSCAN']+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print('DBSCAN')
+print(mean)
+print(maxx)
 # =============================================================================
 # Deep
 # =============================================================================
