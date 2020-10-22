@@ -343,12 +343,44 @@ def load_data(data_path='data/custom',minmax_scale_custom_data=False,task=None):
     return x,y
 
 def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC weights',minmax_scale_custom_data:bool=False,
-                   update_interval=30,pretrain_epochs=150,initialization='VarianceScaling',
-                   pretrain_optimizer='adam',architecture=[500, 500, 2000, 10],n_clusters=5,
-                   batch_size=256,):
+                   update_interval:int=30,pretrain_epochs:int=150,initialization='VarianceScaling',
+                   pretrain_optimizer='adam',architecture:list=[500, 500, 2000, 10],n_clusters:int=5,
+                   batch_size:int=256,):
+    """
+    Parameters
+    ----------
+    x : np.array
+        Input array (features).
+    y : np.array, list, optional
+        labels. The default is None. If None, will pass None to pretrain and use x for AE.
+    weight_load_dir : str, optional
+        DESCRIPTION. The default is None.
+    save_dir : str, optional
+        The default is 'DEC weights'.
+    minmax_scale_custom_data : bool, optional
+        The default is False.
+    update_interval : int, optional
+        The default is 30.
+    pretrain_epochs : int, optional
+        The default is 150.
+    initialization : str,initializer function, optional
+        The default is 'VarianceScaling'.
+    pretrain_optimizer : str, keras optimizer function, optional
+        The default is 'adam'.
+    architecture : list, optional
+        The default is [500, 500, 2000, 10].
+    n_clusters : int, optional
+        The default is 5.
+    batch_size : int, optional
+        The default is 256.
+
+    Returns
+    -------
+    y_pred : np.array
+        Predicted labels for clustering.
+    """
     import os
     from sklearn.preprocessing import MinMaxScaler
-    import pandas as pd
     
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
