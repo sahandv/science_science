@@ -342,7 +342,7 @@ def load_data(data_path='data/custom',minmax_scale_custom_data=False,task=None):
     
     return x,y
 
-def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC weights',minmax_scale_custom_data:bool=False,
+def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC_weights',minmax_scale_custom_data:bool=False,
                    update_interval:int=30,pretrain_epochs:int=150,initialization='VarianceScaling',
                    pretrain_optimizer='adam',architecture:list=[500, 500, 2000, 10],n_clusters:int=5,
                    batch_size:int=256,):
@@ -354,7 +354,7 @@ def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC weights',
     y : np.array, list, optional
         labels. The default is None. If None, will pass None to pretrain and use x for AE.
     weight_load_dir : str, optional
-        DESCRIPTION. The default is None.
+        The default is None.
     save_dir : str, optional
         The default is 'DEC weights'.
     minmax_scale_custom_data : bool, optional
@@ -363,10 +363,10 @@ def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC weights',
         The default is 30.
     pretrain_epochs : int, optional
         The default is 150.
-    initialization : str,initializer function, optional
-        The default is 'VarianceScaling'.
-    pretrain_optimizer : str, keras optimizer function, optional
-        The default is 'adam'.
+    initialization : str, optional
+        Initializer function. The default is 'VarianceScaling'.
+    pretrain_optimizer : str, optional
+        Keras optimizer function. The default is 'adam'.
     architecture : list, optional
         The default is [500, 500, 2000, 10].
     n_clusters : int, optional
