@@ -69,36 +69,37 @@ def evaluate(X,Y,predicted_labels):
 # =============================================================================
 # K-means
 # =============================================================================
+print('\n- k-means random -----------------------')
 for fold in tqdm(range(20)):
     seed = randint(0,10**5)
-    model = KMeans(n_clusters=n_clusters, random_state=seed).fit(X)
+    model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
     predicted_labels = model.labels_
-    tmp_results = ['k-means','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+    tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('\n- k-means -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
 # K-means with init='k-means++'
 # =============================================================================
+print('\n- k-means++ -----------------------')
 for fold in tqdm(range(20)):
     seed = randint(0,10**5)
-    model = KMeans(n_clusters=n_clusters,init='k-means++', random_state=seed).fit(X)
+    model = KMeans(n_clusters=n_clusters,n_init=20,init='k-means++', random_state=seed).fit(X)
     predicted_labels = model.labels_
     tmp_results = ['k-means++','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('\n- k-means++ -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
 # Agglomerative
 # =============================================================================
+print('\n- Agglomerative -----------------------')
 for fold in tqdm(range(4)):
     model = AgglomerativeClustering(n_clusters=n_clusters,linkage='ward').fit(X)
     predicted_labels = model.labels_
@@ -107,13 +108,13 @@ for fold in tqdm(range(4)):
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('\n- Agglomerative -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
 # DBSCAN
 # =============================================================================
 eps=0.000001
+print('\n- DBSCAN -----------------------')
 for fold in tqdm(range(19)):
     eps = eps+0.05
     model = DBSCAN(eps=eps, min_samples=10,n_jobs=15).fit(X)
@@ -123,7 +124,6 @@ for fold in tqdm(range(19)):
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('\n- DBSCAN -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
@@ -138,19 +138,38 @@ archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
          [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
          [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
          [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
+print('\n- DEC -----------------------')
 for fold in tqdm(archs):
-    model = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=10)
-    predicted_labels = model.labels_
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=30)
     tmp_results = ['DEC',str(fold)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('\n- DBSCAN -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
 # Deep with min_max_scaling
 # =============================================================================
-archs = []
-
+archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
+         [500, 500, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 1000, 100],
+         [100, 300, 600, 10],[300, 500, 2000, 10],[700, 1000, 2000, 10],
+         [200, 500, 10],[500, 1000, 10],[1000, 2000, 10],
+         [200, 500, 100],[500, 1000, 100],[1000, 2000, 100],
+         [1000, 500, 10],[500, 200, 10],[200, 100, 10],
+         [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
+         [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
+         [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
+print('\n- DEC -----------------------')
+for fold in tqdm(archs):
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=True,n_clusters=5,architecture=fold,pretrain_epochs=30)
+    tmp_results = ['DEC minmax scaler',str(fold)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print(mean)
+print(maxx)
+# =============================================================================
+# 
+# =============================================================================

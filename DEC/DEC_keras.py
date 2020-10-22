@@ -24,7 +24,7 @@ from keras.utils.vis_utils import plot_model
 try:
     import metrics
 except :
-    import DEC.metrics
+    import DEC.metrics as metrics
 
 def autoencoder(dims, act='relu', init='glorot_uniform', selu=False, drop=False):
     """
@@ -413,7 +413,7 @@ def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC_weights',
     dec.compile(optimizer=SGD(0.01, 0.9), loss='kld')
     y_pred = dec.fit(x, y=y, tol=tol, maxiter=maxiter, batch_size=batch_size,
                      update_interval=update_interval, save_dir=save_dir)
-    print('acc:', metrics.acc(y, y_pred))
+    # print('acc:', metrics.acc(y, y_pred))
     print('clustering time: ', (time() - t0))
     return y_pred
     
