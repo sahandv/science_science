@@ -25,7 +25,9 @@ from sklearn.manifold import TSNE
 from sklearn.feature_extraction.text import TfidfTransformer , TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
+
 from sciosci.assets import text_assets as ta
+from DEC import DEC_keras
 
 # =============================================================================
 # Load data and init
@@ -125,7 +127,12 @@ print('\n- DBSCAN -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
-# Deep
+# Deep with min_max_scaling
 # =============================================================================
+archs = []
 
+# =============================================================================
+# Deep no min_max_scaling
+# =============================================================================
+archs = []
 
