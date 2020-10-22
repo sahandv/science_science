@@ -20,9 +20,11 @@ from keras.optimizers import SGD
 from keras import callbacks
 from keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
-import metrics
 from keras.utils.vis_utils import plot_model
-
+try:
+    import metrics
+except :
+    import DEC.metrics
 
 def autoencoder(dims, act='relu', init='glorot_uniform', selu=False, drop=False):
     """
@@ -345,7 +347,7 @@ def load_data(data_path='data/custom',minmax_scale_custom_data=False,task=None):
 def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC_weights',minmax_scale_custom_data:bool=False,
                    update_interval:int=30,pretrain_epochs:int=150,initialization='VarianceScaling',
                    pretrain_optimizer='adam',architecture:list=[500, 500, 2000, 10],n_clusters:int=5,
-                   batch_size:int=256,):
+                   batch_size:int=256,tol:float=0.001,maxiter:int=2e4):
     """
     Parameters
     ----------
@@ -373,7 +375,10 @@ def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC_weights',
         The default is 5.
     batch_size : int, optional
         The default is 256.
-
+    tol : float, optional
+        Tolerance threshold. The default is 0.001.
+    maxiter : int, optional
+        Max clustering iterations. The default is 2e4.
     Returns
     -------
     y_pred : np.array
@@ -406,8 +411,8 @@ def DEC_simple_run(x,y=None,weight_load_dir:str=None,save_dir:str='DEC_weights',
     dec.model.summary()
     t0 = time()
     dec.compile(optimizer=SGD(0.01, 0.9), loss='kld')
-    y_pred = dec.fit(x, y=y, tol=args.tol, maxiter=args.maxiter, batch_size=args.batch_size,
-                     update_interval=update_interval, save_dir=args.save_dir)
+    y_pred = dec.fit(x, y=y, tol=tol, maxiter=maxiter, batch_size=batch_size,
+                     update_interval=update_interval, save_dir=save_dir)
     print('acc:', metrics.acc(y, y_pred))
     print('clustering time: ', (time() - t0))
     return y_pred

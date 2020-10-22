@@ -139,7 +139,7 @@ archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
          [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
          [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
 for fold in tqdm(archs):
-    model = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold)
+    model = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=10)
     predicted_labels = model.labels_
     tmp_results = ['DEC',str(fold)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
