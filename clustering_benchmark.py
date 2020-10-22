@@ -49,9 +49,7 @@ X_task_1 = vectors_task_1.values
 Y_task_1 = labels_task_1_f[0]
 n_clusters_task_1 = 2
 
-results = pd.DataFrame([],columns=['Method','Silhouette','Homogeneity','NMI','AMI','ARI'])
-rand_states = []
-method_names = []
+results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
 # =============================================================================
 # Evaluation method
 # =============================================================================
@@ -71,15 +69,14 @@ def evaluate(X,Y,predicted_labels):
 # =============================================================================
 for fold in tqdm(range(20)):
     seed = randint(0,10**5)
-    rand_states.append(seed)
     model = KMeans(n_clusters=n_clusters, random_state=seed).fit(X)
     predicted_labels = model.labels_
-    tmp_results = ['k-means']+evaluate(X,Y,predicted_labels)
+    tmp_results = ['k-means','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('k-means')
+print('\n- k-means -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
@@ -87,15 +84,14 @@ print(maxx)
 # =============================================================================
 for fold in tqdm(range(20)):
     seed = randint(0,10**5)
-    rand_states.append(seed)
     model = KMeans(n_clusters=n_clusters,init='k-means++', random_state=seed).fit(X)
     predicted_labels = model.labels_
-    tmp_results = ['k-means++']+evaluate(X,Y,predicted_labels)
+    tmp_results = ['k-means++','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('k-means')
+print('\n- k-means++ -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
@@ -104,12 +100,12 @@ print(maxx)
 for fold in tqdm(range(4)):
     model = AgglomerativeClustering(n_clusters=n_clusters,linkage='ward').fit(X)
     predicted_labels = model.labels_
-    tmp_results = ['Agglomerative']+evaluate(X,Y,predicted_labels)
+    tmp_results = ['Agglomerative','ward']+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('Agglomerative')
+print('\n- Agglomerative -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
@@ -120,12 +116,12 @@ for fold in tqdm(range(19)):
     eps = eps+0.05
     model = DBSCAN(eps=eps, min_samples=10,n_jobs=15).fit(X)
     predicted_labels = model.labels_
-    tmp_results = ['DBSCAN']+evaluate(X,Y,predicted_labels)
+    tmp_results = ['DBSCAN','eps '+str(eps)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 mean = results.mean(axis=0)
 maxx = results.max(axis=0)
-print('DBSCAN')
+print('\n- DBSCAN -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
