@@ -27,7 +27,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
 
 from sciosci.assets import text_assets as ta
-from DEC import DEC_keras
+from DEC.DEC_keras import DEC_simple_run
 
 # =============================================================================
 # Load data and init
@@ -127,12 +127,30 @@ print('\n- DBSCAN -----------------------')
 print(mean)
 print(maxx)
 # =============================================================================
-# Deep with min_max_scaling
-# =============================================================================
-archs = []
-
-# =============================================================================
 # Deep no min_max_scaling
+# =============================================================================
+archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
+         [500, 500, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 1000, 100],
+         [100, 300, 600, 10],[300, 500, 2000, 10],[700, 1000, 2000, 10],
+         [200, 500, 10],[500, 1000, 10],[1000, 2000, 10],
+         [200, 500, 100],[500, 1000, 100],[1000, 2000, 100],
+         [1000, 500, 10],[500, 200, 10],[200, 100, 10],
+         [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
+         [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
+         [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
+for fold in tqdm(archs):
+    model = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold)
+    predicted_labels = model.labels_
+    tmp_results = ['DEC',str(fold)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print('\n- DBSCAN -----------------------')
+print(mean)
+print(maxx)
+# =============================================================================
+# Deep with min_max_scaling
 # =============================================================================
 archs = []
 
