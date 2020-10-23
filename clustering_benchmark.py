@@ -140,7 +140,7 @@ archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
          [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
 print('\n- DEC -----------------------')
 for fold in tqdm(archs):
-    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=150)
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=300)
     tmp_results = ['DEC',str(fold)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
@@ -162,7 +162,7 @@ archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
          [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
 print('\n- DEC -----------------------')
 for fold in tqdm(archs):
-    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=True,n_clusters=5,architecture=fold,pretrain_epochs=150)
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=True,n_clusters=5,architecture=fold,pretrain_epochs=300)
     tmp_results = ['DEC minmax scaler',str(fold)]+evaluate(X,Y,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
