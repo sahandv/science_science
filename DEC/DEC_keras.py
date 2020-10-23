@@ -24,7 +24,13 @@ from keras.utils.vis_utils import plot_model
 try:
     import metrics
 except :
-    import DEC.metrics as metrics
+    try:
+        import DEC.metrics as metrics
+    except:
+        try:
+            import science_science.DEC.metrics as metrics
+        except:
+            print('Could not load metrics!')
 
 def autoencoder(dims, act='relu', init='glorot_uniform', selu=False, drop=False):
     """
