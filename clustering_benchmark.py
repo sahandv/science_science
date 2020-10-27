@@ -32,9 +32,9 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 # Load data and init
 # =============================================================================
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent corpus"
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/FastText Avg patent_wos corpus"
 label_address =  datapath+"Corpus/KPRIS/labels"
 
 vectors = pd.read_csv(data_address)
@@ -148,6 +148,21 @@ mean = results.mean(axis=0)
 maxx = results.max(axis=0)
 print(mean)
 print(maxx)
+
+# =============================================================================
+# Deep no min_max_scaling --- new hyper parameters
+# =============================================================================
+archs = [[700, 1000, 2000, 10]]
+print('\n- DEC 1-----------------------')
+for fold in tqdm(archs):
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=300)
+    tmp_results = ['DEC',str(fold)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print(mean)
+print(maxx)
 # =============================================================================
 # Deep with min_max_scaling
 # =============================================================================
@@ -175,3 +190,19 @@ print(maxx)
 # =============================================================================
 results_df = pd.DataFrame(results)
 results_df.to_csv(data_address+' clustering results',index=False)
+
+
+
+
+#%%
+# =============================================================================
+# Performance evaluation
+# =============================================================================
+
+import pandas as pd
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/Doc2Vec patent_wos corpus clustering results _ new 3"
+df = pd.read_csv(data_address)
+max1 = df.groupby(['Method'], sort=False).max()
+max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
+max3 = df[df.groupby(['Method'])['NMI'].transform(max) == df['NMI']]
