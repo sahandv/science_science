@@ -39,12 +39,16 @@ def evaluate(X,Y,predicted_labels):
     if len(df.groupby('label').groups)<2:
         return [0,0,0,0,0]
     
-    return [silhouette_score(X, predicted_labels, metric='euclidean'),
-                    homogeneity_score(Y, predicted_labels),
-                    normalized_mutual_info_score(Y, predicted_labels),
-                    adjusted_mutual_info_score(Y, predicted_labels),
-                    adjusted_rand_score(Y, predicted_labels)]
-
+    try:
+        sil = silhouette_score(X, predicted_labels, metric='euclidean')
+    except:
+        sil = 0
+        
+    return [sil,
+            homogeneity_score(Y, predicted_labels),
+            normalized_mutual_info_score(Y, predicted_labels),
+            adjusted_mutual_info_score(Y, predicted_labels),
+            adjusted_rand_score(Y, predicted_labels)]
 # =============================================================================
 # Cluster and evaluate
 # =============================================================================
