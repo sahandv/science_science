@@ -37,8 +37,10 @@ datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
 data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent corpus"
 label_address =  datapath+"Corpus/KPRIS/labels"
 
+
 vectors = pd.read_csv(data_address)
 labels = pd.read_csv(label_address,names=['label'])
+
 labels_f = pd.factorize(labels.label)
 X = vectors.values
 Y = labels_f[0]
@@ -71,6 +73,17 @@ def evaluate(X,Y,predicted_labels):
             normalized_mutual_info_score(Y, predicted_labels),
             adjusted_mutual_info_score(Y, predicted_labels),
             adjusted_rand_score(Y, predicted_labels)]
+
+# =============================================================================
+# Evaluate if you already have results and skip clustering (i.e. LDA)
+# =============================================================================
+prediction_results_address = datapath+"Corpus/KPRIS/LDA Results/_5/dataset_topic_scores.csv"
+predictions = pd.read_csv(prediction_results_address)['class'].values # If you don't want to cluster and already have resutls
+tmp_results = ['LDA unigram','max_df 0.8']+evaluate(None,Y,predictions)
+tmp_results = pd.Series(tmp_results, index = results.columns)
+results = results.append(tmp_results, ignore_index=True)
+
+
 # =============================================================================
 # K-means
 # =============================================================================
