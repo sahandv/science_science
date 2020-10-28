@@ -52,10 +52,10 @@ def evaluate(X,Y,predicted_labels):
 # =============================================================================
 # Cluster and evaluate
 # =============================================================================
-def run_all_tests(data_address):
+def run_all_tests(data_address,labels):
     vectors = pd.read_csv(data_address)
-    labels = pd.read_csv(label_address,names=['label'])
     labels_f = pd.factorize(labels.label)
+
     X = vectors.values
     Y = labels_f[0]
     n_clusters = 5
@@ -212,10 +212,11 @@ label_address =  datapath+"Corpus/CS WoS/labels"
 vec_file_names = ['Doc2Vec patent_wos corpus','Doc2Vec wos corpus',
                   'FastText Avg patent_wos corpus','FastText Avg wos corpus',
                   'FastText SIF patent_wos corpus','FastText SIF wos corpus']
+labels = pd.read_csv(label_address,names=['label'])
 
 for file_name in vec_file_names:
     gc.collect()
-    run_all_tests(data_dir+file_name)
+    run_all_tests(data_dir+file_name,labels)
 
 #%%
 # =============================================================================
