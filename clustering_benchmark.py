@@ -157,7 +157,7 @@ def run_all_tests(data_address,labels):
     print('\n- DEC -----------------------')
     for fold in tqdm(archs):
         seed = randint(0,10**4)
-        np.random.seed()
+        np.random.seed(seed)
         predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=300)
         tmp_results = ['DEC',str(seed)+' '+str(fold)]+evaluate(X,Y,predicted_labels)
         tmp_results = pd.Series(tmp_results, index = results.columns)
@@ -194,6 +194,7 @@ def run_all_tests(data_address,labels):
     # maxx = results.max(axis=0)
     # print(mean)
     # print(maxx)
+    
     # =============================================================================
     # Save to disk
     # =============================================================================
@@ -223,10 +224,12 @@ for file_name in vec_file_names:
 # Performance evaluation
 # =============================================================================
 
-# import pandas as pd
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
-# data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/Doc2Vec patent corpus clustering results _ new 4"
-# df = pd.read_csv(data_address)
-# max1 = df.groupby(['Method'], sort=False).max()
-# max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
-# max3 = df[df.groupby(['Method'])['NMI'].transform(max) == df['NMI']]
+import pandas as pd
+datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/Doc2Vec patent_wos corpus clustering results"
+df = pd.read_csv(data_address)
+max1 = df.groupby(['Method'], sort=False).max()
+max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
+max3 = df[df.groupby(['Method'])['NMI'].transform(max) == df['NMI']]
+min3 = df[df.groupby(['Method'])['NMI'].transform(min) == df['NMI']]
