@@ -46,7 +46,7 @@ labels = pd.read_csv(label_address,names=['label'])
 labels_f = pd.factorize(labels.label)
 X = vectors.values
 Y = labels_f[0]
-n_clusters = 17
+n_clusters = 10
 
 labels_task_1 = labels[(labels['label']=='car') | (labels['label']=='memory')]
 vectors_task_1 = vectors.iloc[labels_task_1.index]
@@ -198,16 +198,26 @@ print(maxx)
 # Just cluster
 # =============================================================================
 
-archs = [[200,500,34]]
+print('\n- k-means++ -----------------------')
+seed = randint(0,10**5)
+model = KMeans(n_clusters=n_clusters,n_init=20,init='k-means++', random_state=seed).fit(X)
+predicted_labels = model.labels_
+
+results_df = pd.DataFrame(predicted_labels,columns=['label'])
+results_df.to_csv(data_address+' Kmeans labels',index=False)
+
+results_df.groupby('label').groups.keys()
+
+archs = [[200,500,20]]
 
 print('\n- DEC -----------------------')
 for fold in tqdm(archs):
     seed = randint(0,10**5)
     np.random.seed(seed)
-    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=17,architecture=fold,pretrain_epochs=500)
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=10,architecture=fold,pretrain_epochs=1000)
     
     results_df = pd.DataFrame(predicted_labels,columns=['label'])
-    results_df.to_csv(data_address+' DEC 200,500,34 k17 labels',index=False)
+    results_df.to_csv(data_address+' DEC 200,500,20 k10 labels',index=False)
 
 results_df.groupby('label').groups.keys()
 
