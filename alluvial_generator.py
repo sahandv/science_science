@@ -14,7 +14,7 @@ import seaborn as sns
 # =============================================================================
 # Data prep
 # =============================================================================
-path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 labels = pd.read_csv(path+'Corpus/AI 4k/embeddings/clustering/k10/Doc2Vec patent_wos_ai corpus DEC 200,500,10 k10 labels')
 years = pd.read_csv(path+'Corpus/AI 4k/embeddings/clustering/k10/years 1990-2019.csv')
 df = labels.copy()
@@ -24,22 +24,19 @@ cluster_list = list(df.groupby('label').groups.keys())
 
 X = year_list
 
-df['year']
-Y = # list of lists
+Y = pd.DataFrame({'label':[],'count':[]})
+for year in year_list:
+    Y1 = pd.DataFrame(df[df['year']==year].groupby('label').agg(['count'])['year']['count']).reset_index()
+    Y = (pd.merge(Y, Y1,on='label', how='outer').fillna(0))
+
+Y.columns = ['zero','label']+list(range(len(list(Y.columns))-2))
+Y = Y.drop(['zero','label'],axis=1)
+Y = Y.values
 
 
-# Create data
-X = np.arange(0, 10, 1)
-Y = X + 5 * np.random.random((5, X.size))
- 
-# There are 4 types of baseline we can use:
-baseline = ["zero", "sym", "wiggle", "weighted_wiggle"]
- 
-# Let's make 4 plots, 1 for each baseline
-for n, v in enumerate(baseline):
-   if n<3 :
-      plt.tick_params(labelbottom='off')
-   plt.subplot(2 ,2, n + 1)
-   plt.stackplot(X, *Y, baseline=v)
-   plt.title(v)
-   plt.axis('tight', size=0.2)
+labels = ["c 1 ", "c 2", "c 3","c 4 ", "c 5", "c 6","c 7 ", "c 8", "c 9", "c 10"]
+fig, ax = plt.subplots(figsize=(15,7))
+ax.stackplot(X, *Y, baseline="weighted_wiggle",labels=labels)
+ax.legend(loc='upper left')
+# plt.figure()
+plt.show()
