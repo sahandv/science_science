@@ -227,7 +227,7 @@ for file_name in vec_file_names:
 import pandas as pd
 datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 # datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
-data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/Doc2Vec patent_wos corpus clustering results"
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/Doc2Vec patent_wos corpus clustering results _ DEC new archs"
 df = pd.read_csv(data_address)
 max1 = df.groupby(['Method'], sort=False).max()
 max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})

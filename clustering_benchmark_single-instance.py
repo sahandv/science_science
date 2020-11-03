@@ -34,9 +34,11 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
-label_address =  datapath+"Corpus/KPRIS/labels"
+data_address =  datapath+"Corpus/AI 4k/embeddings/Doc2Vec patent_wos_ai corpus"
+label_address =  datapath+"Corpus/AI 4k/index_keywords 1990-2019.csv"
 
+# data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
+# label_address =  datapath+"Corpus/KPRIS/labels"
 
 vectors = pd.read_csv(data_address)
 labels = pd.read_csv(label_address,names=['label'])
@@ -44,7 +46,7 @@ labels = pd.read_csv(label_address,names=['label'])
 labels_f = pd.factorize(labels.label)
 X = vectors.values
 Y = labels_f[0]
-n_clusters = 5
+n_clusters = 17
 
 labels_task_1 = labels[(labels['label']=='car') | (labels['label']=='memory')]
 vectors_task_1 = vectors.iloc[labels_task_1.index]
@@ -192,6 +194,23 @@ mean = results.mean(axis=0)
 maxx = results.max(axis=0)
 print(mean)
 print(maxx)
+# =============================================================================
+# Just cluster
+# =============================================================================
+
+archs = [[200,500,34]]
+
+print('\n- DEC -----------------------')
+for fold in tqdm(archs):
+    seed = randint(0,10**5)
+    np.random.seed(seed)
+    predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=17,architecture=fold,pretrain_epochs=500)
+    
+    results_df = pd.DataFrame(predicted_labels,columns=['label'])
+    results_df.to_csv(data_address+' DEC 200,500,34 k17 labels',index=False)
+
+results_df.groupby('label').groups.keys()
+
 # =============================================================================
 # Save to disk
 # =============================================================================

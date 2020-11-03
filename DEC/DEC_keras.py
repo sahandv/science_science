@@ -141,7 +141,7 @@ class ClusteringLayer(Layer):
 class DEC(object):
     def __init__(self,
                  dims,
-                 n_clusters=10,
+                 n_clusters=17,
                  alpha=1.0,
                  init='glorot_uniform'):
 
