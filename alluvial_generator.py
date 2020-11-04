@@ -14,8 +14,10 @@ import seaborn as sns
 # =============================================================================
 # Data prep
 # =============================================================================
-path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
-labels = pd.read_csv(path+'Corpus/AI 4k/embeddings/clustering/k10/Doc2Vec patent_wos_ai corpus DEC 200,500,10 k10 labels')
+path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+# path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+
+labels = pd.read_csv(path+'Corpus/AI 4k/embeddings/clustering/k10/DEC/200,500,20-a/Doc2Vec patent_wos_ai corpus DEC 200,500,20 k10 labels')
 years = pd.read_csv(path+'Corpus/AI 4k/embeddings/clustering/k10/years 1990-2019.csv')
 df = labels.copy()
 df['year'] = years['Year']
@@ -36,7 +38,7 @@ Y = Y.values
 
 labels = ["c 1 ", "c 2", "c 3","c 4 ", "c 5", "c 6","c 7 ", "c 8", "c 9", "c 10"]
 fig, ax = plt.subplots(figsize=(15,7))
-ax.stackplot(X, *Y, baseline="weighted_wiggle",labels=labels)
+ax.stackplot(X, *Y, baseline="wiggle",labels=labels)#weighted_wiggle
 ax.legend(loc='upper left')
 # plt.figure()
 plt.show()

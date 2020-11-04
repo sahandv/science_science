@@ -158,6 +158,7 @@ archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
          [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
          [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
          [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
+
 print('\n- DEC -----------------------')
 for fold in tqdm(archs):
     seed = randint(0,10**4)
@@ -208,16 +209,16 @@ results_df.to_csv(data_address+' Kmeans labels',index=False)
 
 results_df.groupby('label').groups.keys()
 
-archs = [[200,500,20]]
+archs = [[200,500,1000,20]]
 
 print('\n- DEC -----------------------')
 for fold in tqdm(archs):
     seed = randint(0,10**5)
-    np.random.seed(seed)
+    np.random.seed(33948)
     predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=10,architecture=fold,pretrain_epochs=1000)
     
     results_df = pd.DataFrame(predicted_labels,columns=['label'])
-    results_df.to_csv(data_address+' DEC 200,500,20 k10 labels',index=False)
+    results_df.to_csv(data_address+' DEC 200,500,1000,20 k10 labels - 01',index=False)
 
 results_df.groupby('label').groups.keys()
 
