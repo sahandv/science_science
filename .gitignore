@@ -116,3 +116,7 @@ data/models/FastText_15D/15D/fasttext-scopus_wos-merged-310k_docs-gensim 15D.mod
 *.py~
 
 DEC_weights/
+
+BERT_weights/
+
+!BERT_weights/__init__.py
