@@ -14,7 +14,6 @@ import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from random import randint
-import gc
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
@@ -52,7 +51,11 @@ def evaluate(X,Y,predicted_labels):
 # =============================================================================
 # Cluster and evaluate
 # =============================================================================
-def run_all_tests(data_address,labels):
+def run_all_tests(data_address,output_file_name,labels):
+    
+    print('Will write the results to',output_file_name)
+    
+    column_names = ['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI']
     vectors = pd.read_csv(data_address)
     # data_dir+file_name+' dm_concat'
     labels_f = pd.factorize(labels.label)
@@ -68,22 +71,28 @@ def run_all_tests(data_address,labels):
     Y_task_1 = labels_task_1_f[0]
     n_clusters_task_1 = 2
     
-    results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
-
+    results = pd.DataFrame([],columns=column_names)
+    results_template = results.copy()
     # =============================================================================
     # Deep no min_max_scaling
     # =============================================================================
-    archs = [[500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
-            [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
-            [500, 1000, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 2000, 100],
-            [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
-            [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
-            [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
-            [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
-            [200, 1000, 2000,100],[200, 1000, 2000,200],[200, 1000, 2000, 500],
-            [200, 500, 1000, 500],[200, 500, 1000, 200],[200, 500, 1000, 100],
-            [200, 1000, 2000, 10],[200, 1000, 2000, 10],[200, 1000, 2000, 10],
-            [200, 500, 1000, 10],[200, 500, 1000, 10],[200, 500, 1000, 10],
+    archs = [
+            # [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
+            # [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
+            # [500, 1000, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 2000, 100],
+            # [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
+            # [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
+            # [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
+            # [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
+            # [200, 1000, 2000,100],[200, 1000, 2000,200],[200, 1000, 2000, 500],
+            # [200, 500, 1000, 500],[200, 500, 1000, 200],[200, 500, 1000, 100],
+            # [200, 1000, 2000, 10],[200, 1000, 2000, 10],[200, 1000, 2000, 10],
+            [1536,3072,1536,100],[1536,3072,1536,100],[1536,3072,1536,100],
+            [1536,3072,1536,10],[1536,3072,1536,10],[1536,3072,1536,10],
+            [1536,3072,1536,100,10],[1536,3072,1536,100,10],[1536,3072,1536,100,10],
+            [1536,3072,1536,100],[1536,3072,1536,100],[1536,3072,1536,100],
+            [1536,3072,1536,10],[1536,3072,1536,10],[1536,3072,1536,10],
+            [1536,3072,1536,100,10],[1536,3072,1536,100,10],[1536,3072,1536,100,10],
             [200,200,100],[200,200,100],[200,200,100],
             [200,500,20],[200,500,200],[200,500,200],
             [200,200,10],[200,200,10],[200,200,10],
@@ -94,8 +103,6 @@ def run_all_tests(data_address,labels):
             [200,200,10],[200,200,10],[200,200,10],
             [200,200,10],[200,200,10],[200,200,10],
             [200,200,10],[200,200,10],[200,200,10],
-            [200,200,10],[200,200,10],[200,200,10],
-            [200,500,10],[200,500,10],[200,500,10],
             [200,500,10],[200,500,10],[200,500,10],
             [200,500,10],[200,500,10],[200,500,10],
             [200,500,10],[200,500,10],[200,500,10],
@@ -103,15 +110,31 @@ def run_all_tests(data_address,labels):
             [200,500,10],[200,500,10],[200,500,10]]
     print('\n- DEC -----------------------')
     for fold in tqdm(archs):
+        gc.collect()
         seed = randint(0,10**4)
         np.random.seed(seed)
         try:
-            predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=350)
+            predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=400)
             tmp_results = ['DEC',str(seed)+' '+str(fold)]+evaluate(X,Y,predicted_labels)
-            tmp_results = pd.Series(tmp_results, index = results.columns)
-            results = results.append(tmp_results, ignore_index=True)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
         except:
             print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
+        
     mean = results.mean(axis=0)
     maxx = results.max(axis=0)
     print(mean)
@@ -154,9 +177,26 @@ def run_all_tests(data_address,labels):
         seed = randint(0,10**5)
         model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
         predicted_labels = model.labels_
-        tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-        tmp_results = pd.Series(tmp_results, index = results.columns)
-        results = results.append(tmp_results, ignore_index=True)
+        try:
+            tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
+        except:
+            print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
     mean = results.mean(axis=0)
     maxx = results.max(axis=0)
     print(mean)
@@ -166,12 +206,30 @@ def run_all_tests(data_address,labels):
     # =============================================================================
     print('\n- k-means++ -----------------------')
     for fold in tqdm(range(20)):
+        gc.collect()
         seed = randint(0,10**5)
         model = KMeans(n_clusters=n_clusters,n_init=20,init='k-means++', random_state=seed).fit(X)
         predicted_labels = model.labels_
-        tmp_results = ['k-means++','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-        tmp_results = pd.Series(tmp_results, index = results.columns)
-        results = results.append(tmp_results, ignore_index=True)
+        try:
+            tmp_results = ['k-means++','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
+        except:
+            print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
     mean = results.mean(axis=0)
     maxx = results.max(axis=0)
     print(mean)
@@ -181,11 +239,29 @@ def run_all_tests(data_address,labels):
     # =============================================================================
     print('\n- Agglomerative -----------------------')
     for fold in tqdm(range(4)):
+        gc.collect()
         model = AgglomerativeClustering(n_clusters=n_clusters,linkage='ward').fit(X)
         predicted_labels = model.labels_
-        tmp_results = ['Agglomerative','ward']+evaluate(X,Y,predicted_labels)
-        tmp_results = pd.Series(tmp_results, index = results.columns)
-        results = results.append(tmp_results, ignore_index=True)
+        try:
+            tmp_results = ['Agglomerative','ward']+evaluate(X,Y,predicted_labels)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
+        except:
+            print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
     mean = results.mean(axis=0)
     maxx = results.max(axis=0)
     print(mean)
@@ -196,12 +272,30 @@ def run_all_tests(data_address,labels):
     eps=0.000001
     print('\n- DBSCAN -----------------------')
     for fold in tqdm(range(19)):
+        gc.collect()
         eps = eps+0.05
         model = DBSCAN(eps=eps, min_samples=10,n_jobs=15).fit(X)
         predicted_labels = model.labels_
-        tmp_results = ['DBSCAN','eps '+str(eps)]+evaluate(X,Y,predicted_labels)
-        tmp_results = pd.Series(tmp_results, index = results.columns)
-        results = results.append(tmp_results, ignore_index=True)
+        try:
+            tmp_results = ['DBSCAN','eps '+str(eps)]+evaluate(X,Y,predicted_labels)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
+        except:
+            print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
     mean = results.mean(axis=0)
     maxx = results.max(axis=0)
     print(mean)
@@ -210,26 +304,29 @@ def run_all_tests(data_address,labels):
     # =============================================================================
     # Save to disk
     # =============================================================================
-    print('Writing to disk...')
+    # print('Writing to disk...')
     results_df = pd.DataFrame(results)
-    results_df.to_csv(data_address+' clustering results',index=False)
+    # results_df.to_csv(output_file_name,index=False)
     print('Done.')
+    return results_df
 # =============================================================================
 # Run
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_dir =  datapath+"Corpus/KPRIS/embeddings/defflemm 100D dm/"
+data_dir =  datapath+"Corpus/KPRIS/embeddings/deflemm/"
 label_address =  datapath+"Corpus/KPRIS/labels"
 
-vec_file_names = ['Doc2Vec patent_wos corpus']#,'Doc2Vec patent corpus',
+vec_file_names = ['bert scibert corpus.csv']#,'Doc2Vec patent corpus',
                   # ,'FastText Avg patent_wos corpus','FastText Avg wos corpus',
                   # 'FastText SIF patent_wos corpus','FastText SIF wos corpus']
 labels = pd.read_csv(label_address,names=['label'])
 
+
 for file_name in vec_file_names:
     gc.collect()
-    run_all_tests(data_dir+file_name,labels)
+    output_file_name = data_dir+file_name+' clustering results'
+    run_all_tests(data_dir+file_name,output_file_name,labels)
 
 #%%
 # =============================================================================
