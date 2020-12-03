@@ -29,6 +29,7 @@ import gc
 tqdm.pandas()
 from sciosci.assets import text_assets
 
+empty_venue = {'raw': ''}
 count = 0
 pace = 400000 # larger pace will be faster, but mind the memory. 400k is safe for 16GB
 done = False
@@ -82,7 +83,11 @@ while not done:
     papers_df['authors'] = papers_df['authors'].progress_apply(
         lambda x: json.dumps(x) if np.all(pd.notnull(x)) else np.nan)
     
+    
+    papers_df['venue'] = papers_df['venue'].progress_apply(
+        lambda x: x if np.all(pd.notnull(x)) else empty_venue)
     venue = pd.DataFrame(papers_df['venue'].values.tolist())
+    
     venue.columns=['venue_name','venue_id','venue_type']
     papers_df = pd.concat([papers_df, venue], axis=1)
     
