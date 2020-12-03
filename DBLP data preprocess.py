@@ -45,8 +45,9 @@ while not done:
     stop = start+pace
     papers = []
     gc.collect()
+    print('\n\nWorking from',start,'to',min(stop,total))
     with open(input_file) as f:
-        for line in tqdm(f,total=pace):
+        for line in tqdm(f,total=min(stop-start,total-start)):
             count+=1
             if count < start:
                 continue
@@ -63,7 +64,7 @@ while not done:
                     # year = json.loads(line)['year']
                     # years.append(year)
                 except:
-                    print('\nNo way to parse the line ',count-1)
+                    print('\n*No way to parse the line ',count-1,'!')
             if count>=total:
                 done = True
                 break
@@ -86,6 +87,7 @@ while not done:
     
     papers_df = papers_df.drop('venue',axis=1)
     papers_df = papers_df.drop('indexed_abstract',axis=1)
-    
+    print('\nPreparation done. Saving to disk...')
     papers_df.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/'
                                 +'Dataset/Aminer/dblp.v12/'+str(start)+'-'+str(stop)+'.csv',index=False)
+    print('\nSaved to disk.')
