@@ -30,7 +30,7 @@ tqdm.pandas()
 from sciosci.assets import text_assets
 
 count = 0
-pace = 400000
+pace = 400000 # larger pace will be faster, but mind the memory. 400k is good for 16GB
 done = False
 papers_df = pd.DataFrame([])
 total = 0
