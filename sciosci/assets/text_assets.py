@@ -89,7 +89,13 @@ def indexed_text_to_string(indexed_text_dict,text_length):
     Returns
     -------
     String
-        Concatenated string
+        Concatenated string    
+    
+    Example Usage
+    -------
+    papers['abstract'] = papers['indexed_abstract'].apply(
+    lambda x: indexed_text_to_string(x['InvertedIndex'],x['IndexLength']) if pd.notnull(x) else np.nan)
+    
     """
     import numpy as np
 
