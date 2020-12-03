@@ -42,12 +42,13 @@ print('\nDone inspecting',total,'lines')
 
 while not done:
     start = count
+    count = 0
     stop = start+pace
     papers = []
     gc.collect()
     print('\n\nWorking from',start,'to',min(stop,total))
     with open(input_file) as f:
-        for line in tqdm(f,total=min(stop-start,total-start)):
+        for line in tqdm(f,total=count+pace):
             count+=1
             if count < start:
                 continue
