@@ -94,6 +94,10 @@ while not done:
     papers_df = papers_df.drop('venue',axis=1)
     papers_df = papers_df.drop('indexed_abstract',axis=1)
     print('\nPreparation done. Saving to disk...')
-    papers_df.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/'
+    if start==0:
+        papers_df.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/'
                                 +'Dataset/Aminer/dblp.v12/'+str(start)+'-'+str(stop)+'.csv',index=False)
+    else:
+        papers_df.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/'
+                                +'Dataset/Aminer/dblp.v12/'+str(start)+'-'+str(stop)+'.csv',index=False,header=False)
     print('\nSaved to disk.')
