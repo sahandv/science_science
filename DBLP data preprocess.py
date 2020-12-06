@@ -12,10 +12,10 @@ Arnab Sinha, Zhihong Shen, Yang Song, Hao Ma, Darrin Eide, Bo-June (Paul) Hsu, a
 
 """
 # =============================================================================
-# read  dblp data
+# read JSON dblp data
 # =============================================================================
 # input_file = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Aminer/dblp_papers_v11.txt'
-input_file = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Aminer/dblp.v12.json'
+input_file = '/mnt/16A4A9BCA4A99EAD/DBLP/dblp.v12.json'
 # input_file = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Aminer/dblp.v10/dblp-ref/dblp-ref-0.json'
 
 # from sciosci import scopus_helper as sh
@@ -31,7 +31,7 @@ from sciosci.assets import text_assets
 
 empty_venue = {'raw': ''}
 count = 0
-pace = 400000 # larger pace will be faster, but mind the memory. 400k is safe for 16GB
+pace = 800000 # larger pace will be faster, but mind the memory. 400k is safe for 16GB
 done = False
 papers_df = pd.DataFrame([])
 total = 0
@@ -93,11 +93,24 @@ while not done:
     
     papers_df = papers_df.drop('venue',axis=1)
     papers_df = papers_df.drop('indexed_abstract',axis=1)
+    try:
+        papers_df = papers_df.drop('alias_ids',axis=1)
+    except:
+        print('alias_ids not droppped. Probably does not exist.')
+        
     print('\nPreparation done. Saving to disk...')
     if start==0:
-        papers_df.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/'
-                                +'Dataset/Aminer/dblp.v12/'+str(start)+'-'+str(stop)+'.csv',index=False)
+        papers_df.to_csv('/mnt/16A4A9BCA4A99EAD/DBLP/'+str(start)+'-'+str(stop)+'.csv',index=False,sep='\t')
     else:
-        papers_df.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/'
-                                +'Dataset/Aminer/dblp.v12/'+str(start)+'-'+str(stop)+'.csv',index=False,header=False)
+        papers_df.to_csv('/mnt/16A4A9BCA4A99EAD/DBLP/'+str(start)+'-'+str(stop)+'.csv',index=False,header=False,sep='\t')
     print('\nSaved to disk.')
+    
+# =============================================================================
+# read CSV data (processed)
+# =============================================================================
+import pandas as pd
+
+data_path = '/mnt/16A4A9BCA4A99EAD/DBLP/CSV/'
+papers_df = pd.read_csv(data_path+'v12.csv',sep=',')
+sample = papers_df.sample(200)
+
