@@ -78,8 +78,10 @@ while not done:
         lambda x: text_assets.indexed_text_to_string(x['InvertedIndex'],x['IndexLength']) if pd.notnull(x) else np.nan)
     # papers_df['fos'] = papers_df['fos'].progress_apply(
     #     lambda x: pd.DataFrame(x).values.tolist() if np.all(pd.notnull(x)) else np.nan)
+    
     papers_df['fos'] = papers_df['fos'].progress_apply(
         lambda x: json.dumps(x) if np.all(pd.notnull(x)) else np.nan)
+    
     papers_df['authors'] = papers_df['authors'].progress_apply(
         lambda x: json.dumps(x) if np.all(pd.notnull(x)) else np.nan)
     
