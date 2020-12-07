@@ -120,6 +120,6 @@ while not done:
 # =============================================================================
 import pandas as pd
 
-data_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/DBLP/'
-papers_df = pd.read_csv(data_path+'v12.csv',sep=',')
+data_path = '/mnt/16A4A9BCA4A99EAD/DBLP/CSV/'
+papers_df = pd.read_csv(data_path+'v12.csv',sep='\t')
 sample = papers_df.sample(200)
