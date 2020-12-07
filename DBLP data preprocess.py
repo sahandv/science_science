@@ -29,6 +29,12 @@ import gc
 tqdm.pandas()
 from sciosci.assets import text_assets
 
+
+columns = ['id', 'authors', 'title', 'year', 'n_citation', 'page_start',
+       'page_end', 'doc_type', 'publisher', 'volume', 'issue', 'doi',
+       'references', 'fos', 'abstract', 'venue_name', 'venue_id',
+       'venue_type']
+
 empty_venue = {'raw': ''}
 count = 0
 pace = 800000 # larger pace will be faster, but mind the memory. 400k is safe for 16GB
@@ -100,11 +106,13 @@ while not done:
     except:
         print('alias_ids not droppped. Probably does not exist.')
         
+    papers_df = papers_df[columns]    
+        
     print('\nPreparation done. Saving to disk...')
     if start==0:
-        papers_df.to_csv('/mnt/16A4A9BCA4A99EAD/DBLP/'+str(start)+'-'+str(stop)+'.csv',index=False,sep='\t')
+        papers_df.to_csv('/mnt/16A4A9BCA4A99EAD/DBLP/CSV/'+str(start)+'-'+str(stop)+'.csv',index=False,sep='\t')
     else:
-        papers_df.to_csv('/mnt/16A4A9BCA4A99EAD/DBLP/'+str(start)+'-'+str(stop)+'.csv',index=False,header=False,sep='\t')
+        papers_df.to_csv('/mnt/16A4A9BCA4A99EAD/DBLP/CSV/'+str(start)+'-'+str(stop)+'.csv',index=False,header=False,sep='\t')
     print('\nSaved to disk.')
     
 # =============================================================================
@@ -112,7 +120,6 @@ while not done:
 # =============================================================================
 import pandas as pd
 
-data_path = '/mnt/16A4A9BCA4A99EAD/DBLP/CSV/'
+data_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/DBLP/'
 papers_df = pd.read_csv(data_path+'v12.csv',sep=',')
 sample = papers_df.sample(200)
-
