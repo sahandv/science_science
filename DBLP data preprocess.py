@@ -119,7 +119,21 @@ while not done:
 # read CSV data (processed)
 # =============================================================================
 import pandas as pd
+import numpy as np
+from tqdm import tqdm
+tqdm.pandas()
 
 data_path = '/mnt/16A4A9BCA4A99EAD/DBLP/CSV/'
-papers_df = pd.read_csv(data_path+'v12.csv',sep='\t')
+papers_df = pd.read_csv(data_path+'v12.1.csv',sep='\t')
 sample = papers_df.sample(200)
+
+with_abstract = papers_df[pd.notnull(papers_df['abstract'])]
+with_ref = papers_df[pd.notnull(papers_df['references'])]
+with_fos= papers_df[pd.notnull(papers_df['fos'])]
+with_all = papers_df[(pd.notnull(papers_df['references']) & pd.notnull(papers_df['abstract']) & pd.notnull(papers_df['fos']))].copy()
+
+with_all['year'] = with_all['year'].replace(np.nan, 0)
+with_all['year'] = with_all['year'].progress_apply(lambda x: x if (x>1800 and x<2022) else 0)
+with_all_filtered = with_all[(with_all['year']>1900) & (with_all['year']<2022)]
+with_all_filtered.hist('year',figsize=(15,5),bins=100)
+sample = with_all_filtered.sample(200)
