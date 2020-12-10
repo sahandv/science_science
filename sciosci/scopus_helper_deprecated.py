@@ -46,25 +46,25 @@ def scopus_initialize(ignore_py_version = False,
     
     if ignore_scopus_config is False:
         try:
-            import pybliometrics
+            import scopus
         except ImportError:
-            sys.exit("\n * Please install scopus package before using this code. Try usng 'pip install pybliometrics'.")
+            sys.exit("\n * Please install scopus package before using this code. Try usng 'pip install scopus'.")
         my_file = Path(str(Path.home())+'/.scopus/config.ini')
         if my_file.is_file():
             print("\n * Configuration file already exists at "+str(Path.home())+'/.scopus/config.ini'+". You may the file and edit the entries manually.")
         else:
-            pybliometrics.utils.create_config()
+            scopus.utils.create_config()
     
 
 
 def search_scopus(query, download = True):
-    from pybliometrics.scopus import ScopusSearch
+    from scopus import ScopusSearch
     result = ScopusSearch(query,download = download)
     return result
 
 
 def retrieve_abstract_try(eid,view = 'REF',param = 'references'):
-    from pybliometrics.scopus import AbstractRetrieval
+    from scopus import AbstractRetrieval
     try:
         refs = AbstractRetrieval(eid, view = view)._json[param]
     except KeyError:
