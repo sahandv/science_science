@@ -43,9 +43,10 @@ nx.draw(G, with_labels=True, font_weight='bold')
 plt.show()
 
 # =============================================================================
-# Get the Adjacency Matrix (A) and Node Features Matrix (X) as numpy array
+# Inserting Adjacency Matrix (A) to Forward Pass Equation
 # =============================================================================
 
+# Get the Adjacency Matrix (A) and Node Features Matrix (X) as numpy array
 A = np.array(nx.attr_matrix(G, node_attr='name')[0])
 X = np.array(nx.attr_matrix(G, node_attr='name')[1])
 X = np.expand_dims(X,axis=1)
@@ -55,4 +56,7 @@ print('\nShape of X: ', X.shape)
 print('\nAdjacency Matrix (A):\n', A)
 print('\nNode Features Matrix (X):\n', X)
 
+#Dot product Adjacency Matrix (A) and Node Features (X)
+AX = np.dot(A,X)
+print("Dot product of A and X (AX):\n", AX)
 
