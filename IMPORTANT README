@@ -1,0 +1,2 @@
+When working in sub directories and executing code from them, make sure to set the parent directory one level higher to properly include the "sciosci" module.
+
