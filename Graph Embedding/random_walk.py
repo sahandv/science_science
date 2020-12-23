@@ -10,7 +10,7 @@ import networkx as nx
 import numpy as np
 import random
 
-def graph_walks(graph:nx.Graph,seed=None,walk_length:int = 5,number_of_walks:int=1000):
+def graph_walks(graph:nx.Graph,seed=None,walk_length:int = 40,number_of_walks:int=40):
     """
     Parameters
     ----------
@@ -19,9 +19,9 @@ def graph_walks(graph:nx.Graph,seed=None,walk_length:int = 5,number_of_walks:int
     seed : TYPE, optional
         Numpy seed to reproduce results. The default is None.
     walk_length : int, optional
-        The default is 5.
+        The default is 40.
     number_of_walks : int, optional
-        The default is 1000.
+        The default is 40.
 
     Returns
     -------
@@ -38,7 +38,7 @@ def graph_walks(graph:nx.Graph,seed=None,walk_length:int = 5,number_of_walks:int
             walks.append(node_random_walk(graph,node,walk_length,seed))
     return walks
             
-def node_random_walk(graph:nx.Graph, node:int, walk_length:int = 5,seed=None):
+def node_random_walk(graph:nx.Graph, node:int, walk_length:int = 40,seed=None):
     """
     Parameters
     ----------
@@ -47,7 +47,7 @@ def node_random_walk(graph:nx.Graph, node:int, walk_length:int = 5,seed=None):
     node : int
         Starting node name/index.
     walk_length : int, optional
-        The default is 5.
+        The default is 40.
     seed : int, optional
         Numpy seed to reproduce results. The default is None.
 
