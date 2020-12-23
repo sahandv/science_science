@@ -99,8 +99,10 @@ sample = merged.sample(5)
 # =============================================================================
 data = pd.read_csv(dir_path+'extractions_with_id.csv')
 data_clean = data[pd.notna(data['Abstract'])]
+data_clean = data_clean[data_clean['Abstract']!='']
+data_clean = data_clean[data_clean['Abstract']!=' ']
 data_clean = data_clean[pd.notna(data_clean['Title'])]
 data_clean = data_clean[pd.notna(data_clean['id'])]
 data_clean_unique = data_clean.groupby('id').first()
 data_clean_unique.to_csv(dir_path+'extractions_with_unique_id.csv',index=False)
-sample = data.sample(5)
+sample = data_clean.sample(500)
