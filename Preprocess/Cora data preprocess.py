@@ -5,8 +5,18 @@ Created on Thu Dec  3 11:12:51 2020
 
 @author: sahand
 
-This is a preprocessing script for Cora dataset*
-* 
+This is a preprocessing script for Cora dataset [McCallumIRJ]
+
+@article{McCallumIRJ,
+ author = "Andrew McCallum and Kamal Nigam and Jason Rennie and Kristie Seymore",
+ title = "Automating the Construction of Internet Portals with Machine Learning",
+ journal = "Information Retrieval Journal",
+ volume = 3,
+ pages = "127--163",
+ publisher = "Kluwer",
+ year = 2000,
+ note = "www.research.whizbang.com/data"
+}
 
 """
 # =============================================================================
@@ -88,7 +98,7 @@ sample = merged.sample(5)
 # Further pre-process to get unique abstracts
 # =============================================================================
 data = pd.read_csv(dir_path+'extractions_with_id.csv')
-data_clean = data[pd.notnull(data['Abstract'])]
+data_clean = data[pd.notna(data['Abstract'])]
 data_clean = data_clean[pd.notna(data_clean['Title'])]
 data_clean = data_clean[pd.notna(data_clean['id'])]
 data_clean_unique = data_clean.groupby('id').first()
