@@ -40,9 +40,28 @@ from sciosci.assets import text_assets
 papers_list_raw = pd.read_csv(dir_path+'papers',sep='\t',names=['id','filename','citation string']) # contains duplicates
 # papers_list_raw = papers_list_raw.groupby('id').first().reset_index()
 
-papers_list = pd.read_csv(dir_path+'classifications',sep='\t',names=['paper_name','class'])
+papers_list_labeled = pd.read_csv(dir_path+'classifications',sep='\t',names=['filename','class'])
+papers_list_labeled = papers_list_labeled[pd.notna(papers_list_labeled['class'])]
+
 
 citations = pd.read_csv(dir_path+'citations',names=['referring_id','cited_id'],sep='\t')
+
+# =============================================================================
+# Prepare classes
+# =============================================================================
+def cleanup(arr):
+    try:
+        return np.array([x for x in arr if x!=''])
+    except:
+        print('\nGot',arr,', which is not a list. returning as-is.')
+        return np.array(arr)
+    
+labels = pd.DataFrame(list(papers_list_labeled['class'].str.split('/').progress_apply(lambda x: cleanup(x))))
+labels.columns = ['class1','class2','class3']
+papers_list_labeled = pd.concat([papers_list_labeled,labels],axis=1)
+
+# Inspect classes
+label_names = [str(x) for x in list(labels.groupby('class1').groups.keys())]
 
 # =============================================================================
 # Read text files
@@ -99,6 +118,20 @@ sample = merged.sample(5)
 # =============================================================================
 data = pd.read_csv(dir_path+'extractions_with_id.csv')
 
+# =============================================================================
+# Merge based on file name to get the idx
+# =============================================================================
+
+merged = pd.merge(papers_list_labeled, data, on='filename')
+merged.to_csv(dir_path+'extractions_with_unique_id_labeled.csv',index=False)
+sample = merged.sample(5)
+
+data = merged.copy()
+# =============================================================================
+# Save to disk
+# =============================================================================
+data = pd.read_csv(dir_path+'extractions_with_id.csv')
+
 data_clean = data[pd.notna(data['Abstract'])]
 data_clean = data_clean[data_clean['Abstract']!='']
 data_clean = data_clean[data_clean['Abstract']!=' ']
@@ -108,3 +141,12 @@ data_clean_unique = data_clean.groupby('id').first().reset_index()
 data_clean_unique.to_csv(dir_path+'extractions_with_unique_id.csv',index=False)
 sample = data_clean_unique.sample(500)
 
+# =============================================================================
+# Filter citations based on the papers
+# =============================================================================
+data = pd.read_csv(dir_path+'extractions_with_unique_id_labeled.csv')
+sample = data.sample(500)
+id_list = data['id'].values.tolist()
+
+filtered_citations = citations[((citations['referring_id'].isin(id_list)) | (citations['cited_id'].isin(id_list)))]
+filtered_citations.to_csv(dir_path+'citations_filtered.csv',index=False)
