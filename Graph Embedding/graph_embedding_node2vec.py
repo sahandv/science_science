@@ -30,7 +30,7 @@ sns.set_style('whitegrid')
 # Read data
 # =============================================================================
 dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-data = pd.read_csv(dir_path+'citations', names=['referring_id','cited_id'],sep='\t')
+data = pd.read_csv(dir_path+'citations_filtered.csv')#, names=['referring_id','cited_id'],sep='\t')
 
 # =============================================================================
 # Prepare graph
