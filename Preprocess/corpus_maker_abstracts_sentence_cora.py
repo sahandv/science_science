@@ -37,7 +37,7 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/extractions_with_unique_id.csv'
+data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/extractions_with_unique_id_labeled.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
@@ -99,6 +99,9 @@ del  abstracts
 
 source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
 source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
+
+class_list = pd.DataFrame(data_with_abstract['class1'].values.tolist(),columns=['class1'])
+class_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus classes1',index=False) # Save year indices to disk for further use
 
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
 year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
