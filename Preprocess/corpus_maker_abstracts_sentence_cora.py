@@ -103,6 +103,9 @@ source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus so
 class_list = pd.DataFrame(data_with_abstract['class1'].values.tolist(),columns=['class1'])
 class_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus classes1',index=False) # Save year indices to disk for further use
 
+id_list = pd.DataFrame(data_with_abstract['id'].values.tolist(),columns=['id'])
+id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus idx',index=False) # Save year indices to disk for further use
+
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
 year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
 gc.collect()
