@@ -42,6 +42,10 @@ for i,row in tqdm(data.iterrows(),total=data.shape[0]):
 # =============================================================================
 # Train
 # =============================================================================
-node2vec = Node2Vec(graph, dimensions=100, walk_length=6, num_walks=100, workers=14)
+node2vec = Node2Vec(graph, dimensions=100, walk_length=100, num_walks=18, workers=2)
 model = node2vec.fit(window=10, min_count=1)
-model.save(dir_path+'node2vec-100-6-100')
+model.save(dir_path+'models/node2vec-100-18-100')
+
+# =============================================================================
+# Get embeddings
+# =============================================================================
