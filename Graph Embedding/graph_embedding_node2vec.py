@@ -31,7 +31,8 @@ np.random.seed(seed)
 # =============================================================================
 # Read data
 # =============================================================================
-dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
+# dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
+dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'
 data = pd.read_csv(dir_path+'citations_filtered.csv')#, names=['referring_id','cited_id'],sep='\t')
 idx = pd.read_csv(dir_path+'extractions_with_unique_id_labeled.csv')
 idx = idx['id'].values.tolist()
