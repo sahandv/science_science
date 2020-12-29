@@ -80,7 +80,7 @@ def run_all_tests(data_address,output_file_name,labels):
             [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
             # [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
             [500, 1000, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 2000, 100],
-            # [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
+            [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
             # [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
             # [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
             [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
@@ -100,7 +100,7 @@ def run_all_tests(data_address,output_file_name,labels):
             # [200,200,10],[200,200,10],[200,200,10],
             # [400,400,10],[400,400,10],[400,400,10],
             # [400,400,10],[400,400,10],[400,400,10],
-            # [400,500,10],[400,500,10],[400,500,10],
+            [400,500,10],[400,500,10],[400,500,10],
             [400,500,10],[400,500,10],[400,500,10],
             # [200,200,10],[200,200,10],[200,200,10],
             # [200,200,10],[200,200,10],[200,200,10],
@@ -317,9 +317,9 @@ def run_all_tests(data_address,output_file_name,labels):
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
 data_dir =  datapath+"Corpus/cora-classify/cora/"
-label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1"
+label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
 
-vec_file_names = ['embeddings/Doc2Vec cora_wos corpus dm1']#,'Doc2Vec patent corpus',
+vec_file_names = ['embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec-vanilla deepwalk 80-10-128']#,'Doc2Vec patent corpus',
                   # ,'FastText Avg patent_wos corpus','FastText Avg wos corpus',
                   # 'FastText SIF patent_wos corpus','FastText SIF wos corpus']
 labels = pd.read_csv(label_address,names=['label'])
