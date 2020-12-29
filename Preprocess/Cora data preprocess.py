@@ -150,3 +150,7 @@ id_list = data['id'].values.tolist()
 
 filtered_citations = citations[((citations['referring_id'].isin(id_list)) | (citations['cited_id'].isin(id_list)))]
 filtered_citations.to_csv(dir_path+'citations_filtered.csv',index=False)
+
+
+
+
