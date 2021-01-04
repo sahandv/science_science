@@ -32,10 +32,10 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 # Load data and init
 # =============================================================================
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/AI 4k/embeddings/Doc2Vec patent_wos_ai corpus"
-label_address =  datapath+"Corpus/AI 4k/index_keywords 1990-2019.csv"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec-vanilla deepwalk 80-10-128"
+label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
 
 # data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
 # label_address =  datapath+"Corpus/KPRIS/labels"

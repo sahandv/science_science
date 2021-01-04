@@ -51,7 +51,7 @@ def evaluate(X,Y,predicted_labels):
 # =============================================================================
 # Cluster and evaluate
 # =============================================================================
-def run_all_tests(data_address,output_file_name,labels):
+def run_all_tests(data_address,output_file_name,labels,k):
     
     print('Will write the results to',output_file_name)
     
@@ -62,7 +62,7 @@ def run_all_tests(data_address,output_file_name,labels):
 
     X = vectors.values
     Y = labels_f[0]
-    n_clusters = 5
+    n_clusters = k
     
     labels_task_1 = labels[(labels['label']=='car') | (labels['label']=='memory')]
     vectors_task_1 = vectors.iloc[labels_task_1.index]
@@ -116,7 +116,7 @@ def run_all_tests(data_address,output_file_name,labels):
         seed = randint(0,10**4)
         np.random.seed(seed)
         try:
-            predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=5,architecture=fold,pretrain_epochs=1000)
+            predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=n_clusters,architecture=fold,pretrain_epochs=1000)
             tmp_results = ['DEC',str(seed)+' '+str(fold)]+evaluate(X,Y,predicted_labels)
             tmp_results_s = pd.Series(tmp_results, index = results.columns)
             tmp_results_df = results_template.copy()
@@ -319,16 +319,17 @@ datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
 label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
 
-vec_file_names = ['embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec-vanilla deepwalk 80-10-128']#,'Doc2Vec patent corpus',
-                  # ,'FastText Avg patent_wos corpus','FastText Avg wos corpus',
+vec_file_names = ['embeddings/Doc2Vec cora corpus dm1 with citations','embeddings/Doc2Vec cora_wos corpus dm1 with citations'#,'Doc2Vec patent corpus',
+                  ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec-80-10-128 p4q1'],
                   # 'FastText SIF patent_wos corpus','FastText SIF wos corpus']
 labels = pd.read_csv(label_address,names=['label'])
 
+clusters = labels.groupby('label').groups
 
 for file_name in vec_file_names:
     gc.collect()
     output_file_name = data_dir+file_name+' clustering results'
-    run_all_tests(data_dir+file_name,output_file_name,labels)
+    run_all_tests(data_dir+file_name,output_file_name,labels,len(list(clusters.keys())))
 
 #%%
 # =============================================================================
@@ -336,9 +337,9 @@ for file_name in vec_file_names:
 # =============================================================================
 
 import pandas as pd
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
-data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/bert orig-large corpus.csv clustering results"
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec-vanilla deepwalk 80-10-128 clustering results"
 df = pd.read_csv(data_address)
 max1 = df.groupby(['Method'], sort=False).max()
 max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
