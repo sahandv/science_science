@@ -59,9 +59,9 @@ def run_all_tests(data_address,output_file_name,labels,k):
     vectors = pd.read_csv(data_address)
     try:
         vectors = vectors.drop('Unnamed: 0',axis=1)
-        print('droped index column. Now '+data_address+' has the shape of: ',vectors.shape)
+        print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
     except:
-        print('vector shapes seem to be good:',vectors.shape)
+        print('\nVector shapes seem to be good:',vectors.shape)
         
     # data_dir+file_name+' dm_concat'
     labels_f = pd.factorize(labels.label)
