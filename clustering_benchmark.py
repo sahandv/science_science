@@ -52,11 +52,17 @@ def evaluate(X,Y,predicted_labels):
 # Cluster and evaluate
 # =============================================================================
 def run_all_tests(data_address,output_file_name,labels,k):
-    
+    print('K=',k)
     print('Will write the results to',output_file_name)
     
     column_names = ['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI']
     vectors = pd.read_csv(data_address)
+    try:
+        vectors = vectors.drop('Unnamed: 0',axis=1)
+        print('droped index column. Now '+data_address+' has the shape of: ',vectors.shape)
+    except:
+        print('vector shapes seem to be good:',vectors.shape)
+        
     # data_dir+file_name+' dm_concat'
     labels_f = pd.factorize(labels.label)
 
@@ -323,7 +329,7 @@ data_dir =  datapath+"Corpus/cora-classify/cora/"
 label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
 
 vec_file_names = ['embeddings/Doc2Vec cora corpus dm1 with citations','embeddings/Doc2Vec cora_wos corpus dm1 with citations'#,'Doc2Vec patent corpus',
-                  ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec-80-10-128 p4q1'],
+                  ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec-80-10-128 p4q1']
                   # 'FastText SIF patent_wos corpus','FastText SIF wos corpus']
 labels = pd.read_csv(label_address,names=['label'])
 
