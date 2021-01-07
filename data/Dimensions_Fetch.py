@@ -21,7 +21,7 @@ dsl = dimcli.Dsl()
 
 data = dsl.query("""search publications for "black holes" return publications""")
 data = dsl.query("""search publications for "black holes" return publications""", verbose=False)
-data = dsl.query_iterative("""search publications for "artificial intelligence" where year=1990 and times_cited > 10 return publications 
+data = dsl.query_iterative("""search publications for "artificial intelligence" where year=2016 and times_cited > 30 return publications 
                            [id + authors + linkout + doi + title + abstract + reference_ids + year + category_bra + category_for]""")
 
 # =============================================================================

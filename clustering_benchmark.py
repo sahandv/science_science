@@ -79,6 +79,104 @@ def run_all_tests(data_address,output_file_name,labels,k):
     
     results = pd.DataFrame([],columns=column_names)
     results_template = results.copy()
+    
+    
+    # # =============================================================================
+    # # Deep with min_max_scaling
+    # # =============================================================================
+    # archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
+    #             [500, 500, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 1000, 100],
+    #             [100, 300, 600, 10],[300, 500, 2000, 10],[700, 1000, 2000, 10],
+    #             [200, 500, 10],[500, 1000, 10],[1000, 2000, 10],
+    #             [200, 500, 100],[500, 1000, 100],[1000, 2000, 100],
+    #             [1000, 500, 10],[500, 200, 10],[200, 100, 10],
+    #             [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
+    #             [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
+    #             [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10],
+    #             [200,200,10],[200,200,10],[200,200,10],
+    #             [200,200,10],[200,200,10],[200,200,10],
+    #             [200,200,10],[200,200,10],[200,200,10],
+    #             [200,500,10],[200,500,10],[200,500,10],
+    #             [200,500,10],[200,500,10],[200,500,10]]
+    # print('\n- DEC 2-----------------------')
+    # for fold in tqdm(archs):
+    #     predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=True,n_clusters=5,architecture=fold,pretrain_epochs=300)
+    #     tmp_results = ['DEC minmax scaler',str(fold)]+evaluate(X,Y,predicted_labels)
+    #     tmp_results = pd.Series(tmp_results, index = results.columns)
+    #     results = results.append(tmp_results, ignore_index=True)
+    # mean = results.mean(axis=0)
+    # maxx = results.max(axis=0)
+    # print(mean)
+    # print(maxx)
+    
+
+    # =============================================================================
+    # K-means
+    # =============================================================================
+    print('\n- k-means random -----------------------')
+    for fold in tqdm(range(20)):
+        seed = randint(0,10**5)
+        model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
+        predicted_labels = model.labels_
+        try:
+            tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
+        except:
+            print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+            print('\nWirite success.')
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
+    mean = results.mean(axis=0)
+    maxx = results.max(axis=0)
+    print(mean)
+    print(maxx)
+    # =============================================================================
+    # K-means with init='k-means++'
+    # =============================================================================
+    print('\n- k-means++ -----------------------')
+    for fold in tqdm(range(20)):
+        gc.collect()
+        seed = randint(0,10**5)
+        model = KMeans(n_clusters=n_clusters,n_init=20,init='k-means++', random_state=seed).fit(X)
+        predicted_labels = model.labels_
+        try:
+            tmp_results = ['k-means++','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+            tmp_results_s = pd.Series(tmp_results, index = results.columns)
+            tmp_results_df = results_template.copy()
+            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
+            results = results.append(tmp_results_s, ignore_index=True)
+        except:
+            print('Some error happened, skipping ',fold)
+        
+        print('writing the fold results to file')
+        # if file does not exist write header 
+        try:
+            if not os.path.isfile(output_file_name):
+                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
+            else: # else it exists so append without writing the header
+                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+            print('\nWirite success.')
+        except:
+            print('something went wrong and could not write the results to file!\n',
+                 'You may abort and see what can be done.\n',
+                 'Or wait to see the the final results in memory.')
+    mean = results.mean(axis=0)
+    maxx = results.max(axis=0)
+    print(mean)
+    print(maxx)
     # =============================================================================
     # Deep no min_max_scaling
     # =============================================================================
@@ -141,6 +239,7 @@ def run_all_tests(data_address,output_file_name,labels,k):
                 tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
             else: # else it exists so append without writing the header
                 tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+            print('\nWirite success.')
         except:
             print('something went wrong and could not write the results to file!\n',
                  'You may abort and see what can be done.\n',
@@ -151,100 +250,6 @@ def run_all_tests(data_address,output_file_name,labels,k):
     print(mean)
     print(maxx)
     
-    # # =============================================================================
-    # # Deep with min_max_scaling
-    # # =============================================================================
-    # archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
-    #             [500, 500, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 1000, 100],
-    #             [100, 300, 600, 10],[300, 500, 2000, 10],[700, 1000, 2000, 10],
-    #             [200, 500, 10],[500, 1000, 10],[1000, 2000, 10],
-    #             [200, 500, 100],[500, 1000, 100],[1000, 2000, 100],
-    #             [1000, 500, 10],[500, 200, 10],[200, 100, 10],
-    #             [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
-    #             [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
-    #             [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10],
-    #             [200,200,10],[200,200,10],[200,200,10],
-    #             [200,200,10],[200,200,10],[200,200,10],
-    #             [200,200,10],[200,200,10],[200,200,10],
-    #             [200,500,10],[200,500,10],[200,500,10],
-    #             [200,500,10],[200,500,10],[200,500,10]]
-    # print('\n- DEC 2-----------------------')
-    # for fold in tqdm(archs):
-    #     predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=True,n_clusters=5,architecture=fold,pretrain_epochs=300)
-    #     tmp_results = ['DEC minmax scaler',str(fold)]+evaluate(X,Y,predicted_labels)
-    #     tmp_results = pd.Series(tmp_results, index = results.columns)
-    #     results = results.append(tmp_results, ignore_index=True)
-    # mean = results.mean(axis=0)
-    # maxx = results.max(axis=0)
-    # print(mean)
-    # print(maxx)
-    
-
-    # =============================================================================
-    # K-means
-    # =============================================================================
-    print('\n- k-means random -----------------------')
-    for fold in tqdm(range(20)):
-        seed = randint(0,10**5)
-        model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
-        predicted_labels = model.labels_
-        try:
-            tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-            tmp_results_s = pd.Series(tmp_results, index = results.columns)
-            tmp_results_df = results_template.copy()
-            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
-            results = results.append(tmp_results_s, ignore_index=True)
-        except:
-            print('Some error happened, skipping ',fold)
-        
-        print('writing the fold results to file')
-        # if file does not exist write header 
-        try:
-            if not os.path.isfile(output_file_name):
-                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
-            else: # else it exists so append without writing the header
-                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
-        except:
-            print('something went wrong and could not write the results to file!\n',
-                 'You may abort and see what can be done.\n',
-                 'Or wait to see the the final results in memory.')
-    mean = results.mean(axis=0)
-    maxx = results.max(axis=0)
-    print(mean)
-    print(maxx)
-    # =============================================================================
-    # K-means with init='k-means++'
-    # =============================================================================
-    print('\n- k-means++ -----------------------')
-    for fold in tqdm(range(20)):
-        gc.collect()
-        seed = randint(0,10**5)
-        model = KMeans(n_clusters=n_clusters,n_init=20,init='k-means++', random_state=seed).fit(X)
-        predicted_labels = model.labels_
-        try:
-            tmp_results = ['k-means++','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-            tmp_results_s = pd.Series(tmp_results, index = results.columns)
-            tmp_results_df = results_template.copy()
-            tmp_results_df = tmp_results_df.append(tmp_results_s, ignore_index=True)
-            results = results.append(tmp_results_s, ignore_index=True)
-        except:
-            print('Some error happened, skipping ',fold)
-        
-        print('writing the fold results to file')
-        # if file does not exist write header 
-        try:
-            if not os.path.isfile(output_file_name):
-                tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
-            else: # else it exists so append without writing the header
-                tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
-        except:
-            print('something went wrong and could not write the results to file!\n',
-                 'You may abort and see what can be done.\n',
-                 'Or wait to see the the final results in memory.')
-    mean = results.mean(axis=0)
-    maxx = results.max(axis=0)
-    print(mean)
-    print(maxx)
     # =============================================================================
     # Agglomerative
     # =============================================================================
@@ -269,6 +274,7 @@ def run_all_tests(data_address,output_file_name,labels,k):
                 tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
             else: # else it exists so append without writing the header
                 tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+            print('\nWirite success.')
         except:
             print('something went wrong and could not write the results to file!\n',
                  'You may abort and see what can be done.\n',
@@ -303,6 +309,7 @@ def run_all_tests(data_address,output_file_name,labels,k):
                 tmp_results_df.to_csv(output_file_name, header=column_names,index=False)
             else: # else it exists so append without writing the header
                 tmp_results_df.to_csv(output_file_name, mode='a', header=False,index=False)
+            print('\nWirite success.')
         except:
             print('something went wrong and could not write the results to file!\n',
                  'You may abort and see what can be done.\n',
@@ -328,8 +335,8 @@ datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
 label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
 
-vec_file_names = ['embeddings/Doc2Vec cora corpus dm1 with citations','embeddings/Doc2Vec cora_wos corpus dm1 with citations'#,'Doc2Vec patent corpus',
-                  ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec-80-10-128 p4q1']
+vec_file_names = ['embeddings/node2vec deepwalk 80-10-128','embeddings/FastText SIF cora corpus']#,'Doc2Vec patent corpus',
+                  # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
                   # 'FastText SIF patent_wos corpus','FastText SIF wos corpus']
 labels = pd.read_csv(label_address,names=['label'])
 
@@ -348,9 +355,9 @@ for file_name in vec_file_names:
 import pandas as pd
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec-vanilla deepwalk 80-10-128 clustering results"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec deepwalk-100-6-100 p1q1 clustering results"
 df = pd.read_csv(data_address)
-max1 = df.groupby(['Method'], sort=False).max()
-max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
-max3 = df[df.groupby(['Method'])['NMI'].transform(max) == df['NMI']]
-min3 = df[df.groupby(['Method'])['NMI'].transform(min) == df['NMI']]
+# max1 = df.groupby(['Method'], sort=False).max()
+# max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
+max3 = df[df.groupby(['Method'])['ARI'].transform(max) == df['ARI']]
+# min3 = df[df.groupby(['Method'])['NMI'].transform(min) == df['NMI']]
