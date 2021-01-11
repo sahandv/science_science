@@ -28,7 +28,7 @@ year_to = 2021
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
-MAKE_SENTENCE_CORPUS_ADVANCED = True
+MAKE_SENTENCE_CORPUS_ADVANCED = False
 MAKE_REGULAR_CORPUS = True
 GET_WORD_FREQ_IN_SENTENCE = False
 PROCESS_KEYWORDS = False
@@ -37,7 +37,7 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Dimensions/all dimensions AI articles-proceedings cited 0.csv'
+data_path_rel = '/mnt/16A4A9BCA4A99EAD/Dimensions/all dimensions AI articles-proceedings cited 0.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
@@ -46,7 +46,7 @@ data_full_relevant = pd.read_csv(data_path_rel,index_col=0)
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
-root_dir = '/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Dimensions/'
+root_dir = '/mnt/16A4A9BCA4A99EAD/Dimensions/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
 gc.collect()
 
@@ -57,10 +57,10 @@ data_full_relevant['DE'] = np.nan
 data_full_relevant['ID'] = ''
 data_full_relevant['SO'] = data_full_relevant['publisher']
 
-# 
-data_wrong = data_full_relevant[data_full_relevant['AB'].str.contains("abstract available")].index
-data_wrong = list(data_wrong)
-data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
+# data_filtered = pd.read_csv('/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/abstract_title deflemm',names=['AB'])
+# data_wrong = data_full_relevant[data_full_relevant['AB'].str.contains("abstract available")].index
+# data_wrong = list(data_wrong)
+# data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
 sample = data_full_relevant.sample(4)
 
 # =============================================================================
@@ -96,6 +96,12 @@ for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
     abstracts.append(abstract)
 data_with_abstract['AB'] = abstracts.copy()
 del  abstracts
+del data_full_relevant
+gc.collect()
+
+references = pd.DataFrame(data_with_abstract['reference_ids'].values.tolist(),columns=['reference_ids'])
+references.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus references',index=False) # Save year indices to disk for further use
+
 
 source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
 source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
@@ -354,6 +360,7 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
 # =============================================================================
 # Tokenize (Author Keywords and Abstracts+Titles)
 # =============================================================================
+print('Tokenize (Author Keywords and Abstracts+Titles)')
 abstracts = []
 keywords = []
 keywords_index = []
@@ -638,9 +645,9 @@ corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
-corpus_abstract.to_csv(root_dir+subdir+'abstract_title deflemm',index=False,header=False)
+corpus_abstract.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' abstract_title deflemm',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title pure',index=False,header=False)
+corpus_abstract_pure.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' abstract_title pure',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)

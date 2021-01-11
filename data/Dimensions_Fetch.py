@@ -22,7 +22,7 @@ dsl = dimcli.Dsl()
 
 # data = dsl.query("""search publications for "black holes" return publications""")
 # data = dsl.query("""search publications for "black holes" return publications""", verbose=False)
-years = list(range(1998,2021))
+years = list(range(1960,2021))
 for year in tqdm(years):
     # year = 2016
     data = dsl.query_iterative(r"""search publications for "\"artificial intelligence\"" where year="""+str(year)+
@@ -43,7 +43,7 @@ for year in tqdm(years):
     print(data.errors_string)
     
     csv = pd.DataFrame(data.publications)
-    csv.to_csv('/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Dimensions/'+str(year)+' dimensions AI articles-proceedings cited>0.csv')
+    csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/'+str(year)+' dimensions AI articles-proceedings cited>0.csv')
     
     del csv
     del data
