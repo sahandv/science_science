@@ -34,7 +34,7 @@ model = Doc2Vec.load(fname)
 fname = dir_root+'Corpus/Dimensions/abstract_title deflemm'
 texts = pd.read_csv(fname,names=['abstract'])['abstract'].values.tolist()
 test_docs = [doc.lower().split() for doc in texts]
-test_docs = test_docs[480000:]
+# test_docs = test_docs[480000:]
 
 
 start_alpha=0.01
@@ -43,4 +43,4 @@ X=[]
 for d in tqdm(test_docs):
     X.append( model.infer_vector(d, alpha=start_alpha, steps=infer_epoch))
 X_df = pd.DataFrame(X)
-X_df.to_csv(dir_root+'Corpus/Dimensions/embeddings/doc2vec 128D dm=1 window=10 480000:',index=False)
+X_df.to_csv(dir_root+'Corpus/Dimensions/embeddings/doc2vec 128D dm=1 window=10',index=False)
