@@ -33,6 +33,7 @@ pairs.to_csv(dir_root+'Corpus/Dimensions/citations pairs',index=False)
 # =============================================================================
 # Filter pairs
 # =============================================================================
-mask = data['pub_id'].values.tolist()
+pairs = pd.read_csv(dir_root+'Corpus/Dimensions/citations pairs')
+mask = data_pub_ids['pub_id'].values.tolist()
 pairs_masked = pairs[pairs['cited'].isin(mask)]
 pairs_masked.to_csv(dir_root+'Corpus/Dimensions/citations pairs - masked',index=False)

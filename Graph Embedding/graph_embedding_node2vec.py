@@ -6,6 +6,7 @@ Created on Wed Dec 16 16:27:46 2020
 @author: sahand
 """
 import sys
+import gc
 import warnings
 from text_unidecode import unidecode
 from collections import deque
@@ -32,9 +33,11 @@ np.random.seed(seed)
 # Read data
 # =============================================================================
 # dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'
-data = pd.read_csv(dir_path+'citations_filtered.csv')#, names=['referring_id','cited_id'],sep='\t')
-idx = pd.read_csv(dir_path+'extractions_with_unique_id_labeled.csv')
+dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/'
+data = pd.read_csv(dir_path+'citations pairs - masked')#, names=['referring_id','cited_id'],sep='\t')
+data.columns = ['referring_id','cited_id']
+idx = pd.read_csv(dir_path+'corpus idx',index_col=0)
+idx.columns = ['id']
 idx = idx['id'].values.tolist()
 
 # =============================================================================
@@ -44,17 +47,19 @@ graph = nx.Graph()
 for i,row in tqdm(data.iterrows(),total=data.shape[0]):
     graph.add_edge(row['referring_id'],row['cited_id'])
 
+del data
+gc.collect()
 # =============================================================================
 # Train
 # =============================================================================
-node2vec = Node2Vec(graph, dimensions=128, walk_length=80, num_walks=10, workers=2, p=4, q=1,seed=seed)
+node2vec = Node2Vec(graph, dimensions=128, walk_length=80, num_walks=10, workers=1, p=4, q=1,seed=seed)
 model = node2vec.fit(window=10, min_count=1)
-model.save(dir_path+'models/node2vec-100-10-128 p4q1')
+model.save(dir_path+'models/node2vec-128-80-10 p4q1')
 
 # =============================================================================
 # Get embeddings
 # =============================================================================
-model_name = 'node2vec deepwalk-100-6-100 p1q1'
+model_name = 'node2vec-128-80-10 p4q1'
 model = Word2Vec.load(dir_path+'models/'+model_name)
 embeddings = []
 idx_true = []
