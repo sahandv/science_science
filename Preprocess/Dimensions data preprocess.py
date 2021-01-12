@@ -62,3 +62,12 @@ cat_1['for_name'] = cat_1['for_name'].str.replace("'","").str.strip().str.lower(
 cat_1['for_id_root'] = cat_1['for_id'].str[:2]
 
 cat_1.to_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/categories_processed',index=False)
+
+# =============================================================================
+# Check labels and etc.
+# =============================================================================
+cats = pd.read_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/categories_processed')
+cats_groups = cats.groupby('for_id_root').groups
+
+
+
