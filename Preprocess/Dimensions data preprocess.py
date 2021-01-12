@@ -55,18 +55,20 @@ def clean_cats(cat_string):
 cat_1 = [clean_cats(x[0]) for x in data['cat'].values.tolist()]
 cat_1 = pd.DataFrame(cat_1)
 cat_1.columns = ['cat_id','cat_name','for_id','for_name']
-cat_1['cat_id'] = cat_1['cat_id'].str.replace("'","").str.strip()
+cat_1['cat_id'] = cat_1['cat_id'].str.replace("'","").str.strip().apply(str)
 cat_1['cat_name'] = cat_1['cat_name'].str.replace("'","").str.strip().str.lower()
-cat_1['for_id'] = cat_1['for_id'].str.replace("'","").str.strip()
+cat_1['for_id'] = cat_1['for_id'].str.replace("'","").str.strip().apply(str)
 cat_1['for_name'] = cat_1['for_name'].str.replace("'","").str.strip().str.lower()
-cat_1['for_id_root'] = cat_1['for_id'].str[:2]
+cat_1['for_id_root'] = cat_1['for_id'].str[:2].apply(str)
 
 cat_1.to_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/categories_processed',index=False)
+pd.DataFrame(cat_1['for_id_root']).to_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/corpus classes_1 root',index=False,header=False)
+pd.DataFrame(cat_1['for_id']).to_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/corpus classes_1',index=False,header=False)
 
 # =============================================================================
 # Check labels and etc.
 # =============================================================================
-cats = pd.read_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/categories_processed')
+cats = pd.read_csv('/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/categories_processed', dtype=str)
 cats_groups = cats.groupby('for_id_root').groups
 
 
