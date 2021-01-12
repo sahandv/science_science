@@ -36,7 +36,7 @@ np.random.seed(seed)
 dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/'
 data = pd.read_csv(dir_path+'citations pairs - masked')#, names=['referring_id','cited_id'],sep='\t')
 data.columns = ['referring_id','cited_id']
-idx = pd.read_csv(dir_path+'corpus idx',index_col=0)
+idx = pd.read_csv(dir_path+'publication idx',names=['id'])#(dir_path+'corpus idx',index_col=0)
 idx.columns = ['id']
 idx = idx['id'].values.tolist()
 
@@ -52,14 +52,14 @@ gc.collect()
 # =============================================================================
 # Train
 # =============================================================================
-node2vec = Node2Vec(graph, dimensions=128, walk_length=80, num_walks=10, workers=1, p=4, q=1,seed=seed)
+node2vec = Node2Vec(graph, dimensions=128, walk_length=80, num_walks=10, workers=1, p=1, q=1,seed=seed)
 model = node2vec.fit(window=10, min_count=1)
-model.save(dir_path+'models/node2vec-128-80-10 p4q1')
+model.save(dir_path+'models/node2vec deepwalk-128-80-10 p1q1')
 
 # =============================================================================
 # Get embeddings
 # =============================================================================
-model_name = 'node2vec-128-80-10 p4q1'
+model_name = 'node2vec deepwalk-128-80-10 p1q1'
 model = Word2Vec.load(dir_path+'models/'+model_name)
 embeddings = []
 idx_true = []
