@@ -47,6 +47,11 @@ graph = nx.Graph()
 for i,row in tqdm(data.iterrows(),total=data.shape[0]):
     graph.add_edge(row['referring_id'],row['cited_id'])
 
+print('Graph fully connected:',nx.is_connected(graph))
+print('Connected components:',nx.number_connected_components(graph))
+
+# connected_components = list(nx.connected_components(graph))
+
 del data
 gc.collect()
 # =============================================================================
