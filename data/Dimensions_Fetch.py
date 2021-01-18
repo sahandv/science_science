@@ -17,7 +17,7 @@ dimcli.login()
 dsl = dimcli.Dsl()
 
 # =============================================================================
-# Query
+# Query - get year by year
 # =============================================================================
 
 # data = dsl.query("""search publications for "black holes" return publications""")
@@ -49,6 +49,33 @@ for year in tqdm(years):
     del data
     gc.collect()
     
+# =============================================================================
+# Query - get by category
+# =============================================================================
+categories = ["01 Mathematical Sciences","09 Engineering","11 Medical and Health Sciences",
+              "17 Psychology and Cognitive Sciences","06 Biological Sciences",
+              "15 Commerce, Management, Tourism and Services","10 Technology",
+              "13 Education","20 Language, Communication and Culture","16 Studies in Human Society"]
+              
+
+data = dsl.query_iterative(r"""search publications where year>1969
+                               and (type="article" or type="proceeding") and times_cited > 6 and category_for.name="01 Mathematical Sciences"
+                               and abstract is not empty and reference_ids is not empty and title is not empty and category_for is not empty
+                               return publications 
+                               [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + 
+                                times_cited + altmetric + reference_ids +  year + category_for + journal + 
+                               proceedings_title + publisher + research_orgs]""") # for "\"machine learning\"" 
+                               
+data.json.keys()
+len(data.publications)
+print("We got", data.count_batch, "results out of", data.count_total)
+ # ps errors are printed out by default
+print(data.errors_string)
+
+csv = pd.DataFrame(data.publications)
+csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/'+str(year)+' dimensions AI concepts articles-proceedings cited>0.csv')
+
+
 # =============================================================================
 # Data combine
 # =============================================================================

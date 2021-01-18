@@ -91,12 +91,14 @@ for i in range(int(len(cats_all_df.columns)/len(name_template))):
 
 cats_all_df.columns = column_names
 
-cat_0_groups = cats_all_df.groupby('for_id-0').size()#.agg(['count'])
+cat_0_groups = cats_all_df.groupby('for_id_root-0').size().reset_index()#.agg(['count'])
 print(cat_0_groups)
-cat_1_groups = cats_all_df.groupby('for_id-1').size()#.agg(['count'])
+cat_1_groups = cats_all_df.groupby('for_id_root-1').size().reset_index()#.agg(['count'])
 print(cat_1_groups)
-cat_2_groups = cats_all_df.groupby('for_id-2').size()#.agg(['count'])
+cat_2_groups = cats_all_df.groupby('for_id-2').size().reset_index()#.agg(['count'])
 print(cat_2_groups)
+
+cats_all_df.to_csv(dir_root+'categories_procesed_further')
 
 # =============================================================================
 # Check labels and etc.
