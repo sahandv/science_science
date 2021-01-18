@@ -58,13 +58,13 @@ categories = ["01 Mathematical Sciences","09 Engineering","11 Medical and Health
               "13 Education","20 Language, Communication and Culture","16 Studies in Human Society"]
               
 
-data = dsl.query_iterative(r"""search publications where year>1969
-                               and (type="article" or type="proceeding") and times_cited > 6 and category_for.name="01 Mathematical Sciences"
+data = dsl.query_iterative(r"""search publications in full_data for "(\"machine learning\" OR \"artificial intelligence\")"  where year>1969
+                               and (type="article" or type="proceeding") and times_cited > 5 and category_for.name="09 Engineering"
                                and abstract is not empty and reference_ids is not empty and title is not empty and category_for is not empty
                                return publications 
                                [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + 
                                 times_cited + altmetric + reference_ids +  year + category_for + journal + 
-                               proceedings_title + publisher + research_orgs]""") # for "\"machine learning\"" 
+                               proceedings_title + publisher + research_orgs] sort by altmetric desc""") # for "\"machine learning\"" 
                                
 data.json.keys()
 len(data.publications)
