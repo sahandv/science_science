@@ -7,8 +7,8 @@ Created on Tue Jan 12 12:30:30 2021
 """
 import pandas as pd
 from tqdm import tqdm
-dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
-# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/' # c1314
+# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
+dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/' # c1314
 
 # =============================================================================
 # Label prep - cleanup of data without label
@@ -84,8 +84,19 @@ for cats in tqdm(data['cat'].values.tolist()):
     # cats_all.append([clean_cats(x) for x in cats])
 
 cats_all_df = pd.DataFrame(cats_all)
+name_template = ['cat_id','cat_name','for_id','for_name','for_id_root']
+column_names =  []
+for i in range(int(len(cats_all_df.columns)/len(name_template))):
+    column_names.extend([x+'-'+str(i) for x in name_template])
 
+cats_all_df.columns = column_names
 
+cat_0_groups = cats_all_df.groupby('for_id-0').size()#.agg(['count'])
+print(cat_0_groups)
+cat_1_groups = cats_all_df.groupby('for_id-1').size()#.agg(['count'])
+print(cat_1_groups)
+cat_2_groups = cats_all_df.groupby('for_id-2').size()#.agg(['count'])
+print(cat_2_groups)
 
 # =============================================================================
 # Check labels and etc.
