@@ -5,13 +5,13 @@ Created on Mon Jan 11 11:06:18 2021
 
 @author: sahand
 """
-
+import gc
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
-dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
 data = pd.read_csv(dir_root+'Corpus/Dimensions - AI/corpus references',names=['refs'])
 data_pub_ids = pd.read_csv(dir_root+'Corpus/Dimensions - AI/publication idx',names=['pub_id'])
@@ -51,11 +51,21 @@ for idx,paper in tqdm(data.iterrows(),total=data.shape[0]):
     refs = paper['refs'][1:-1].replace("'",'').split(', ')
     for ref in refs:
         pairs.append([paper['pub_id'],ref])
-        
-pairs = pd.DataFrame(pairs,columns=['citing','cited'])
-pair_groups = pairs.groupby('cited').groups
-pair_groups_cited = [list(x) for x in list(pair_groups.values()) if len(list(x))>1]
+  
+del data    
+gc.collect()
 
-# group = pair_groups_cited[0]
-# for i in group:
+pairs = pd.DataFrame(pairs,columns=['citing','cited'])
+pair_groups = pairs.groupby(['cited']).groups
+
+pair_groups_list = [list(x) for x in list(pair_groups.values()) if len(list(x))>1]
+
+pairs_new = []
+for x in tqdm(range(len(pair_groups_list))):
+    group = pairs.iloc[pair_groups_list[x]]['citing'].values.tolist()
+    n = len(group)
+    for i in range(n):
+        for j in range(i+1,n):
+            pairs_new.append([group[i],group[j]])
+    
     
