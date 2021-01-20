@@ -10,12 +10,14 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
-# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data = pd.read_csv(dir_root+'Corpus/Dimensions/corpus references',names=['refs'])
+data = pd.read_csv(dir_root+'Corpus/Dimensions/corpus references')
+data.columns = ['refs']
 data_pub_ids = pd.read_csv(dir_root+'Corpus/Dimensions/publication idx',names=['pub_id'])
 data['pub_id'] = data_pub_ids['pub_id']
+data = data[pd.notnull(data['pub_id'])]
 data = data[pd.notnull(data['refs'])]
 
 # =============================================================================
@@ -58,19 +60,35 @@ pairs = pd.DataFrame(pairs,columns=['citing','cited'])
 pair_groups = pairs.groupby(['cited']).groups
 pair_groups_list = [list(x) for x in list(pair_groups.values()) if len(list(x))>1]
 
+pairs[pd.isna(pairs['citing'])]
 
-# eat memory (fast!)
+# =============================================================================
+# # eat memory (fast!)
+# =============================================================================
 pairs_cocitation = []
 for x in tqdm(range(len(pair_groups_list))):
     group = pairs.iloc[pair_groups_list[x]]['citing'].values.tolist()
     n = len(group)
     for i in range(n):
         for j in range(i+1,n):
-            pairs_cocitation.append([group[i],group[j]])
+            pairs_cocitation.append(group[i]+'--'+group[j])
+
+# del pairs
+gc.collect()
+
+pairs_cocitation = pd.DataFrame(pairs_cocitation,columns=['pair'])
+pairs_cocitation['weight'] = 0
+pairs_cocitation.columns = ['pair','weight']
+pairs_cocitation.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/co-citation-pairs-concat.csv',index=False,header=False)
+
+# read from file or continue to use the same one
+pairs_cocitation = pd.read_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/co-citation-pairs-concat.csv',names=['pair','weight'])
 
 
 
-# save memory (slow!)
+# =============================================================================
+# # save memory (slow!)
+# =============================================================================
 pairs_cocitation = pd.DataFrame([],columns=['pair','weight'])
 for x in tqdm(range(len(pair_groups_list))):
     group = pairs.iloc[pair_groups_list[x]]['citing'].values.tolist()
