@@ -13,17 +13,17 @@ dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Co
 # =============================================================================
 # Label prep - cleanup of data without label
 # =============================================================================
-categories = pd.read_csv(dir_root+'corpus category_for',names=['cat'])
-data = pd.read_csv(dir_root+'publication idx',names=['id'])
-data['cat'] = categories['cat']
+categories = pd.read_csv(dir_root+'corpus category_for')
+data = pd.read_csv(dir_root+'publication idx')
+data['cat'] = categories['category_for']
 # data['cat'] = data.cat.str.replace('[','').str.replace(']','').str[1:-1].str.split('}, {')
 # data['cat1'] = data['cat'][0]
 pub_ids = pd.DataFrame(data['id'])
 data = data[pd.notnull(data['cat'])]
-categories = categories[pd.notnull(categories['cat'])]
-categories.to_csv(dir_root+'with label/corpus category_for',index=False,header=False)
+categories = categories[pd.notnull(categories['category_for'])]
+categories.to_csv(dir_root+'corpus category_for',index=False,header=False)
 pub_ids_mask = pd.DataFrame(data['id'])
-pub_ids_mask.to_csv(dir_root+'with label/publication idx',index=False,header=False)
+pub_ids_mask.to_csv(dir_root+'publication idx',index=False,header=False)
 pub_ids_mask = data['id'].values.tolist()
 
 # filtering operation:
