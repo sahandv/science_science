@@ -71,7 +71,8 @@ for x in tqdm(range(len(pair_groups_list))):
     n = len(group)
     for i in range(n):
         for j in range(i+1,n):
-            pairs_cocitation.append(group[i]+'--'+group[j])
+            pairs_cocitation.append(group[i]+'-'+group[j])
+
 
 # del pairs
 gc.collect()
@@ -87,7 +88,7 @@ pairs_cocitation = pd.read_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/co-citation-pai
 
 
 # =============================================================================
-# # save memory (slow!)
+# # save memory (slow!) - pandas method
 # =============================================================================
 pairs_cocitation = pd.DataFrame([],columns=['pair','weight'])
 for x in tqdm(range(len(pair_groups_list))):
@@ -101,4 +102,26 @@ for x in tqdm(range(len(pair_groups_list))):
             else:
                 row = pairs_cocitation['pair']==group[i]+';'+group[j]
                 pairs_cocitation.loc[row,'weight'] = pairs_cocitation[row]['weight'].values.tolist()[0]+1
+                
+# =============================================================================
+# # save memory (slow!) - python list method
+# =============================================================================
+pairs_cocitation_index = []
+pairs_cocitation_weight = []
+for x in tqdm(range(len(pair_groups_list))):
+    group = pairs.iloc[pair_groups_list[x]]['citing'].values.tolist()
+    n = len(group)
+    for i in range(n):
+        for j in range(i+1,n):
+            if (group[i]+'-'+group[j] not in pairs_cocitation_index) and (group[j]+'-'+group[i] not in pairs_cocitation_index):
+                pairs_cocitation_index.append(group[i]+'-'+group[j])
+                pairs_cocitation_weight.append(0)
+            else:
+                try:
+                    pairs_cocitation_weight[pairs_cocitation_index.index(group[i]+'-'+group[j])] = pairs_cocitation_weight[pairs_cocitation_index.index(group[i]+'-'+group[j])]+1
+                except:
+                    try:
+                        pairs_cocitation_weight[pairs_cocitation_index.index(group[j]+'-'+group[i])] = pairs_cocitation_weight[pairs_cocitation_index.index(group[j]+'-'+group[i])]+1
+                    except:
+                        print('WTF?! Where is ',group[j]+'-'+group[i],'or',group[i]+'-'+group[j],'then?')
 
