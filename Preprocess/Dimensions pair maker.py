@@ -50,22 +50,37 @@ pairs = []
 for idx,paper in tqdm(data.iterrows(),total=data.shape[0]):
     refs = paper['refs'][1:-1].replace("'",'').split(', ')
     for ref in refs:
-        pairs.append([paper['pub_id'],ref])
-  
+        pairs.append([paper['pub_id'],ref])  
 del data    
 gc.collect()
 
 pairs = pd.DataFrame(pairs,columns=['citing','cited'])
 pair_groups = pairs.groupby(['cited']).groups
-
 pair_groups_list = [list(x) for x in list(pair_groups.values()) if len(list(x))>1]
 
-pairs_new = []
+
+# eat memory (fast!)
+pairs_cocitation = []
 for x in tqdm(range(len(pair_groups_list))):
     group = pairs.iloc[pair_groups_list[x]]['citing'].values.tolist()
     n = len(group)
     for i in range(n):
         for j in range(i+1,n):
-            pairs_new.append([group[i],group[j]])
-    
-    
+            pairs_cocitation.append([group[i],group[j]])
+
+
+
+# save memory (slow!)
+pairs_cocitation = pd.DataFrame([],columns=['pair','weight'])
+for x in tqdm(range(len(pair_groups_list))):
+    group = pairs.iloc[pair_groups_list[x]]['citing'].values.tolist()
+    n = len(group)
+    for i in range(n):
+        for j in range(i+1,n):
+            if group[i]+';'+group[j] not in pairs_cocitation['pair'].values.tolist():
+            # if row.any() == False:
+                pairs_cocitation = pairs_cocitation.append({'pair':group[i]+';'+group[j],'weight':0},ignore_index=True)
+            else:
+                row = pairs_cocitation['pair']==group[i]+';'+group[j]
+                pairs_cocitation.loc[row,'weight'] = pairs_cocitation[row]['weight'].values.tolist()[0]+1
+
