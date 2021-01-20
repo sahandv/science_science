@@ -110,6 +110,9 @@ class_list = pd.DataFrame(data_with_abstract['category_for'].values.tolist(),col
 class_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus category_for',index=False) # Save year indices to disk for further use
 
 id_list = pd.DataFrame(data_with_abstract['id'].values.tolist(),columns=['id'])
+id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' publication idx',index=False) # Save year indices to disk for further use
+
+id_list = pd.DataFrame(list(data_with_abstract.index),columns=['index'])
 id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus idx',index=False) # Save year indices to disk for further use
 
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
@@ -387,8 +390,10 @@ for index,paper in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.s
     abstracts_pure.append(abstract_dic_pure)
 
 # Add to main df. Not necessary
-data_with_abstract['AB_split'] = abstracts_pure 
-data_with_abstract['AB_KW_split'] = abstracts
+# data_with_abstract['AB_split'] = abstracts_pure 
+# data_with_abstract['AB_KW_split'] = abstracts
+del data_with_abstract
+gc.collect()
 
 # =============================================================================
 # Strip and lowe case 
