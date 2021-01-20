@@ -10,8 +10,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
-dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/'
+# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
 data = pd.read_csv(dir_root+'Corpus/Dimensions/corpus references')
 data.columns = ['refs']
@@ -125,3 +125,7 @@ for x in tqdm(range(len(pair_groups_list))):
                     except:
                         print('WTF?! Where is ',group[j]+'-'+group[i],'or',group[i]+'-'+group[j],'then?')
 
+pairs_cocitation_index = pd.DataFrame(pairs_cocitation_index)
+pairs_cocitation_index.columns = ['pair']
+pairs_cocitation_index['weight'] =  pairs_cocitation_weight
+pairs_cocitation_index.to_csv(dir_root+'Corpus/Dimensions/co-citations pairs - weighted',index=False)
