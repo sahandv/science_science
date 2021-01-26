@@ -6,9 +6,10 @@ Created on Tue Jan 12 12:30:30 2021
 @author: sahand
 """
 import pandas as pd
+import numpy as np
 from tqdm import tqdm
-# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
-dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/' # c1314
+dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
+# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/' # c1314
 
 # =============================================================================
 # Label prep - cleanup of data without label
@@ -56,7 +57,7 @@ def clean_cats(cat_string):
     return result
 
 # get the first cat only 
-   
+
 cat_1 = [clean_cats(x[0]) for x in data['cat'].values.tolist()]
 cat_1 = pd.DataFrame(cat_1)
 cat_1.columns = ['cat_id','cat_name','for_id','for_name']
@@ -90,15 +91,64 @@ for i in range(int(len(cats_all_df.columns)/len(name_template))):
     column_names.extend([x+'-'+str(i) for x in name_template])
 
 cats_all_df.columns = column_names
+# cats_all_df.to_csv(dir_root+'categories_procesed_further')
 
 cat_0_groups = cats_all_df.groupby('for_id_root-0').size().reset_index()#.agg(['count'])
 print(cat_0_groups)
 cat_1_groups = cats_all_df.groupby('for_id_root-1').size().reset_index()#.agg(['count'])
 print(cat_1_groups)
 cat_2_groups = cats_all_df.groupby('for_id-2').size().reset_index()#.agg(['count'])
-print(cat_2_groups)
+print(cat_2_groups) 
 
-cats_all_df.to_csv(dir_root+'categories_procesed_further')
+
+def category_selector(cat_row,level:int=0,max_level:int=7):
+    """
+    It is an recursive function to select the categories.
+    
+    Parameters
+    ----------
+    cat_row : Pandas Series
+        A row of categories.
+    level : int
+        Depth of recurring function
+    max_level : int
+        max depth of recurring  function
+    
+        
+    Returns
+    -------
+    cat :  list
+        Category
+    
+    """
+    cat = row['for_id_root-'+str(level)]
+
+    if (cat!='01' and cat!='06' and cat!='09' and cat!='10' and
+        cat!='11' and cat!='15' and cat!='17') is False:
+        return cat
+    else:
+        if level<max_level:
+            return category_selector(row,level+1,max_level)
+            
+
+cats = []
+for i,row in tqdm(cats_all_df.iterrows(),total=cats_all_df.shape[0]):
+    cats.append(category_selector(row,0,7))
+
+cats = pd.DataFrame(cats,columns=['category'])
+if cats[pd.isnull(cats['category'])].shape[0]>0:
+    print('oops! found some unwanted categories...')
+cats.to_csv(dir_root+'categories_masked_clean',index=False)
+
+# eight = cats_all_df[((cats_all_df['for_id_root-0']!='01') & 
+#                      (cats_all_df['for_id_root-0']!='06') &
+#                      (cats_all_df['for_id_root-0']!='09') &
+#                      (cats_all_df['for_id_root-0']!='10') &
+#                      (cats_all_df['for_id_root-0']!='11') &
+#                      (cats_all_df['for_id_root-0']!='15') &
+#                      (cats_all_df['for_id_root-0']!='17'))]
+
+
 
 # =============================================================================
 # Check labels and etc.
