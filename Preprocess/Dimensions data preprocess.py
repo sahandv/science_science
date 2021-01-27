@@ -153,8 +153,11 @@ cats.to_csv(dir_root+'categories_masked_clean',index=False)
 # =============================================================================
 # Check labels and etc.
 # =============================================================================
-cats = pd.read_csv(dir_root+'categories_processed', dtype=str)
-cats_groups = cats.groupby('for_id_root').groups
+cats = pd.read_csv(dir_root+'categories_masked_clean_categorical', dtype=str)
+cats.info()
+cats.category = pd.Categorical(cats.category)
+cats.category = cats.category.cat.codes
+cats.to_csv(dir_root+'categories_masked_clean_categorical',index=False)
 
 
 
