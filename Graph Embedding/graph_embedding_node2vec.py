@@ -34,8 +34,8 @@ np.random.seed(seed)
 # =============================================================================
 # dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
 dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/'
-data = pd.read_csv(dir_path+'co-citation-pairs-concat-unique-weights-int.csv')#, names=['referring_id','cited_id'],sep='\t')
-# data.columns = ['referring_id','cited_id']
+data = pd.read_csv(dir_path+'citations pairs')#, names=['referring_id','cited_id'],sep='\t')
+data.columns = ['referring_id','cited_id']
 gc.collect()
 sample = data.sample()
 data.info(memory_usage='deep')
