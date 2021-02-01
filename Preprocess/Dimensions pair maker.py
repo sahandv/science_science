@@ -37,8 +37,15 @@ for idx,paper in tqdm(data.iterrows(),total=data.shape[0]):
         pairs.append([paper['pub_id'],ref])
         
 pairs = pd.DataFrame(pairs,columns=['citing','cited'])
-pairs.to_csv(dir_root+'Corpus/Dimensions/citations pairs',index=False)
-
+pairs.citing = pairs.citing.str.replace('pub.','')
+pairs.cited = pairs.cited .str.replace('pub.','')
+pairs.citing = pairs.citing.astype(str).astype(int)
+pairs.cited = pairs.cited .astype(str).astype(int)
+sample = pairs.sample()
+pairs.to_csv(dir_root+'Corpus/Dimensions/citations pairs - int',index=False)
+data_pub_ids.pub_id =  data_pub_ids.pub_id.str.replace('pub.','')
+data_pub_ids.pub_id =  data_pub_ids.pub_id.astype(str).astype(int)
+data_pub_ids.to_csv(dir_root+'Corpus/Dimensions/publication idx - int',index=False,header=False)
 # =============================================================================
 # Filter pairs
 # =============================================================================
