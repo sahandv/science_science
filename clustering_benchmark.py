@@ -331,14 +331,14 @@ def run_all_tests(data_address,output_file_name,labels,k):
 # Run
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+data_dir =  datapath+"Corpus/Dimensions/"
+label_address =  datapath+"Corpus/Dimensions/categories_masked_clean_categorical"
 
-data_dir =  datapath+"Corpus/cora-classify/cora/"
-label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
-
-vec_file_names = ['embeddings/node2vec deepwalk 80-10-128','embeddings/FastText SIF cora corpus']#,'Doc2Vec patent corpus',
+vec_file_names = ['embeddings/doc2vec 128D dm=1 window=10']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
                   # 'FastText SIF patent_wos corpus','FastText SIF wos corpus']
-labels = pd.read_csv(label_address,names=['label'])
+labels = pd.read_csv(label_address)
+labels.columns = ['label']
 
 clusters = labels.groupby('label').groups
 
@@ -355,7 +355,7 @@ for file_name in vec_file_names:
 import pandas as pd
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec deepwalk-100-6-100 p1q1 clustering results"
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/bert scibert corpus.csv clustering results"
 df = pd.read_csv(data_address)
 # max1 = df.groupby(['Method'], sort=False).max()
 # max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
