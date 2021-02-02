@@ -44,6 +44,8 @@ idx.columns = ['id']
 idx['id'] = idx['id'].str.replace('pub.','').astype(str).astype(int)
 idx = idx['id'].values.tolist()
 
+
+data = data[data['cited_id'].isin(idx)] # mask
 # =============================================================================
 # Prepare graph
 # =============================================================================
