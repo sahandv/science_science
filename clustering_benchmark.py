@@ -355,6 +355,7 @@ for file_name in vec_file_names:
 import pandas as pd
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
+datapath = '/home/sahand/GoogleDrive/Data/' #Asus
 data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/performance/bert scibert corpus.csv clustering results"
 df = pd.read_csv(data_address)
 # max1 = df.groupby(['Method'], sort=False).max()
