@@ -34,19 +34,21 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec-vanilla deepwalk 80-10-128"
-label_address =  datapath+"Corpus/cora-classify/cora/corpus classes1 with citations"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec super-d2v-node 128-80-10 p1q025"
+label_address = datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
 
 # data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
 # label_address =  datapath+"Corpus/KPRIS/labels"
 
-vectors = pd.read_csv(data_address)
-labels = pd.read_csv(label_address,names=['label'])
+vectors = pd.read_csv(data_address)#,header=None)
+labels = pd.read_csv(label_address)
+labels.columns = ['label']
 
 labels_f = pd.factorize(labels.label)
 X = vectors.values
 Y = labels_f[0]
-n_clusters = 10
+n_clusters = len(list(labels.groupby('label').groups.keys())) 
+
 
 labels_task_1 = labels[(labels['label']=='car') | (labels['label']=='memory')]
 vectors_task_1 = vectors.iloc[labels_task_1.index]
@@ -227,3 +229,15 @@ results_df.groupby('label').groups.keys()
 # =============================================================================
 results_df = pd.DataFrame(results)
 results_df.to_csv(data_address+' clustering results',index=False)
+
+# =============================================================================
+# find centroid of each cluster for a model
+# =============================================================================
+cluster_centers = []
+for cluster in tqdm(range(n_clusters),total=n_clusters):
+    cluster_centers.append(np.array(X)[predicted_labels==cluster].mean(axis=0))
+# =============================================================================
+# Save clusters
+# =============================================================================
+predicted_labels = pd.DataFrame(predicted_labels,columns=['labels'])
+predicted_labels.to_csv(datapath+"Corpus/cora-classify/cora/embeddings/doc2vec all-lem 128D dm=1 window=10 predictions",index=False)
