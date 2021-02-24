@@ -28,7 +28,7 @@ year_to = 2021
 
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
-MAKE_SENTENCE_CORPUS_ADVANCED = True
+MAKE_SENTENCE_CORPUS_ADVANCED = False
 MAKE_REGULAR_CORPUS = True
 GET_WORD_FREQ_IN_SENTENCE = False
 PROCESS_KEYWORDS = False
@@ -38,16 +38,18 @@ nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
 data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/extractions_with_unique_id_labeled.csv'
+citations_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/citations_filtered.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
+citations = pd.read_csv(citations_path)
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
 root_dir = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-subdir = 'clean/' # no_lemmatization_no_stopwords
+subdir = 'clean/with citations new/' # no_lemmatization_no_stopwords
 gc.collect()
 
 data_full_relevant['PY'] = 2010
@@ -63,6 +65,16 @@ data_wrong = list(data_wrong)
 data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
 sample = data_full_relevant.sample(4)
 
+# =============================================================================
+# filter by citations
+# =============================================================================
+all_citations = citations['referring_id'].values.tolist()
+all_citations.extend(citations['cited_id'].values.tolist())
+all_citations = pd.DataFrame(all_citations)
+all_citations.columns = ['citation_id']
+citations_mask = list(all_citations.groupby('citation_id').groups.keys())
+
+data_full_relevant = data_full_relevant[data_full_relevant['id'].isin(citations_mask)]
 # =============================================================================
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
@@ -97,17 +109,15 @@ for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
 data_with_abstract['AB'] = abstracts.copy()
 del  abstracts
 
-source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
-source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
+alist = pd.DataFrame(data_with_abstract['Author'].values.tolist(),columns=['author'])
+alist.to_csv(root_dir+subdir+'corpus authors',index=False) # Save year indices to disk for further use
 
 class_list = pd.DataFrame(data_with_abstract['class1'].values.tolist(),columns=['class1'])
-class_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus classes1',index=False) # Save year indices to disk for further use
+class_list.to_csv(root_dir+subdir+'corpus classes1',index=False) # Save year indices to disk for further use
 
 id_list = pd.DataFrame(data_with_abstract['id'].values.tolist(),columns=['id'])
-id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus idx',index=False) # Save year indices to disk for further use
+id_list.to_csv(root_dir+subdir+'corpus idx',index=False) # Save year indices to disk for further use
 
-year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
-year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
 gc.collect()
 # =============================================================================
 # Sentence maker
@@ -403,14 +413,14 @@ keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 tmp_data = []
 print("\nString pre processing for ababstracts_purestracts")
 for string_list in tqdm(abstracts, total=len(abstracts)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='ALL',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts = tmp_data.copy()
 del tmp_data
 
 tmp_data = []
 for string_list in tqdm(abstracts_pure, total=len(abstracts_pure)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts_pure = tmp_data.copy()
 del tmp_data
@@ -514,6 +524,14 @@ if PROCESS_KEYWORDS is True:
     keywords = kw.thesaurus_matching(keywords)
     keywords_index = kw.thesaurus_matching(keywords_index)
 
+# =============================================================================
+# Remove single letter words
+# =============================================================================
+tmp = []
+for abstract in tqdm(abstracts):
+    tmp.append([x for x in abstract if len(x)>1])
+
+abstracts = tmp.copy()
 # =============================================================================
 # Term to string corpus for co-word analysis
 # =============================================================================
@@ -637,10 +655,10 @@ corpus_keywords = pd.DataFrame(corpus_keywords,columns=['words'])
 corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
-
-corpus_abstract.to_csv(root_dir+subdir+'abstract_title deflemm',index=False,header=False)
+corpus_abstract_pure.shape
+corpus_abstract.to_csv(root_dir+subdir+'abstract_title all-lem',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title pure',index=False,header=False)
+corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title very pure',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
