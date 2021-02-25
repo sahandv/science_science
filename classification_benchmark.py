@@ -21,9 +21,16 @@ from sklearn.decomposition import PCA
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import cross_val_score, cross_validate
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.metrics import make_scorer, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import LabelEncoder
+from sklearn.pipeline import Pipeline
 
-from keras import backend as K
 import keras as keras
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras import backend as K
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import SGD, Adam
@@ -58,82 +65,43 @@ class AccuracyHistory(keras.callbacks.Callback):
 
     def on_epoch_end(self, batch, logs={}):
         self.acc.append(logs.get('acc'))
+
 # =============================================================================
-# Classify and evaluate
+# Models
 # =============================================================================
-def run_all_tests(data_address:str,output_dir:str,labels:list,model_shapes:list,test_size:float=0.1):
-    tic = time.time()
-    vectors = pd.read_csv(data_address)#,header=None,)
-    try:
-        vectors = vectors.drop('Unnamed: 0',axis=1)
-        print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
-    except:
-        print('\nVector shapes seem to be good:',vectors.shape)
-        
-    path_to_model = output_dir+'classification/'+data_address.split('/')[-1]
-    Path(path_to_model).mkdir(parents=True, exist_ok=True)
-    
-    # preprocess inputs and split
-    labels_f = pd.factorize(labels.label)[0]
-    enc = OneHotEncoder(handle_unknown='ignore')
-    Y = enc.fit_transform(np.expand_dims(labels_f,axis=1)).toarray()
-    X = vectors.values
-    Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=test_size, random_state=100,shuffle=True)
-    Xtrain, Xvalid, Ytrain, Yvalid = train_test_split(Xtrain, Ytrain, test_size=0.3, random_state=100,shuffle=True)
-    
-    results = []
-    
-    for i,model_shape in enumerate(model_shapes):
-        
-        #run models
-        model = Sequential()
-        
-        model.add(Dense(model_shape[0], input_dim=128, activation='relu', kernel_initializer='he_uniform'))
+classifier = 'rf'
+
+def baseline_model(model_shape:list=[200,100,50,10],input_dim:int=128,act:str='relu',act_last:str='softmax',loss_f:str='categorical_crossentropy',opt:str='adam'):
+    def model():
+        nn = Sequential()
+        nn.add(Dense(model_shape[0], input_dim=128, activation=act))#, kernel_initializer='he_uniform'))
         for dim in model_shape[1:-1]:
-            model.add(Dense(dim, activation='relu'))
-        model.add(Dense(model_shape[-1], activation='softmax'))
+            nn.add(Dense(dim, activation=act))
+        nn.add(Dense(model_shape[-1], activation=act_last))
         # compile model
         # opt = SGD(lr=0.01, momentum=0.9)
-        opt = Adam(learning_rate=0.1)
-        model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])  #sparse_categorical_crossentropy  if you don't want to categorize yourself
-        print(model.summary())
-        
-        # fit model
-        path_to_model = path_to_model + '/' + str(model_shape) + '_checkpoint.hdf5'
-        print('The model will be saved into ',path_to_model)
-        checkpoint = ModelCheckpoint(filepath=path_to_model, save_best_only=True, monitor='val_accuracy', mode='max')
-        
-        history = model.fit(Xtrain, Ytrain, validation_data=(Xvalid, Yvalid), epochs=100, verbose=0, callbacks=[checkpoint])
-        
-        #test model
-        # loss, accuracy, f1_score, precision, recall
-        results.append(model.evaluate(Xtest, Ytest, verbose=0))
-        
-        _, train_acc = model.evaluate(Xtrain, Ytrain, verbose=0)
-        _, test_acc = model.evaluate(Xtest, Ytest, verbose=0)
-        
-        print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
-        
-        # plot loss during training
-        pyplot.subplot(211)
-        pyplot.title('Loss')
-        pyplot.plot(history.history['loss'], label='train')
-        pyplot.plot(history.history['val_loss'], label='test')
-        pyplot.legend()
-        # plot accuracy during training
-        pyplot.subplot(212)
-        pyplot.title('Accuracy')
-        pyplot.plot(history.history['accuracy'], label='train')
-        pyplot.plot(history.history['val_accuracy'], label='test')
-        pyplot.legend()
-        pyplot.title(str(model_shape))
-        pyplot.show()
-    
-    column_names = ['loss','accuracy','f1','percision','recall']
-    results = pd.DataFrame(results,columns=column_names)
-    toc = time.time()
-    print('All done in '+str(toc - tic)+'seconds!')
-    return results
+        # opt = Adam(learning_rate=0.1)
+        nn.compile(loss=loss_f, optimizer=opt, metrics=['accuracy'])  #sparse_categorical_crossentropy  if you don't want to categorize yourself
+        print(nn.summary())
+        return nn
+    return model
+
+def baseline_model2():
+    # Create model here
+    model = Sequential()
+    model.add(Dense(15, input_dim = 128, activation = 'relu')) # Rectified Linear Unit Activation Function
+    model.add(Dense(15, activation = 'relu'))
+    model.add(Dense(10, activation = 'softmax')) # Softmax for multi-class classification
+    # Compile model here
+    model.compile(loss = 'categorical_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+    return model
+
+scoring = {'accuracy' : make_scorer(accuracy_score), 
+           'precision' : make_scorer(precision_score ,average = 'micro'),
+           'recall' : make_scorer(recall_score ,average = 'micro'), 
+           'f1_score' : make_scorer(f1_score ,average = 'micro')}
+
+
 # =============================================================================
 # Run
 # =============================================================================
@@ -150,14 +118,104 @@ labels = pd.read_csv(label_address)
 labels.columns = ['label']
 
 model_shapes = [
-    [512,256,64,10],
-    [1024,256,16,10],
-    [512,64,10]
+    # [512,256,64,10],
+    # [1024,256,16,10],
+    [512,64,10],
+    [200,100,50,10]
+    # [200,100,10]
     ]
-results = []
+
+results_all = []
 for file_name in vec_file_names:
     gc.collect()
     data_address = data_dir+file_name
     output_dir = data_dir
-    results.append(run_all_tests(data_address,data_dir,labels,model_shapes))
+    # results.append(run_all_tests(data_address,data_dir,labels,model_shapes))
 
+# =============================================================================
+# Classify and evaluate
+# =============================================================================
+# def run_all_tests(data_address:str,output_dir:str,labels:list,model_shapes:list,test_size:float=0.1):
+    tic = time.time()
+    vectors = pd.read_csv(data_address)#,header=None,)
+    try:
+        vectors = vectors.drop('Unnamed: 0',axis=1)
+        print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
+    except:
+        print('\nVector shapes seem to be good:',vectors.shape)
+        
+    path_to_model = output_dir+'classification/'+data_address.split('/')[-1]
+    Path(path_to_model).mkdir(parents=True, exist_ok=True)
+    
+    # preprocess inputs and split
+    # labels_f = pd.factorize(labels.label)[0]
+    # enc = OneHotEncoder(handle_unknown='ignore')
+    # Y = enc.fit_transform(np.expand_dims(labels_f,axis=1)).toarray()
+    Y = pd.get_dummies(labels).values
+    X = vectors.values
+    
+    # Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.1, random_state=100,shuffle=True)
+    # Xtrain, Xvalid, Ytrain, Yvalid = train_test_split(Xtrain, Ytrain, test_size=0.3, random_state=100,shuffle=True)
+    kfold = KFold(n_splits = 10, shuffle = True, random_state = 100)
+    
+    
+# =============================================================================
+#     Random forest
+# =============================================================================
+    if classifier == 'rf':
+        model=RandomForestClassifier(n_estimators=50, criterion = 'entropy', random_state = 100) 
+        results = cross_validate(model, X, Y, cv = kfold,scoring=scoring)
+# =============================================================================
+#     DNN
+# =============================================================================
+    if classifier == 'dnn':
+        results = []
+        for i,model_shape in enumerate(model_shapes):
+            #run models
+            print(model_shape)
+            # model = baseline_model(model_shape)
+            # estimator = KerasClassifier(build_fn = model, epochs = 100, batch_size = 10, verbose = 0)
+            model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape), epochs = 100, batch_size = 32, verbose = 1)
+            result = cross_val_score(model, X, Y, cv = kfold)
+            # result = cross_val_score(model, X, Y, cv = kfold)
+            print(" >> Baseline accuracy:",result.mean()*100," ~",result.std()*100)
+            
+            
+            # fit model
+            # path_to_model = path_to_model + '/' + str(model_shape) + '_checkpoint.hdf5'
+            # print('The model will be saved into ',path_to_model)
+            # checkpoint = ModelCheckpoint(filepath=path_to_model, save_best_only=True, monitor='val_accuracy', mode='max')
+            
+            # history = model.fit(Xtrain, Ytrain, validation_data=(Xvalid, Yvalid), epochs=100, verbose=0, callbacks=[checkpoint])
+            
+            # #test model
+            # # loss, accuracy, f1_score, precision, recall
+            # Ypred = model.predict(Xtest)
+            # results.append(model.evaluate(Xtest, Ytest, verbose=0)+[f1_m(Ytest,Ypred),precision_m(Ytest,Ypred),recall_m(Ytest, Ypred)])
+            
+            # _, train_acc = model.evaluate(Xtrain, Ytrain, verbose=0)
+            # _, test_acc = model.evaluate(Xtest, Ytest, verbose=0)
+            
+            # print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
+            
+            # # plot loss during training
+            # pyplot.subplot(211)
+            # pyplot.title('Loss')
+            # pyplot.plot(history.history['loss'], label='train')
+            # pyplot.plot(history.history['val_loss'], label='test')
+            # pyplot.legend()
+            # # plot accuracy during training
+            # pyplot.subplot(212)
+            # pyplot.title('Accuracy')
+            # pyplot.plot(history.history['accuracy'], label='train')
+            # pyplot.plot(history.history['val_accuracy'], label='test')
+            # pyplot.legend()
+            # pyplot.title(str(model_shape))
+            # pyplot.show()
+        
+        # column_names = ['loss','accuracy','f1','percision','recall']
+        # results = pd.DataFrame(results,columns=column_names)
+        results.append(result)
+    toc = time.time()
+    print('All done in '+str(toc - tic)+'seconds!')
+    results_all.append(results)
