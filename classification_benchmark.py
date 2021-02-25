@@ -69,12 +69,12 @@ class AccuracyHistory(keras.callbacks.Callback):
 # =============================================================================
 # Models
 # =============================================================================
-classifier = 'rf'
+classifier = 'dnn'
 
 def baseline_model(model_shape:list=[200,100,50,10],input_dim:int=128,act:str='relu',act_last:str='softmax',loss_f:str='categorical_crossentropy',opt:str='adam'):
     def model():
         nn = Sequential()
-        nn.add(Dense(model_shape[0], input_dim=128, activation=act))#, kernel_initializer='he_uniform'))
+        nn.add(Dense(model_shape[0], input_dim=input_dim, activation=act))#, kernel_initializer='he_uniform'))
         for dim in model_shape[1:-1]:
             nn.add(Dense(dim, activation=act))
         nn.add(Dense(model_shape[-1], activation=act_last))
@@ -112,7 +112,8 @@ label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/co
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
-vec_file_names =  ['embeddings/node2vec super-d2v-node 128-10-100 p1q025']
+# vec_file_names =  ['embeddings/node2vec super-d2v-node 128-10-100 p1q025']
+vec_file_names =  ['embeddings/Doc2Vec cora_wos corpus dm1 with citations']
 
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
@@ -121,7 +122,7 @@ model_shapes = [
     # [512,256,64,10],
     # [1024,256,16,10],
     [512,64,10],
-    [200,100,50,10]
+    [200,100,10]
     # [200,100,10]
     ]
 
@@ -175,7 +176,7 @@ for file_name in vec_file_names:
             print(model_shape)
             # model = baseline_model(model_shape)
             # estimator = KerasClassifier(build_fn = model, epochs = 100, batch_size = 10, verbose = 0)
-            model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape), epochs = 100, batch_size = 32, verbose = 1)
+            model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape,input_dim=X.shape[1]), epochs = 100, batch_size = 32, verbose = 1)
             result = cross_val_score(model, X, Y, cv = kfold)
             # result = cross_val_score(model, X, Y, cv = kfold)
             print(" >> Baseline accuracy:",result.mean()*100," ~",result.std()*100)
