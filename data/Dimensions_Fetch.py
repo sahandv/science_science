@@ -11,6 +11,7 @@ import gc
 from tqdm import tqdm
 import dimcli
 import pandas as pd
+import numpy as np
 # dimcli.login(key="my-secret-key",endpoint="https://app.dimensions.ai")
 # dimcli --init
 dimcli.login()
@@ -88,6 +89,15 @@ print(data.errors_string)
 csv = pd.DataFrame(data.publications)
 csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-proceedings cited>4.csv')
 
+# =============================================================================
+# Drop randomly to reduce dataset size
+# =============================================================================
+np.random.seed(10)
+df = pd.read_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-proceedings cited>4.csv')
+remove_n = 50000
+drop_indices = np.random.choice(df.index, remove_n, replace=False)
+df_subset = df.drop(drop_indices)
+csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-proceedings cited>4 reduced.csv')
 
 # =============================================================================
 # Data combine
