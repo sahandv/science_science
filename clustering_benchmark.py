@@ -262,7 +262,7 @@ def run_all_tests(data_address:str,output_file_name:str,labels:list,k:int,algos:
     # =============================================================================
     if 'agglomerative' in algos:
         print('\n- Agglomerative -----------------------')
-        for fold in tqdm(range(4)):
+        for fold in tqdm(range(1)):
             gc.collect()
             model = AgglomerativeClustering(n_clusters=n_clusters,linkage='ward').fit(X)
             predicted_labels = model.labels_
@@ -297,7 +297,7 @@ def run_all_tests(data_address:str,output_file_name:str,labels:list,k:int,algos:
     if 'DBSCAN' in algos:
         eps=0.000001
         print('\n- DBSCAN -----------------------')
-        for fold in tqdm(range(19)):
+        for fold in tqdm(range(5)):
             gc.collect()
             eps = eps+0.05
             model = DBSCAN(eps=eps, min_samples=10,n_jobs=15).fit(X)
@@ -346,7 +346,7 @@ label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/co
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
-vec_file_names =  ['embeddings/node2vec super-d2v-node 200-20-80 p1q05']
+vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05']
 
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
@@ -366,8 +366,8 @@ for file_name in vec_file_names:
 import pandas as pd
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
-datapath = '/home/sahand/GoogleDrive/Data/' #Asus
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec super-d2v-node 128-10-100 p1q025 clustering results"
+# datapath = '/home/sahand/GoogleDrive/Data/' #Asus
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec 300-70-20 p1q05 clustering results"
 df = pd.read_csv(data_address)
 # max1 = df.groupby(['Method'], sort=False).max()
 # max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
