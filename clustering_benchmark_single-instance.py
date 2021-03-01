@@ -34,7 +34,7 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/doc2vec 300D dm=1 window=10"#node2vec super-d2v-node 128-70-20 p1q025"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec super-d2v300-node 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
 label_address = datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
 
 # data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
