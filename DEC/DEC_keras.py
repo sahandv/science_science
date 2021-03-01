@@ -190,7 +190,7 @@ class DEC(object):
 
         # begin pretraining
         t0 = time()
-        self.autoencoder.fit(x, x, batch_size=batch_size, epochs=epochs, callbacks=cb,verbose=0)
+        self.autoencoder.fit(x, x, batch_size=batch_size, epochs=epochs, callbacks=cb,verbose=1)
         print('\nPretraining time: %ds' % round(time() - t0))
         self.autoencoder.save_weights(save_dir + '/ae_weights.h5')
         print('\nPretrained weights are saved to %s/ae_weights.h5' % save_dir)
