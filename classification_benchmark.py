@@ -105,6 +105,8 @@ scoring = {'accuracy' : make_scorer(accuracy_score),
 # =============================================================================
 # Run
 # =============================================================================
+method_a = False    # Method A: Using sklearn kfold
+method_b = True     # Method B: Using custom kfold loop
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
 label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
@@ -113,7 +115,10 @@ label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/co
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-10-100 p1q025']
-vec_file_names =  ['embeddings/Doc2Vec cora_wos corpus dm1 with citations']
+# vec_file_names =  ['embeddings/Doc2Vec cora_wos corpus dm1 with citations']
+# vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05',
+#                    'embeddings/node2vec super-d2v300-node 300-70-20 p1q05']
+vec_file_names =  ['embeddings/doc2vec 300D dm=1 window=10']
 
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
@@ -121,13 +126,18 @@ labels.columns = ['label']
 model_shapes = [
     # [512,256,64,10],
     # [1024,256,16,10],
-    [512,64,10],
-    [200,100,10]
+    # [512,64,10],
+    [200,100,10],
+    [300,200,100,10],
     # [200,100,10]
     ]
 
 results_all = []
+results_all_detailed = []
 for file_name in vec_file_names:
+    print('\nVec file:',file_name)
+    file_results = []
+    file_results_detailed = []
     gc.collect()
     data_address = data_dir+file_name
     output_dir = data_dir
@@ -170,17 +180,77 @@ for file_name in vec_file_names:
 #     DNN
 # =============================================================================
     if classifier == 'dnn':
-        results = []
+        
         for i,model_shape in enumerate(model_shapes):
+            model_results = []
+            model_result_detailed = []
             #run models
             print(model_shape)
             # model = baseline_model(model_shape)
             # estimator = KerasClassifier(build_fn = model, epochs = 100, batch_size = 10, verbose = 0)
-            model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape,input_dim=X.shape[1]), epochs = 100, batch_size = 32, verbose = 1)
-            result = cross_val_score(model, X, Y, cv = kfold)
-            # result = cross_val_score(model, X, Y, cv = kfold)
-            print(" >> Baseline accuracy:",result.mean()*100," ~",result.std()*100)
             
+            # Method A: Using sklearn kfold
+            if method_a is True:
+                model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape,input_dim=X.shape[1]), epochs = 100, batch_size = 32, verbose = 1)
+                result = cross_val_score(model, X, Y, cv = kfold)
+                # result = cross_val_score(model, X, Y, cv = kfold)
+                print(" >> Baseline accuracy:",result.mean()*100," ~",result.std()*100)
+                model_result_detailed.append(result)
+                model_results.append(result.mean()*100)
+                
+            # Method B: Using custom kfold
+            if method_b is True:
+                cv_acc = []
+                cv_f1 = []
+                cv_f1_w = []
+                cv_p = []
+                cv_p_w = []
+                cv_r = []
+                cv_r_w = []
+                y_single = np.argmax(Y, axis=1)
+                
+                for train_index, val_index in kfold.split(X):
+                    model = KerasClassifier(build_fn=baseline_model(model_shape=model_shape,input_dim=X.shape[1]), batch_size=32, epochs=100)
+                    model.fit(X[train_index], Y[train_index])
+                    pred = model.predict(X[val_index])#model.predict_classes(X[val_index])
+                    
+                    # get fold accuracy & append
+                    fold_acc = accuracy_score(y_single[val_index], pred)
+                    fold_f1 = f1_score(y_single[val_index], pred,average='micro')
+                    fold_f1_weighted = f1_score(y_single[val_index], pred,average='weighted')
+                    fold_precision = precision_score(y_single[val_index], pred,average='micro')
+                    fold_precision_weighted = precision_score(y_single[val_index], pred,average='weighted')
+                    fold_recall = recall_score(y_single[val_index], pred,average='micro')
+                    fold_recall_weighted = recall_score(y_single[val_index], pred,average='weighted')
+                    
+                    cv_acc.append(fold_acc)
+                    cv_f1.append(fold_f1)
+                    cv_f1_w.append(fold_f1_weighted)
+                    cv_p.append(fold_precision)
+                    cv_p_w.append(fold_precision_weighted)
+                    cv_r.append(fold_recall)
+                    cv_r_w.append(fold_recall_weighted)
+                    
+                model_results.append(np.mean(cv_acc))
+                model_result_detailed.append({'accuracy':cv_acc,
+                                        'f1':cv_f1,
+                                        'f1 weighted':cv_f1_w,
+                                        'precision':cv_p,
+                                        'precision weighted':cv_p_w,
+                                        'recall':cv_r,
+                                        'recall weighted':cv_r_w})
+                print('\n===\nResults for',model_shape,':')
+                print('accuracy',cv_acc,
+                                        'f1',cv_f1,
+                                        'f1 weighted',cv_f1_w,
+                                        'precision',cv_p,
+                                        'precision weighted',cv_p_w,
+                                        'recall',cv_r,
+                                        'recall weighted',cv_r_w,
+                                        '\n')
+                
+            file_results.append({'model':str(model_shape),'resuls':model_results})
+            file_results_detailed.append({'model':str(model_shape),'resuls':model_result_detailed})
             
             # fit model
             # path_to_model = path_to_model + '/' + str(model_shape) + '_checkpoint.hdf5'
@@ -216,7 +286,27 @@ for file_name in vec_file_names:
         
         # column_names = ['loss','accuracy','f1','percision','recall']
         # results = pd.DataFrame(results,columns=column_names)
-        results.append(result)
+        
     toc = time.time()
     print('All done in '+str(toc - tic)+'seconds!')
-    results_all.append(results)
+    results_all.append({'file':file_name,'resuls':file_results})
+    results_all_detailed.append({'file':file_name,'resuls':file_results_detailed})
+    
+
+text_file = open(data_dir+"classification/results.txt", "w")
+text_file.write(str(results_all_detailed))
+text_file.close()
+
+# y_true = [0, 1, 2, 0, 1, 2]
+# y_pred = [0, 2, 1, 0, 0, 1]
+# f1_score(y_true, y_pred, average='micro')
+
+y_true = y_single[val_index]
+y_pred = pred
+f1_score(y_true, y_pred, average='micro')
+
+pd.DataFrame(y_true).to_csv(data_dir+"classification/y_true.txt",index=False)
+pd.DataFrame(y_pred).to_csv(data_dir+"classification/y_pred.txt",index=False)
+
+
+
