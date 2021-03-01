@@ -118,6 +118,9 @@ id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus idx',i
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
 year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
 gc.collect()
+
+year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
+year_list.shape
 # =============================================================================
 # Sentence maker
 # =============================================================================
