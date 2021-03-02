@@ -115,16 +115,16 @@ label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/co
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-10-100 p1q025']
-# vec_file_names =  ['embeddings/Doc2Vec cora_wos corpus dm1 with citations']
+vec_file_names =  ['embeddings/naive node2vec + doc2vec 600']
 # vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05',
 #                    'embeddings/node2vec super-d2v300-node 300-70-20 p1q05']
-vec_file_names =  ['embeddings/doc2vec 300D dm=1 window=10']
+# vec_file_names =  ['embeddings/doc2vec 300D dm=1 window=10']
 
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
 
 model_shapes = [
-    # [512,256,64,10],
+    [600,300,100,10],
     # [1024,256,16,10],
     # [512,64,10],
     [200,100,10],
@@ -291,9 +291,14 @@ for file_name in vec_file_names:
     print('All done in '+str(toc - tic)+'seconds!')
     results_all.append({'file':file_name,'resuls':file_results})
     results_all_detailed.append({'file':file_name,'resuls':file_results_detailed})
-    
 
-text_file = open(data_dir+"classification/results.txt", "w")
+filename = path_to_model+"/results.txt"
+if os.path.exists(filename):
+    append_write = 'a' # append if already exists
+else:
+    append_write = 'w' # make a new file if not
+
+text_file = open(filename, append_write)
 text_file.write(str(results_all_detailed))
 text_file.close()
 
@@ -305,8 +310,8 @@ y_true = y_single[val_index]
 y_pred = pred
 f1_score(y_true, y_pred, average='micro')
 
-pd.DataFrame(y_true).to_csv(data_dir+"classification/y_true.txt",index=False)
-pd.DataFrame(y_pred).to_csv(data_dir+"classification/y_pred.txt",index=False)
+pd.DataFrame(y_true).to_csv(path_to_model+"/y_true.txt",index=False)
+pd.DataFrame(y_pred).to_csv(path_to_model+"/y_pred.txt",index=False)
 
 
 
