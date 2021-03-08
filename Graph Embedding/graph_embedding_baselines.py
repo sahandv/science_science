@@ -15,7 +15,7 @@ from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
 
 # =============================================================================
-# Init
+# Init Cora
 # =============================================================================
 dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
 texts = pd.read_csv(dir_root+'clean/with citations new/abstract_title all-lem',names=['abstract'])['abstract'].values.tolist()
