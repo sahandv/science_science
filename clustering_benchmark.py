@@ -3,7 +3,7 @@
 """
 Created on Wed Oct 21 16:10:03 2020
 
-@author: sahand
+@author: github.com/sahandv
 """
 import sys
 import time

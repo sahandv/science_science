@@ -3,7 +3,7 @@
 """
 Created on Mon Mar  8 11:22:36 2021
 
-@author: sahand
+@author: github.com/sahandv
 """
 import sys
 import gc

@@ -3,7 +3,7 @@
 """
 Created on Wed Dec 16 16:27:46 2020
 
-@author: sahand
+@author: github.com/sahandv
 """
 import sys
 import gc
@@ -60,6 +60,7 @@ print('Connected components:',nx.number_connected_components(graph))
 
 del data
 gc.collect()
+
 # =============================================================================
 # Train
 # =============================================================================
