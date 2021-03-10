@@ -37,19 +37,19 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/extractions_with_unique_id_labeled.csv'
-citations_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/citations_filtered.csv'
+data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/extractions_with_unique_id_labeled_single_component.csv'
+citations_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/citations_filtered.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
-# data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
+# data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
 citations = pd.read_csv(citations_path)
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
-root_dir = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-subdir = 'clean/with citations new/' # no_lemmatization_no_stopwords
+root_dir = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'
+subdir = 'clean/single_component/' # no_lemmatization_no_stopwords
 gc.collect()
 
 data_full_relevant['PY'] = 2010
@@ -66,7 +66,7 @@ data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
 sample = data_full_relevant.sample(4)
 
 # =============================================================================
-# filter by citations
+# filter by citations - not necessary anymore. just in case.
 # =============================================================================
 all_citations = citations['referring_id'].values.tolist()
 all_citations.extend(citations['cited_id'].values.tolist())
