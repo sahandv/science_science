@@ -178,4 +178,5 @@ giant_connected_component = list(max(nx.connected_components(graph), key=len))
 data_filtered = data[data['id'].isin(giant_connected_component)]
 data_filtered.to_csv(dir_path+'extractions_with_unique_id_labeled_single_component.csv',index=False)
 
-
+citations = citations[(citations['referring_id'].isin(giant_connected_component)) | (citations['cited_id'].isin(giant_connected_component))]
+citations.to_csv(dir_path+'citations_filtered_sinlge_component.csv',index=False)
