@@ -34,7 +34,8 @@ from keras import backend as K
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import SGD, Adam
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.utils.np_utils import to_categorical
 
 from sciosci.assets import text_assets as ta
 from DEC.DEC_keras import DEC_simple_run
@@ -109,13 +110,19 @@ method_a = False    # Method A: Using sklearn kfold
 method_b = True     # Method B: Using custom kfold loop
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
-label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
+label_address =  datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
 
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-10-100 p1q025']
-vec_file_names =  ['embeddings/naive node2vec + doc2vec 600']
+vec_file_names =  ['embeddings/single_component_small/doc2vec 300D dm=1 window=10',
+                   'embeddings/single_component_small/DW 300-70-20',
+                   'embeddings/single_component_small/DW 300-70-20 with_d2v300D_supernodes',
+                   'embeddings/single_component_small/node2vec 300-70-20 p1q05',
+                   'embeddings/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes',
+                   'embeddings/single_component_small/TADW-120-240',
+                   'embeddings/single_component_small/TENE-120-240']
 # vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05',
 #                    'embeddings/node2vec super-d2v300-node 300-70-20 p1q05']
 # vec_file_names =  ['embeddings/doc2vec 300D dm=1 window=10']
@@ -127,7 +134,7 @@ model_shapes = [
     [600,300,100,10],
     # [1024,256,16,10],
     # [512,64,10],
-    [200,100,10],
+    [300,150,10],
     [300,200,100,10],
     # [200,100,10]
     ]
@@ -155,7 +162,7 @@ for file_name in vec_file_names:
     except:
         print('\nVector shapes seem to be good:',vectors.shape)
         
-    path_to_model = output_dir+'classification/'+data_address.split('/')[-1]
+    path_to_model = output_dir+'classification/single_component_small/'+data_address.split('/')[-1]
     Path(path_to_model).mkdir(parents=True, exist_ok=True)
     
     # preprocess inputs and split
@@ -165,11 +172,16 @@ for file_name in vec_file_names:
     Y = pd.get_dummies(labels).values
     X = vectors.values
     
+    encoder = LabelEncoder()
+    encoder.fit(labels.values.T[0])
+    encoded_Y = to_categorical(encoder.transform(labels.values.T[0]))
+
+    
     # Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.1, random_state=100,shuffle=True)
     # Xtrain, Xvalid, Ytrain, Yvalid = train_test_split(Xtrain, Ytrain, test_size=0.3, random_state=100,shuffle=True)
-    kfold = KFold(n_splits = 10, shuffle = True, random_state = 100)
+    kfold = KFold(n_splits = 2, shuffle = True, random_state = 100)
     
-    
+    callback = EarlyStopping(monitor='accuracy', patience=10)
 # =============================================================================
 #     Random forest
 # =============================================================================
@@ -191,7 +203,7 @@ for file_name in vec_file_names:
             
             # Method A: Using sklearn kfold
             if method_a is True:
-                model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape,input_dim=X.shape[1]), epochs = 100, batch_size = 32, verbose = 1)
+                model = KerasClassifier(build_fn = baseline_model(model_shape=model_shape,input_dim=X.shape[1]), epochs = 100, batch_size = 32, verbose = 1, callbacks=[callback])
                 result = cross_val_score(model, X, Y, cv = kfold)
                 # result = cross_val_score(model, X, Y, cv = kfold)
                 print(" >> Baseline accuracy:",result.mean()*100," ~",result.std()*100)
@@ -208,11 +220,13 @@ for file_name in vec_file_names:
                 cv_r = []
                 cv_r_w = []
                 y_single = np.argmax(Y, axis=1)
-                
+                fold_number = 0
                 for train_index, val_index in kfold.split(X):
-                    model = KerasClassifier(build_fn=baseline_model(model_shape=model_shape,input_dim=X.shape[1]), batch_size=32, epochs=100)
+                    fold_number +=1
+                    model = KerasClassifier(build_fn=baseline_model(model_shape=model_shape,input_dim=X.shape[1]), batch_size=32, epochs=100,callbacks=[callback])
                     model.fit(X[train_index], Y[train_index])
                     pred = model.predict(X[val_index])#model.predict_classes(X[val_index])
+                    # pred = np.argmax(model.predict(X[val_index]), axis=-1)
                     
                     # get fold accuracy & append
                     fold_acc = accuracy_score(y_single[val_index], pred)
@@ -230,6 +244,13 @@ for file_name in vec_file_names:
                     cv_p_w.append(fold_precision_weighted)
                     cv_r.append(fold_recall)
                     cv_r_w.append(fold_recall_weighted)
+                    
+                    print('writing to disk...')
+                    y_true = y_single[val_index]
+                    y_pred = pred
+                    pd.DataFrame(y_true).to_csv(path_to_model+"/y_true k5 fold"+str(fold_number),index=False)
+                    pd.DataFrame(y_pred).to_csv(path_to_model+"/y_pred k5 fold"+str(fold_number),index=False)
+                    print('done')
                     
                 model_results.append(np.mean(cv_acc))
                 model_result_detailed.append({'accuracy':cv_acc,
@@ -251,6 +272,7 @@ for file_name in vec_file_names:
                 
             file_results.append({'model':str(model_shape),'resuls':model_results})
             file_results_detailed.append({'model':str(model_shape),'resuls':model_result_detailed})
+            
             
             # fit model
             # path_to_model = path_to_model + '/' + str(model_shape) + '_checkpoint.hdf5'
@@ -306,12 +328,10 @@ text_file.close()
 # y_pred = [0, 2, 1, 0, 0, 1]
 # f1_score(y_true, y_pred, average='micro')
 
-y_true = y_single[val_index]
-y_pred = pred
+
 f1_score(y_true, y_pred, average='micro')
 
-pd.DataFrame(y_true).to_csv(path_to_model+"/y_true.txt",index=False)
-pd.DataFrame(y_pred).to_csv(path_to_model+"/y_pred.txt",index=False)
+
 
 
 
