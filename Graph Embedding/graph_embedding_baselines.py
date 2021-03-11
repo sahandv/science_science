@@ -53,7 +53,7 @@ idx_new = corpus[corpus['id'].isin(giant_connected_component)]['id'].values.toli
 # translate  node_indices to sequential numeric_indices
 # =============================================================================
 dictionary = dict()
-for i,value in tqdm(enumerate(giant_connected_component)):
+for i,value in tqdm(enumerate(idx_new)):
     dictionary[value]=i
 
 networks_new = networks.replace(dictionary)
