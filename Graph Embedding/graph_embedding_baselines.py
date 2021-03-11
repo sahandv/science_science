@@ -56,12 +56,14 @@ labels_new = corpus[corpus['id'].isin(giant_connected_component)]['label'].value
 # translate  node_indices to sequential numeric_indices
 # =============================================================================
 dictionary = dict()
+idx_seq = list()
 for i,value in tqdm(enumerate(idx_new)):
     dictionary[value]=i
-
+    idx_seq.append(i)
 networks_new = networks.replace(dictionary)
 
 nodes_new = list(set(networks_new['referring_id'].values.tolist()+networks_new['cited_id'].values.tolist()))
+
 if (len(nodes_new) == len(texts_new)) and (len(nodes_new) == len(giant_connected_component)):
     print('The dimensions are good now:',len(nodes_new))
 else:
@@ -71,9 +73,10 @@ else:
 # Save for future use     - can skip
 # =============================================================================
 networks_new.to_csv(dir_root+'clean/single_component_small/network',index=False)
-pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small/abstract_title all-lem',index=False)
-pd.DataFrame(idx_new).to_csv(dir_root+'clean/single_component_small/corpus_idx',index=False)
-pd.DataFrame(labels_new).to_csv(dir_root+'clean/single_component_small/labels',index=False)
+pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small/abstract_title all-lem',index=False,header=False)
+pd.DataFrame(idx_new,columns=['id']).to_csv(dir_root+'clean/single_component_small/corpus_idx_original',index=False)
+pd.DataFrame(labels_new,columns=['class1']).to_csv(dir_root+'clean/single_component_small/labels',index=False)
+pd.DataFrame(idx_seq,columns=['id']).to_csv(dir_root+'clean/single_component_small/node_idx_seq',index=False)
 
 # =============================================================================
 # Prepare graph
