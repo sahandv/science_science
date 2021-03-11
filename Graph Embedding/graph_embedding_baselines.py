@@ -19,6 +19,7 @@ from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer,Co
 # =============================================================================
 dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
 texts = pd.read_csv(dir_root+'clean/single_component/abstract_title all-lem',names=['abstract'])['abstract'].values.tolist()
+labels = pd.read_csv(dir_root+'clean/single_component/corpus classes1')['class1'].values.tolist()
 networks = pd.read_csv(dir_root+'citations_filtered_single_component.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
 networks.columns = ['referring_id','cited_id']
 
@@ -46,9 +47,11 @@ giant_connected_component = list(max(nx.connected_components(graph), key=len))
 networks = networks[(networks['referring_id'].isin(giant_connected_component)) & (networks['cited_id'].isin(giant_connected_component))] # mask
 
 # mask text by component
-corpus = pd.DataFrame({'id':idx,'text':texts})
+corpus = pd.DataFrame({'id':idx,'text':texts,'label':labels})
 texts_new = corpus[corpus['id'].isin(giant_connected_component)]['text'].values.tolist()
 idx_new = corpus[corpus['id'].isin(giant_connected_component)]['id'].values.tolist()
+labels_new = corpus[corpus['id'].isin(giant_connected_component)]['label'].values.tolist()
+
 # =============================================================================
 # translate  node_indices to sequential numeric_indices
 # =============================================================================
@@ -70,6 +73,7 @@ else:
 networks_new.to_csv(dir_root+'clean/single_component_small/network',index=False)
 pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small/abstract_title all-lem',index=False)
 pd.DataFrame(idx_new).to_csv(dir_root+'clean/single_component_small/corpus_idx',index=False)
+pd.DataFrame(labels_new).to_csv(dir_root+'clean/single_component_small/labels',index=False)
 
 # =============================================================================
 # Prepare graph
