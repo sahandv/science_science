@@ -29,20 +29,47 @@ idx = pd.read_csv(dir_root+'clean/single_component/corpus idx')#,names=['id'])#(
 idx.columns = ['id']
 # idx['id'] = idx['id'].str.replace('pub.','').astype(str).astype(int)
 idx = idx['id'].values.tolist()
-networks = networks[(networks['referring_id'].isin(idx)) | (networks['cited_id'].isin(idx))] # mask
-
+networks = networks[(networks['referring_id'].isin(idx)) & (networks['cited_id'].isin(idx))] # mask
 # =============================================================================
-# translate  node_indices to numeric_indices
+# component selector
 # =============================================================================
-nodes = list(set(networks['referring_id'].values.tolist()+networks['cited_id'].values.tolist()))
+graph = nx.Graph()
+for i,row in tqdm(networks.iterrows(),total=networks.shape[0]):
+    graph.add_edge(row['referring_id'],(row['cited_id']))
+    
 
+print('Graph fully connected:',nx.is_connected(graph))
+print('Connected components:',nx.number_connected_components(graph))
+giant_connected_component = list(max(nx.connected_components(graph), key=len))
+
+# mask network by component
+networks = networks[(networks['referring_id'].isin(giant_connected_component)) & (networks['cited_id'].isin(giant_connected_component))] # mask
+
+# mask text by component
+corpus = pd.DataFrame({'id':idx,'text':texts})
+texts_new = corpus[corpus['id'].isin(giant_connected_component)]['text'].values.tolist()
+idx_new = corpus[corpus['id'].isin(giant_connected_component)]['id'].values.tolist()
+# =============================================================================
+# translate  node_indices to sequential numeric_indices
+# =============================================================================
 dictionary = dict()
-for i,value in tqdm(enumerate(idx)):
+for i,value in tqdm(enumerate(giant_connected_component)):
     dictionary[value]=i
 
 networks_new = networks.replace(dictionary)
 
-new_nodes = list(set(networks_new['referring_id'].values.tolist()+networks_new['cited_id'].values.tolist()))
+nodes_new = list(set(networks_new['referring_id'].values.tolist()+networks_new['cited_id'].values.tolist()))
+if (len(nodes_new) == len(texts_new)) and (len(nodes_new) == len(giant_connected_component)):
+    print('The dimensions are good now:',len(nodes_new))
+else:
+    print('Unmatching dimensions:', len(nodes_new) , len(texts_new) , len(giant_connected_component))
+
+# =============================================================================
+# Save for future use     - can skip
+# =============================================================================
+networks_new.to_csv(dir_root+'clean/single_component_small/network',index=False)
+pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small/abstract_title all-lem',index=False)
+pd.DataFrame(idx_new).to_csv(dir_root+'clean/single_component_small/corpus_idx',index=False)
 
 # =============================================================================
 # Prepare graph
@@ -52,39 +79,45 @@ for i,row in tqdm(networks_new.iterrows(),total=networks_new.shape[0]):
     graph.add_edge(row['referring_id'],row['cited_id'])
 
 print('Graph fully connected:',nx.is_connected(graph))
-print('Connected components:',nx.number_connected_components(graph))
+if nx.number_connected_components(graph)>1:
+    print('Too many components in network. Should be 1, but is',nx.number_connected_components(graph))
+else:
+    print('Good. Connected components:',nx.number_connected_components(graph))
 
 # connected_components = list(nx.connected_components(graph))
-
 # del networks
 gc.collect()
 # =============================================================================
 # Text embedding (BoW)
 # =============================================================================
 count_vect = CountVectorizer()
-X = count_vect.fit_transform(texts)
+X = count_vect.fit_transform(texts_new)
 X.shape
+pd.DataFrame(X).to_csv()
 # =============================================================================
 # Text embedding (TFIDF)
 # =============================================================================
 vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(texts)
+X = vectorizer.fit_transform(texts_new)
 X.shape
 # =============================================================================
 # TADW
 # =============================================================================
-TADW = kc.node_embedding.TADW(dimensions=120, reduction_dimensions=240,lambd=1)
+TADW = kc.node_embedding.TADW(dimensions=120,lambd=1)
 TADW.fit(graph,X)
 TADW_vectors = TADW.get_embedding() 
+pd.DataFrame(TADW_vectors).to_csv(dir_root+'embeddings/single_component_small/TADW-120-240',index=False)
 # =============================================================================
 # TENE
 # =============================================================================
-TENE = kc.node_embedding.TENE()
+TENE = kc.node_embedding.TENE(dimensions=120)
 TENE.fit(graph,X)
 TENE_vectors = TENE.get_embedding() 
+pd.DataFrame(TENE_vectors).to_csv(dir_root+'embeddings/single_component_small/TENE-120-240',index=False)
 # =============================================================================
 # DeepWalk
 # =============================================================================
-DW = kc.DeepWalk()
+DW = kc.DeepWalk(dimensions=300)
 DW.fit(graph)
 DW_vectors = DW.get_embedding() 
+pd.DataFrame(TENE_vectors).to_csv(dir_root+'embeddings/single_component_small/DW-300-240',index=False)
