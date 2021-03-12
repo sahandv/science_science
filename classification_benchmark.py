@@ -111,7 +111,7 @@ method_b = True     # Method B: Using custom kfold loop
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
 label_address =  datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
-
+n_folds = 5
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
@@ -179,7 +179,7 @@ for file_name in vec_file_names:
     
     # Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.1, random_state=100,shuffle=True)
     # Xtrain, Xvalid, Ytrain, Yvalid = train_test_split(Xtrain, Ytrain, test_size=0.3, random_state=100,shuffle=True)
-    kfold = KFold(n_splits = 2, shuffle = True, random_state = 100)
+    kfold = KFold(n_splits = n_folds, shuffle = True, random_state = 100)
     
     callback = EarlyStopping(monitor='accuracy', patience=10)
 # =============================================================================
@@ -314,7 +314,7 @@ for file_name in vec_file_names:
     results_all.append({'file':file_name,'resuls':file_results})
     results_all_detailed.append({'file':file_name,'resuls':file_results_detailed})
 
-filename = path_to_model+"/results.txt"
+filename = output_dir+'classification/single_component_small/all results k'+str(n_folds)+".txt"
 if os.path.exists(filename):
     append_write = 'a' # append if already exists
 else:
