@@ -116,15 +116,15 @@ n_folds = 5
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-10-100 p1q025']
-vec_file_names =  ['embeddings/single_component_small/doc2vec 300D dm=1 window=10',
-                   'embeddings/single_component_small/DW 300-70-20',
-                   'embeddings/single_component_small/DW 300-70-20 with_d2v300D_supernodes',
-                   'embeddings/single_component_small/node2vec 300-70-20 p1q05',
-                   'embeddings/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes',
-                   'embeddings/single_component_small/TADW-120-240',
-                   'embeddings/single_component_small/TENE-120-240']
-# vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05',
-#                    'embeddings/node2vec super-d2v300-node 300-70-20 p1q05']
+# vec_file_names =  ['embeddings/single_component_small/doc2vec 300D dm=1 window=10',
+#                    'embeddings/single_component_small/DW 300-70-20',
+#                    'embeddings/single_component_small/DW 300-70-20 with_d2v300D_supernodes',
+#                    'embeddings/single_component_small/node2vec 300-70-20 p1q05',
+#                    'embeddings/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes',
+#                    'embeddings/single_component_small/TADW-120-240',
+#                    'embeddings/single_component_small/TENE-120-240']
+vec_file_names =  ['embeddings/single_component_small/naive d2v + dw 600',
+                    'embeddings/single_component_small/naive d2v + n2v 600']
 # vec_file_names =  ['embeddings/doc2vec 300D dm=1 window=10']
 
 labels = pd.read_csv(label_address)
