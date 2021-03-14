@@ -120,3 +120,7 @@ DEC_weights/
 BERT_weights/
 
 !BERT_weights/__init__.py
+
+./logs/
+
+Graph Embedding/./logs/
