@@ -8,9 +8,9 @@ Created on Mon Feb 22 12:30:13 2021
 
 import pandas as pd
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
-idx_address = datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus idx"
-cluster_address = datapath+"Corpus/cora-classify/cora/embeddings/doc2vec all-lem 300D dm=1 window=10 predictions"
-citations_address = datapath+'Corpus/cora-classify/cora/citations_filtered.csv'
+idx_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small/node_idx_seq"
+cluster_address = datapath+"Corpus/cora-classify/cora/embeddings/single_component_small/doc2vec 300D dm=1 window=10 clustering predictions"
+citations_address = datapath+'Corpus/cora-classify/cora/clean/single_component_small/network'
 
 idx = pd.read_csv(idx_address)
 clusters = pd.read_csv(cluster_address)
@@ -31,4 +31,4 @@ for cluster in cluster_ids:
     
 
 citation_pairs = pd.DataFrame(citation_pairs,columns=['referring_id','cited_id'])
-citation_pairs.to_csv(datapath+'Corpus/cora-classify/cora/citations_filtered with_d2v300D_supernodes.csv',index=False)
+citation_pairs.to_csv(datapath+'Corpus/cora-classify/cora/clean/single_component_small/network with_d2v300D_supernodes',index=False)
