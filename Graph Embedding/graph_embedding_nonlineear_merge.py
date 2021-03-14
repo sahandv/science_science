@@ -28,13 +28,14 @@ from keras.wrappers.scikit_learn import KerasClassifier
 from keras import backend as K
 from keras.models import Model
 from keras.layers import Dense, Input, Dropout, concatenate
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.optimizers import SGD, Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.utils.np_utils import to_categorical# from tensorflow.contrib.keras import layers
 
 # read labels
-datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+datapath = '/home/sahand/GoogleDrive/Data/'
 data_dir =  datapath+'Corpus/cora-classify/cora/'
 label_address =  data_dir+'clean/single_component_small/labels'
 labels = pd.read_csv(label_address)
@@ -58,31 +59,42 @@ X = vec.values
 
 
 # split data for train and future test
-Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.6, random_state=100,shuffle=True)
+Xpretrain, Xtrain, Ypretrain, Ytrain = train_test_split(X, Y, test_size=0.6, random_state=100,shuffle=True)
+Xpretrain_train, Xpretrain_test, Ypretrain_train, Ypretrain_test = train_test_split(X, Y, test_size=0.3, random_state=100,shuffle=True)
+
 
 # define model
-model_shape=[600,300,100,50]
-input_dim=600
+model_shape=[800,300,100]
+input_shape = 600
 act='relu'
 act_last='softmax'
 loss_f='categorical_crossentropy'
 opt='adam'
 init='glorot_uniform'
 
-x = Input(shape=(input_dim,), name='input')
-x_1 = Dense(model_shape[1], activation=act, kernel_initializer=init, name='hidden_1')(x)
-x_2 = Dense(model_shape[2], activation=act, kernel_initializer=init, name='hidden_2')(x_1)
+x = Input(shape=(input_shape,), name='input')
+x_1 = x
+for i,dim in enumerate(model_shape[:-1]):
+    x_1 = Dense(dim, activation=act, name='hidden_'+str(i))(x_1)
+
+x_2 = Dense(model_shape[-1], activation=act, name='hidden_last')(x_1)
 # x_3 = Dense(model_shape[3], activation=act, kernel_initializer=init, name='hidden_3')(x_2)
-# combined = concatenate([x_2.output, x_3.output])
-y = Dense(num_classes, activation=act_last, kernel_initializer=init, name='output')(x_2)#(combined)
+
+x_2 = concatenate([x_1, x_2])
+y = Dense(num_classes, activation=act_last, name='output')(x_2)#(combined)
 model = Model(inputs=x, outputs=y, name='classifier')
-model.compile()
+model.compile(loss=loss_f, optimizer=opt, metrics=['accuracy'])
 model.summary()
 
-# train
+callback = EarlyStopping(monitor='val_loss',patience=80)
+checkpoint = ModelCheckpoint('models/pretrain_best_model.h5', monitor='val_loss', mode='min', save_best_only=True)
 
+print('classes',dict(pd.DataFrame(pd.DataFrame(Ypretrain_train).idxmax(axis=1),columns=['label']).groupby('label').groups).keys())
+# Xpretrain_test.shape
+# train
+history = model.fit(Xpretrain_train, Ypretrain_train, validation_data=(Xpretrain_test, Ypretrain_test), epochs=400, batch_size = 32, verbose=1, callbacks=[callback, checkpoint])
 
 # get output 
-
+# best_model = load_model('models/pretrain_best_model.h5')
 
 
