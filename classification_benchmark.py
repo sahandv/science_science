@@ -111,7 +111,7 @@ method_b = True     # Method B: Using custom kfold loop
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
 label_address =  datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
-n_folds = 5
+n_folds = 2
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
@@ -123,9 +123,9 @@ n_folds = 5
 #                    'embeddings/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes',
 #                    'embeddings/single_component_small/TADW-120-240',
 #                    'embeddings/single_component_small/TENE-120-240']
-# vec_file_names =  ['embeddings/single_component_small/naive d2v + dw 600',
-#                     'embeddings/single_component_small/deep_nonlinear_embedding_600']
-vec_file_names =  ['embeddings/single_component_small/deep_nonlinear_embedding_600']
+vec_file_names =  ['embeddings/single_component_small/naive d2v + dw 600',
+                    'embeddings/single_component_small/naive d2v + n2v 600']
+# vec_file_names =  ['embeddings/single_component_small/deep_nonlinear_embedding_600']
 
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
@@ -314,7 +314,7 @@ for file_name in vec_file_names:
     results_all.append({'file':file_name,'resuls':file_results})
     results_all_detailed.append({'file':file_name,'resuls':file_results_detailed})
 
-filename = output_dir+'classification/single_component_small/third all results k'+str(n_folds)+".txt"
+filename = output_dir+'classification/single_component_small/sec all results k'+str(n_folds)+".txt"
 if os.path.exists(filename):
     append_write = 'a' # append if already exists
 else:
