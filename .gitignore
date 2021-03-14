@@ -107,6 +107,18 @@ venv.bak/
 
 *.csv~
 
+./logs*
+
+*/logs*
+
+.*logs/
+
+*/[Ll]ogs/*
+
+[Ll]ogs/
+
+Graph Embedding/./logs/
+
 data/models/FastText_15D/15D/fasttext-scopus_wos-merged-310k_docs-gensim 15D.model
 
 data/models/FastText_15D/15D/fasttext-scopus_wos-merged-310k_docs-gensim 15D.model.trainables.vectors_ngrams_lockf.npy
@@ -121,6 +133,3 @@ BERT_weights/
 
 !BERT_weights/__init__.py
 
-./logs/
-
-Graph Embedding/./logs/
