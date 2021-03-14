@@ -34,8 +34,8 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec super-d2v300-node 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
-label_address = datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small/doc2vec 300D dm=1 window=10"#node2vec super-d2v-node 128-70-20 p1q025"
+label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
 
 # data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
 # label_address =  datapath+"Corpus/KPRIS/labels"
@@ -194,7 +194,7 @@ print(maxx)
 # =============================================================================
 
 print('\n- k-means -----------------------')
-seed = 80063
+seed = 11822
 model = KMeans(n_clusters=n_clusters,n_init=20,init='k-means++', random_state=seed).fit(X)
 predicted_labels = model.labels_
 
@@ -235,4 +235,4 @@ for cluster in tqdm(range(n_clusters),total=n_clusters):
 # Save clusters
 # =============================================================================
 predicted_labels = pd.DataFrame(predicted_labels,columns=['labels'])
-predicted_labels.to_csv(datapath+"Corpus/cora-classify/cora/embeddings/doc2vec all-lem 300D dm=1 window=10 predictions",index=False)
+predicted_labels.to_csv(data_address+' clustering predictions',index=False)
