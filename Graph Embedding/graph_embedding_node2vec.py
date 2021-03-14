@@ -34,12 +34,13 @@ np.random.seed(seed)
 # =============================================================================
 dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
 # dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/'
-data = pd.read_csv(dir_path+'citations_filtered with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+# data = pd.read_csv(dir_path+'citations_filtered_single_component.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+data = pd.read_csv(dir_path+'clean/single_component_small/network with_d2v300D_supernodes')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
 data.columns = ['referring_id','cited_id']
 gc.collect()
 sample = data.sample()
 data.info(memory_usage='deep')
-idx = pd.read_csv(dir_path+'clean/with citations new/corpus idx')#,names=['id'])#(dir_path+'corpus idx',index_col=0)
+idx = pd.read_csv(dir_path+'clean/single_component_small/node_idx_seq')#,names=['id'])#(dir_path+'corpus idx',index_col=0)
 idx.columns = ['id']
 # idx['id'] = idx['id'].str.replace('pub.','').astype(str).astype(int)
 idx = idx['id'].values.tolist()
@@ -66,13 +67,13 @@ gc.collect()
 # =============================================================================
 node2vec = Node2Vec(graph, dimensions=300, walk_length=70, num_walks=20, workers=1, p=1, q=0.5,seed=seed)
 model = node2vec.fit(window=10, min_count=1)
-model.save(dir_path+'models/node2vec super-d2v300-node 300-70-20 p1q05')
+model.save(dir_path+'models/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes')
 
 # =============================================================================
 # Get embeddings
 # =============================================================================
-model_name = 'node2vec super-d2v300-node 300-70-20 p1q05'
-model = Word2Vec.load(dir_path+'models/'+model_name)
+model_name = 'node2vec 300-70-20 p1q05 with_d2v300D_supernodes'
+model = Word2Vec.load(dir_path+'models/single_component_small/'+model_name)
 embeddings = []
 idx_true = []
 miss_count = 0
@@ -88,6 +89,6 @@ print('total misses:',miss_count)
 
 embeddings = pd.DataFrame(embeddings)
 embeddings.index = idx_true
-embeddings.to_csv(dir_path+'embeddings/'+model_name,index=True)
+embeddings.to_csv(dir_path+'embeddings/single_component_small/'+model_name,index=True)
 
 
