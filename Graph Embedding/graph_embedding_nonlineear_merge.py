@@ -65,7 +65,7 @@ Y = pd.get_dummies(labels).values
 X = vec.values
 # make them more balanced
 
-Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.5, random_state=100,shuffle=True)
+Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, Y, test_size=0.8, random_state=100,shuffle=True)
 if pretrain:
     # split data for train and future test
     Xpretrain_train, Xpretrain_test, Ypretrain_train, Ypretrain_test = train_test_split(Xtrain, Ytrain, test_size=0.3, random_state=100,shuffle=True)
@@ -97,7 +97,7 @@ if pretrain:
     model.summary()
     
     callback = EarlyStopping(monitor='val_accuracy',patience=35)
-    checkpoint = ModelCheckpoint('models/pretrain_best_model.h5', monitor='val_accuracy', mode='min', save_best_only=True)
+    checkpoint = ModelCheckpoint('models/pretrain_best_model-20.h5', monitor='val_accuracy', mode='min', save_best_only=True)
     tensorboard = TensorBoard(
                               log_dir='.\logs',
                               histogram_freq=1,
@@ -112,7 +112,7 @@ if pretrain:
 if get_output:
     input_arr = X
     
-    best_model = load_model('models/pretrain_best_model.h5')
+    best_model = load_model('models/pretrain_best_model-20.h5')
     plot_model(best_model, to_file='models/model_plot.png', show_shapes=True, show_layer_names=True)
     
     # get_output = K.function([best_model.input],[best_model.layers[5].output])
@@ -123,7 +123,7 @@ if get_output:
     layer_name = 'hidden_2'
     intermediate_layer_model = Model(inputs=best_model.input,outputs=best_model.get_layer(layer_name).output)
     embeddings = pd.DataFrame(intermediate_layer_model.predict(X))
-    embeddings.to_csv(datapath+'Corpus/cora-classify/cora/embeddings/single_component_small/deep_nonlinear_embedding_600',index=False)
+    embeddings.to_csv(datapath+'Corpus/cora-classify/cora/embeddings/single_component_small/deep_nonlinear_embedding_600_20percent',index=False)
     
     
     

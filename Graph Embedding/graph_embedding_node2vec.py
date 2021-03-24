@@ -35,7 +35,7 @@ np.random.seed(seed)
 dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
 # dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/'
 # data = pd.read_csv(dir_path+'citations_filtered_single_component.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
-data = pd.read_csv(dir_path+'clean/single_component_small/network with_d2v300D_supernodes')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+data = pd.read_csv(dir_path+'clean/single_component_small/network')#network with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
 data.columns = ['referring_id','cited_id']
 gc.collect()
 sample = data.sample()

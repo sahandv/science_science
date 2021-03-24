@@ -100,7 +100,7 @@ gc.collect()
 count_vect = CountVectorizer()
 X = count_vect.fit_transform(texts_new)
 X.shape
-pd.DataFrame(X).to_csv()
+# pd.DataFrame(X).to_csv()
 # =============================================================================
 # Text embedding (TFIDF)
 # =============================================================================
@@ -110,17 +110,17 @@ X.shape
 # =============================================================================
 # TADW
 # =============================================================================
-TADW = kc.node_embedding.TADW(dimensions=120,lambd=1)
+TADW = kc.node_embedding.TADW(dimensions=32,lambd=1)
 TADW.fit(graph,X)
 TADW_vectors = TADW.get_embedding() 
-pd.DataFrame(TADW_vectors).to_csv(dir_root+'embeddings/single_component_small/TADW-120-240',index=False)
+pd.DataFrame(TADW_vectors).to_csv(dir_root+'embeddings/single_component_small/TADW-32-64-bow',index=False)
 # =============================================================================
 # TENE
 # =============================================================================
-TENE = kc.node_embedding.TENE(dimensions=120)
+TENE = kc.node_embedding.TENE(dimensions=32)
 TENE.fit(graph,X)
 TENE_vectors = TENE.get_embedding() 
-pd.DataFrame(TENE_vectors).to_csv(dir_root+'embeddings/single_component_small/TENE-120-240',index=False)
+pd.DataFrame(TENE_vectors).to_csv(dir_root+'embeddings/single_component_small/TENE-32-64-bow',index=False)
 # =============================================================================
 # DeepWalk
 # =============================================================================
