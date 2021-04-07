@@ -191,7 +191,7 @@ def run_all_tests(data_address:str,output_file_name:str,labels:list,k:int,algos:
                 [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
                 # [500, 500, 2000, 500],[500, 500, 2000, 500],[500, 500, 2000, 500],
                 # [500, 1000, 2000, 100],[500, 1000, 2000, 100],[500, 1000, 2000, 100],
-                # [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
+                [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
                 # [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
                 # [200, 1000, 2000,100, 10],[200, 1000, 2000,200, 10],[200, 1000, 2000, 500, 10],
                 # [200, 500, 1000, 500, 10],[200, 500, 1000, 200, 10],[200, 500, 1000, 100, 10],
@@ -199,13 +199,13 @@ def run_all_tests(data_address:str,output_file_name:str,labels:list,k:int,algos:
                 # [200, 500, 1000, 500],[200, 500, 1000, 200],[200, 500, 1000, 100],
                 # [200, 1000, 2000, 10],[200, 1000, 2000, 10],[200, 1000, 2000, 10],
                 [1536,3072,1536,100],[1536,3072,1536,100],[1536,3072,1536,100],
-                # [256,1024,512,10],[256,1024,512,10],[256,1024,512,10],
+                [256,1024,512,10],[256,1024,512,10],[256,1024,512,10],
                 # [1024,1024,2048,256,10],[1024,1024,2048,256,10],
                 # [512,1024,2048,128,10],[512,1024,2048,128,10],
                 # [512,1024,2048,10],[512,1024,2048,10],
                 # [1024,1024,2048,10],[1024,1024,2048,10],
                 # [1536,768,384,192,10],[1536,768,384,192,10],[1536,768,192,10],
-                # [1536,3072,1536,100,10],[1536,3072,1536,100,10],[1536,3072,1536,100,10],
+                [1536,3072,1536,100,10],[1536,3072,1536,100,10],[1536,3072,1536,100,10],
                 # [1536,3072,1536,100],[1536,3072,1536,100],[1536,3072,1536,100],
                 # [1536,3072,1536,10],[1536,3072,1536,10],[1536,3072,1536,10],
                 # [1536,3072,1536,100,10],[1536,3072,1536,100,10],[1536,3072,1536,100,10],
@@ -214,7 +214,8 @@ def run_all_tests(data_address:str,output_file_name:str,labels:list,k:int,algos:
                 # [200,200,10],[200,200,10],[200,200,10],
                 # [400,400,10],[400,400,10],[400,400,10],
                 # [400,400,10],[400,400,10],[400,400,10],
-                # [400,1000,10],[400,1000,10],[400,1000,100,10],[400,1000,100,10],
+                [400,1000,10],[400,1000,10],[400,1000,100,10],[400,1000,100,10],
+                [600,300,50,10],[600,300,50,10],[600,300,10],
                 [400,500,10],[400,500,10],[400,500,10],
                 # [200,200,10],[200,200,10],[200,200,10],
                 # [200,200,10],[200,200,10],[200,200,10],
@@ -341,13 +342,25 @@ def run_all_tests(data_address:str,output_file_name:str,labels:list,k:int,algos:
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
-label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
+# label_address =  datapath+"Corpus/cora-classify/cora/clean/with citations new/corpus classes1"
+label_address =  datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
 
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
-vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05']
-
+# vec_file_names =  ['embeddings/node2vec 300-70-20 p1q05']
+vec_file_names = [
+                'embeddings/single_component_small/deep_nonlinear_embedding_600',
+                'embeddings/single_component_small/doc2vec 300D dm=1 window=10',
+                'embeddings/single_component_small/DW 300-70-20',
+                'embeddings/single_component_small/DW 300-70-20 with_d2v300D_supernodes',
+                'embeddings/single_component_small/node2vec 300-70-20 p1q05',
+                'embeddings/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes',
+                'embeddings/single_component_small/TADW-120-240',
+                'embeddings/single_component_small/TENE-150-300-bow',
+                'embeddings/single_component_small/naive d2v + dw 600',
+                'embeddings/single_component_small/naive d2v + n2v 600'
+                ]
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
 
@@ -367,7 +380,7 @@ import pandas as pd
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Zen
 # datapath = '/home/sahand/GoogleDrive/Data/' #Asus
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/node2vec 300-70-20 p1q05 clustering results"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small/naive d2v + n2v 600 clustering results"
 df = pd.read_csv(data_address)
 # max1 = df.groupby(['Method'], sort=False).max()
 # max2 = df.groupby(['Method']).agg({'NMI': 'max','AMI':'max','ARI':'max'})
