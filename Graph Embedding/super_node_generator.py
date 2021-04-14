@@ -19,7 +19,7 @@ citation_pairs = pd.read_csv(citations_address).values.tolist()
 idx_clusters = idx.copy()
 idx_clusters['cluster'] = clusters['labels']
 cluster_ids = list(clusters.groupby('labels').groups.keys())
-super_id = 5000000  # A number out of document ID ranges
+super_id = 50000000  # A number out of document ID ranges
 
 # Connect the supernode to all cluster members
 for cluster in cluster_ids:
