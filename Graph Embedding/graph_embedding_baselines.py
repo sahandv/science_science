@@ -18,15 +18,15 @@ from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer,Co
 # Init Cora
 # =============================================================================
 dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-texts = pd.read_csv(dir_root+'clean/single_component/abstract_title all-lem',names=['abstract'])['abstract'].values.tolist()
-labels = pd.read_csv(dir_root+'clean/single_component/corpus classes1')['class1'].values.tolist()
-networks = pd.read_csv(dir_root+'citations_filtered_single_component.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
-networks.columns = ['referring_id','cited_id']
+texts = pd.read_csv(dir_root+'clean/single_component_small/abstract_title all-lem',names=['abstract'])['abstract'].values.tolist()
+labels = pd.read_csv(dir_root+'clean/single_component_small/labels')['class1'].values.tolist()
+networks = pd.read_csv(dir_root+'clean/single_component_small/cocitations_filtered.csv')#../../citations_filtered_single_component.csv # with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+networks.columns = ['referring_id','cited_id','count']
 
 gc.collect()
 sample = networks.sample()
 networks.info(memory_usage='deep')
-idx = pd.read_csv(dir_root+'clean/single_component/corpus idx')#,names=['id'])#(dir_path+'corpus idx',index_col=0)
+idx = pd.read_csv(dir_root+'clean/single_component_small/corpus_idx_original')#,names=['id'])#(dir_path+'corpus idx',index_col=0)
 idx.columns = ['id']
 # idx['id'] = idx['id'].str.replace('pub.','').astype(str).astype(int)
 idx = idx['id'].values.tolist()
@@ -51,32 +51,39 @@ corpus = pd.DataFrame({'id':idx,'text':texts,'label':labels})
 texts_new = corpus[corpus['id'].isin(giant_connected_component)]['text'].values.tolist()
 idx_new = corpus[corpus['id'].isin(giant_connected_component)]['id'].values.tolist()
 labels_new = corpus[corpus['id'].isin(giant_connected_component)]['label'].values.tolist()
+head = networks.head(10000)
 
 # =============================================================================
 # translate  node_indices to sequential numeric_indices
 # =============================================================================
+networks_new = pd.DataFrame()
 dictionary = dict()
 idx_seq = list()
 for i,value in tqdm(enumerate(idx_new)):
     dictionary[value]=i
     idx_seq.append(i)
-networks_new = networks.replace(dictionary)
+# networks_new = networks.replace(dictionary) #very heavy on memory use
+networks_new['referring_id'] = networks['referring_id'].map(dictionary)
+networks_new['cited_id'] = networks['cited_id'].map(dictionary)
+networks_new['count'] = networks['count']
+head2 = networks_new.head(10000)
 
 nodes_new = list(set(networks_new['referring_id'].values.tolist()+networks_new['cited_id'].values.tolist()))
 
+# A simple check of dimensions to see if the number of unique nodes are matching
 if (len(nodes_new) == len(texts_new)) and (len(nodes_new) == len(giant_connected_component)):
     print('The dimensions are good now:',len(nodes_new))
 else:
     print('Unmatching dimensions:', len(nodes_new) , len(texts_new) , len(giant_connected_component))
 
 # =============================================================================
-# Save for future use     - can skip
+# Save for future use in node2vec and etc.    - can skip
 # =============================================================================
-networks_new.to_csv(dir_root+'clean/single_component_small/network',index=False)
+networks_new.to_csv(dir_root+'clean/single_component_small/network_cocitation seq',index=False)
 pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small/abstract_title all-lem',index=False,header=False)
 pd.DataFrame(idx_new,columns=['id']).to_csv(dir_root+'clean/single_component_small/corpus_idx_original',index=False)
 pd.DataFrame(labels_new,columns=['class1']).to_csv(dir_root+'clean/single_component_small/labels',index=False)
-pd.DataFrame(idx_seq,columns=['id']).to_csv(dir_root+'clean/single_component_small/node_idx_seq',index=False)
+pd.DataFrame(idx_seq,columns=['id']).to_csv(dir_root+'clean/single_component_small/node_idx_seq cocite',index=False)
 
 # =============================================================================
 # Prepare graph
@@ -110,17 +117,17 @@ X.shape
 # =============================================================================
 # TADW
 # =============================================================================
-TADW = kc.node_embedding.TADW(dimensions=32,lambd=1)
+TADW = kc.node_embedding.TADW(dimensions=120,lambd=1)
 TADW.fit(graph,X)
 TADW_vectors = TADW.get_embedding() 
-pd.DataFrame(TADW_vectors).to_csv(dir_root+'embeddings/single_component_small/TADW-32-64-bow',index=False)
+pd.DataFrame(TADW_vectors).to_csv(dir_root+'embeddings/single_component_small/cocite TADW-120-240-tfidf',index=False)
 # =============================================================================
 # TENE
 # =============================================================================
-TENE = kc.node_embedding.TENE(dimensions=32)
+TENE = kc.node_embedding.TENE(dimensions=120)
 TENE.fit(graph,X)
 TENE_vectors = TENE.get_embedding() 
-pd.DataFrame(TENE_vectors).to_csv(dir_root+'embeddings/single_component_small/TENE-32-64-bow',index=False)
+pd.DataFrame(TENE_vectors).to_csv(dir_root+'embeddings/single_component_small/cocite TENE-120-240-tfidf',index=False)
 # =============================================================================
 # DeepWalk
 # =============================================================================
