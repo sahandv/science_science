@@ -18,15 +18,15 @@ from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer,Co
 # Init Cora
 # =============================================================================
 dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-texts = pd.read_csv(dir_root+'clean/single_component_small/abstract_title all-lem',names=['abstract'])['abstract'].values.tolist()
-labels = pd.read_csv(dir_root+'clean/single_component_small/labels')['class1'].values.tolist()
-networks = pd.read_csv(dir_root+'clean/single_component_small/cocitations_filtered.csv')#../../citations_filtered_single_component.csv # with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+texts = pd.read_csv(dir_root+'clean/single_component_small_19k/abstract_title all-lem',names=['abstract'])['abstract'].values.tolist()
+labels = pd.read_csv(dir_root+'clean/single_component_small_19k/labels')['class1'].values.tolist()
+networks = pd.read_csv(dir_root+'clean/single_component_small_19k/cocitations_filtered.csv')#../../citations_filtered_single_component.csv # with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
 networks.columns = ['referring_id','cited_id','count']
 
 gc.collect()
 sample = networks.sample()
 networks.info(memory_usage='deep')
-idx = pd.read_csv(dir_root+'clean/single_component_small/corpus_idx_original')#,names=['id'])#(dir_path+'corpus idx',index_col=0)
+idx = pd.read_csv(dir_root+'clean/single_component_small_19k/corpus_idx_original')#,names=['id'])#(dir_path+'corpus idx',index_col=0)
 idx.columns = ['id']
 # idx['id'] = idx['id'].str.replace('pub.','').astype(str).astype(int)
 idx = idx['id'].values.tolist()
