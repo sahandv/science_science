@@ -79,11 +79,11 @@ else:
 # =============================================================================
 # Save for future use in node2vec and etc.    - can skip
 # =============================================================================
-networks_new.to_csv(dir_root+'clean/single_component_small/network_cocitation seq',index=False)
-pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small/abstract_title all-lem',index=False,header=False)
-pd.DataFrame(idx_new,columns=['id']).to_csv(dir_root+'clean/single_component_small/corpus_idx_original',index=False)
-pd.DataFrame(labels_new,columns=['class1']).to_csv(dir_root+'clean/single_component_small/labels',index=False)
-pd.DataFrame(idx_seq,columns=['id']).to_csv(dir_root+'clean/single_component_small/node_idx_seq cocite',index=False)
+networks_new.to_csv(dir_root+'clean/single_component_small_18k/network_cocitation seq',index=False)
+pd.DataFrame(texts_new).to_csv(dir_root+'clean/single_component_small_18k/abstract_title all-lem',index=False,header=False)
+pd.DataFrame(idx_new,columns=['id']).to_csv(dir_root+'clean/single_component_small_18k/corpus_idx_original',index=False)
+pd.DataFrame(labels_new,columns=['class1']).to_csv(dir_root+'clean/single_component_small_18k/labels',index=False)
+pd.DataFrame(idx_seq,columns=['id']).to_csv(dir_root+'clean/single_component_small_18k/node_idx_seq cocite',index=False)
 
 # =============================================================================
 # Prepare graph
