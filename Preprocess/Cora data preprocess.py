@@ -22,8 +22,8 @@ This is a preprocessing script for Cora dataset [McCallumIRJ]
 # =============================================================================
 # Init
 # =============================================================================
-# dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'      # ryzen
-dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'      # c1314
+dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/clean/single_component_small/'      # ryzen
+# dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'      # c1314
 
 
 import json   
@@ -148,27 +148,29 @@ sample = data_clean_unique.sample(500)
 # =============================================================================
 # Filter citations based on the papers
 # =============================================================================
-data = pd.read_csv(dir_path+'extractions_with_unique_id_labeled.csv')
+data = pd.read_csv(dir_path+'corpus_idx_original')#extractions_with_unique_id_labeled.csv
+citations = pd.read_csv(dir_path+'../../co-citation-pairs-concat-unique-weights.csv')
 sample = data.sample(500)
 id_list = data['id'].values.tolist()
 
-filtered_citations = citations[(citations['referring_id'].isin(id_list)) | (citations['cited_id'].isin(id_list))]
-filtered_citations.to_csv(dir_path+'citations_filtered.csv',index=False)
+
+filtered_citations = citations[(citations['cite1'].isin(id_list)) & (citations['cite2'].isin(id_list))]
+filtered_citations.to_csv(dir_path+'cocitations_filtered.csv',index=False)
 
 # =============================================================================
 # Filter and take the largest component
 # =============================================================================
 
 # dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
-data = pd.read_csv(dir_path+'extractions_with_unique_id_labeled.csv')
-citations = pd.read_csv(dir_path+'citations_filtered.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
-citations.columns = ['referring_id','cited_id']
+data = pd.read_csv(dir_path+'corpus_idx_original')#extractions_with_unique_id_labeled.csv
+citations = pd.read_csv(dir_path+'cocitations_filtered.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+# citations.columns = ['referring_id','cited_id']
 
 citations.info(memory_usage='deep')
 
 graph = nx.Graph()
 for i,row in tqdm(citations.iterrows(),total=citations.shape[0]):
-    graph.add_edge(row['referring_id'],(row['cited_id']))
+    graph.add_edge(row['cite1'],(row['cite2']))
     
 
 print('Graph fully connected:',nx.is_connected(graph))
