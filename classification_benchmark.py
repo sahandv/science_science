@@ -70,7 +70,7 @@ class AccuracyHistory(keras.callbacks.Callback):
 # =============================================================================
 # Models
 # =============================================================================
-classifier = 'rf'
+classifier = 'deep'
 
 def baseline_model(model_shape:list=[200,100,50,10],input_dim:int=128,act:str='relu',act_last:str='softmax',loss_f:str='categorical_crossentropy',opt:str='adam'):
     def model():
@@ -110,30 +110,30 @@ method_a = False    # Method A: Using sklearn kfold
 method_b = True     # Method B: Using custom kfold loop
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 data_dir =  datapath+"Corpus/cora-classify/cora/"
-label_address =  datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
+label_address =  datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
 n_folds = 5
 
 # vec_file_names = ['embeddings/node2vec super-d2v-node 128-80-10 p4q1','embeddings/node2vec super-d2v-node 128-80-10 p1q025','embeddings/node2vec super-d2v-node 128-10-100 p1q025']#,'Doc2Vec patent corpus',
                   # ,'embeddings/node2vec-80-10-128 p1q0.5','embeddings/node2vec deepwalk 80-10-128']
 # vec_file_names =  ['embeddings/node2vec super-d2v-node 128-80-10 p1q05']
-vec_file_names =  ['embeddings/single_component_small/deep_nonlinear_embedding_600_20percent']
+# vec_file_names =  ['embeddings/single_component_small_18k/doc2vec 300D dm=1 window=10']
 # vec_file_names =  [
-#                     'embeddings/single_component_small/deep_nonlinear_embedding_600',
-#                     'embeddings/single_component_small/doc2vec 300D dm=1 window=10',
-#                     'embeddings/single_component_small/DW 300-70-20',
-#                     'embeddings/single_component_small/DW 300-70-20 with_d2v300D_supernodes',
-#                     'embeddings/single_component_small/node2vec 300-70-20 p1q05',
-#                     'embeddings/single_component_small/node2vec 300-70-20 p1q05 with_d2v300D_supernodes',
-#                     'embeddings/single_component_small/TADW-120-240',
-#                     'embeddings/single_component_small/TENE-150-300-bow',
-#                     'embeddings/single_component_small/naive d2v + dw 600',
-#                     'embeddings/single_component_small/naive d2v + n2v 600'
+#                     # 'embeddings/single_component_small/deep_nonlinear_embedding_600',
+#                     'embeddings/single_component_small_18k/cocite dw 300-70-20 p1q1',
+#                     'embeddings/single_component_small_18k/cocite node2vec 300-70-20 p1q05',
+#                     'embeddings/single_component_small_18k/cocite sn dw 300-70-20 p1q1',
+#                     'embeddings/single_component_small_18k/cocite sn node2vec 300-70-20 p1q05',
+#                     'embeddings/single_component_small_18k/cocite TADW-120-240-bow',
+#                     'embeddings/single_component_small_18k/cocite TADW-120-240-tfidf',
+#                     'embeddings/single_component_small_18k/cocite TENE-120-240-bow',
+#                     'embeddings/single_component_small_18k/cocite TENE-120-240-tfidf',
+#                     'embeddings/single_component_small_18k/dw 300-70-20 p1q1',
+#                     'embeddings/single_component_small_18k/n2v 300-70-20 p1q05'
 #                     ]
-# vec_file_names =  ['embeddings/single_component_small/TENE-150-300-bow',
-#                    'embeddings/single_component_small/TADW-120-240']
-
-labels = pd.read_csv(label_address)
-labels.columns = ['label']
+vec_file_names =  ['embeddings/single_component_small_18k/deep_nonlinear_embedding_600_50percent 20 April']#,
+                    # 'embeddings/single_component_small_18k/deep_nonlinear_2layers_embedding_900_50percent']
+filter_file_names = ['clean/single_component_small_18k/nonlinear_test_data_idx 20 april']#,
+                     # 'clean/single_component_small_18k/nonlinear_2layers_test_data_idx']
 
 model_shapes = [
     [600,300,100,10],
@@ -146,7 +146,7 @@ model_shapes = [
 
 results_all = []
 results_all_detailed = []
-for file_name in vec_file_names:
+for i,file_name in enumerate(vec_file_names):
     print('\nVec file:',file_name)
     file_results = []
     file_results_detailed = []
@@ -161,13 +161,24 @@ for file_name in vec_file_names:
 # def run_all_tests(data_address:str,output_dir:str,labels:list,model_shapes:list,test_size:float=0.1):
     tic = time.time()
     vectors = pd.read_csv(data_address)#,header=None,)
+    
+    labels = pd.read_csv(label_address)
+    labels.columns = ['label']
+    
+    if filter_file_names[i] is not False:
+        data_filter =  datapath+"Corpus/cora-classify/cora/"+filter_file_names[i]
+        data_filter = pd.read_csv(data_filter)
+        data_filter= data_filter['id_seq'].astype(int).values    
+        vectors = vectors.iloc[data_filter]
+        labels = labels.iloc[data_filter]
+    
     try:
         vectors = vectors.drop('Unnamed: 0',axis=1)
         print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
     except:
         print('\nVector shapes seem to be good:',vectors.shape)
         
-    path_to_model = output_dir+'classification/single_component_small/deep/'+data_address.split('/')[-1]
+    path_to_model = output_dir+'classification/single_component_small_18k/deep/'+data_address.split('/')[-1]
     Path(path_to_model).mkdir(parents=True, exist_ok=True)
     
     # preprocess inputs and split
@@ -191,7 +202,7 @@ for file_name in vec_file_names:
 # =============================================================================
 #     Random forest
 # =============================================================================
-    if classifier == 'dnn':
+    if classifier == 'rf':
         n_trees = 200
         y_single = np.argmax(Y, axis=1)
         model=RandomForestClassifier(n_estimators=n_trees, criterion = 'entropy', random_state = 100,n_jobs=-1) 
@@ -236,7 +247,7 @@ for file_name in vec_file_names:
                 pd.DataFrame(y_true).to_csv(path_to_model+"/y_true k5 fold"+str(fold_number),index=False)
                 pd.DataFrame(y_pred).to_csv(path_to_model+"/y_pred k5 fold"+str(fold_number),index=False)
                 print('done')
-                    
+
             model_results.append(np.mean(cv_acc))
             model_result_detailed.append({'accuracy':cv_acc,
                                     'f1':cv_f1,
@@ -254,10 +265,10 @@ for file_name in vec_file_names:
                                     'recall',cv_r,
                                     'recall weighted',cv_r_w,
                                     '\n')
-                
+
             file_results.append({'n_trees':str(n_trees),'resuls':model_results})
             file_results_detailed.append({'n_trees':str(n_trees),'resuls':model_result_detailed})
-            
+
     toc = time.time()
     print('All done in '+str(toc - tic)+'seconds!')
     results_all.append({'file':file_name,'resuls':file_results})
@@ -265,8 +276,8 @@ for file_name in vec_file_names:
 # =============================================================================
 #     DNN
 # =============================================================================
-    if classifier == 'dnn':
-        
+    if classifier == 'deep':
+
         for i,model_shape in enumerate(model_shapes):
             model_results = []
             model_result_detailed = []
@@ -301,7 +312,7 @@ for file_name in vec_file_names:
                     model.fit(X[train_index], Y[train_index])
                     pred = model.predict(X[val_index])#model.predict_classes(X[val_index])
                     # pred = np.argmax(model.predict(X[val_index]), axis=-1)
-                    
+
                     # get fold accuracy & append
                     fold_acc = accuracy_score(y_single[val_index], pred)
                     fold_f1 = f1_score(y_single[val_index], pred,average='micro')
@@ -318,14 +329,14 @@ for file_name in vec_file_names:
                     cv_p_w.append(fold_precision_weighted)
                     cv_r.append(fold_recall)
                     cv_r_w.append(fold_recall_weighted)
-                    
+
                     print('writing to disk...')
                     y_true = y_single[val_index]
                     y_pred = pred
                     pd.DataFrame(y_true).to_csv(path_to_model+"/y_true k5 fold"+str(fold_number),index=False)
                     pd.DataFrame(y_pred).to_csv(path_to_model+"/y_pred k5 fold"+str(fold_number),index=False)
                     print('done')
-                    
+
                 model_results.append(np.mean(cv_acc))
                 model_result_detailed.append({'accuracy':cv_acc,
                                         'f1':cv_f1,
@@ -343,7 +354,7 @@ for file_name in vec_file_names:
                                         'recall',cv_r,
                                         'recall weighted',cv_r_w,
                                         '\n')
-                
+
             file_results.append({'model':str(model_shape),'resuls':model_results})
             file_results_detailed.append({'model':str(model_shape),'resuls':model_result_detailed})
             
@@ -388,7 +399,7 @@ for file_name in vec_file_names:
     results_all.append({'file':file_name,'resuls':file_results})
     results_all_detailed.append({'file':file_name,'resuls':file_results_detailed})
 
-filename = output_dir+'classification/single_component_small/deep/all results k'+str(n_folds)+".txt"
+filename = output_dir+'classification/single_component_small_18k/'+classifier+'/deep relu-sigmoid results k'+str(n_folds)+".txt"
 if os.path.exists(filename):
     append_write = 'a' # append if already exists
 else:
