@@ -34,8 +34,8 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small/doc2vec 300D dm=1 window=10"#node2vec super-d2v-node 128-70-20 p1q025"
-label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small/labels"
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
+label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
 
 # data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
 # label_address =  datapath+"Corpus/KPRIS/labels"
@@ -43,6 +43,12 @@ label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small
 vectors = pd.read_csv(data_address)#,header=None)
 labels = pd.read_csv(label_address)
 labels.columns = ['label']
+
+try:
+    vectors = vectors.drop('Unnamed: 0',axis=1)
+    print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
+except:
+    print('\nVector shapes seem to be good:',vectors.shape)
 
 labels_f = pd.factorize(labels.label)
 X = vectors.values
@@ -84,7 +90,7 @@ results = results.append(tmp_results, ignore_index=True)
 # K-means
 # =============================================================================
 print('\n- k-means random -----------------------')
-for fold in tqdm(range(10)):
+for fold in tqdm(range(5)):
     seed = randint(0,10**5)
     model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
     predicted_labels = model.labels_
@@ -206,16 +212,16 @@ results_df.to_csv(data_address+' Kmeans labels',index=False)
 
 results_df.groupby('label').groups.keys()
 
-archs = [[200,500,1000,20]]
+archs = [[500,1000,10]]
 
 print('\n- DEC -----------------------')
-for fold in tqdm(archs):
+for i,fold in tqdm(enumerate(archs)):
     seed = randint(0,10**5)
     np.random.seed(33948)
     predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=10,architecture=fold,pretrain_epochs=1000)
     
     results_df = pd.DataFrame(predicted_labels,columns=['label'])
-    results_df.to_csv(data_address+' DEC 200,500,1000,20 k10 labels - 01',index=False)
+    results_df.to_csv(data_address+' DEC 500,1000,10 k10 labels - '+str(i),index=False)
 
 results_df.groupby('label').groups.keys()
 
