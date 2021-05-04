@@ -90,7 +90,8 @@ model.summary()
 del model
 inputs = tf.keras.Input(shape=(max_length,), dtype="int32")
 x = tf.keras.layers.Embedding(vocab_size,embedding_dim,input_length=max_length)(inputs)
-x = tf.keras.layers.Flatten()(x) # tf.keras.layers.GlobalAveragePooling1D() specifically if using weird shapes as a result of subword tokens etc.
+# use tf.keras.layers.GlobalAveragePooling1D() specifically if using weird shapes as a result of subword tokens etc.
+x = tf.keras.layers.Flatten()(x) 
 x = tf.keras.layers.Dense(6,activation='relu')(x)
 outputs = tf.keras.layers.Dense(1,activation='sigmoid')(x)
 model = keras.Model(inputs, outputs)
@@ -101,6 +102,7 @@ model.summary()
 del model
 inputs = tf.keras.Input(shape=(None,), dtype="int32")
 x = tf.keras.layers.Embedding(vocab_size,embedding_dim,input_length=max_length)(inputs)
+# using bidirectional LSTM instead of flatten or averaging can improve the results
 x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)
 x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64))(x)
 x = tf.keras.layers.Dense(6,activation='relu')(x)
