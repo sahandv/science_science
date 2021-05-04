@@ -3,7 +3,7 @@
 """
 Created on Wed Oct 21 16:10:03 2020
 
-@author: sahand
+@author: github.com/sahandv
 """
 import sys
 import time
@@ -32,7 +32,9 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 # Load data and init
 # =============================================================================
-datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+
 
 data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
 label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
