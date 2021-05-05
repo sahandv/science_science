@@ -133,3 +133,5 @@ BERT_weights/
 
 !BERT_weights/__init__.py
 
+
+*.h5
