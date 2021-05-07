@@ -130,10 +130,11 @@ n_folds = 5
 #                     'embeddings/single_component_small_18k/dw 300-70-20 p1q1',
 #                     'embeddings/single_component_small_18k/n2v 300-70-20 p1q05'
 #                     ]
-vec_file_names =  ['embeddings/single_component_small_18k/deep_nonlinear_embedding_600_50percent 20 April']#,
-                    # 'embeddings/single_component_small_18k/deep_nonlinear_2layers_embedding_900_50percent']
-filter_file_names = ['clean/single_component_small_18k/nonlinear_test_data_idx 20 april']#,
+vec_file_names =  ['embeddings/single_component_small_18k/doc2vec 300D dm=1 window=10 tagged',
+                   'embeddings/single_component_small_18k/doc2vec 300D dm=1 window=10']
+# filter_file_names = ['clean/single_component_small_18k/nonlinear_test_data_idx 20 april']#,
                      # 'clean/single_component_small_18k/nonlinear_2layers_test_data_idx']
+filter_file_names = [False,False]
 
 model_shapes = [
     [600,300,100,10],
@@ -399,7 +400,7 @@ for i,file_name in enumerate(vec_file_names):
     results_all.append({'file':file_name,'resuls':file_results})
     results_all_detailed.append({'file':file_name,'resuls':file_results_detailed})
 
-filename = output_dir+'classification/single_component_small_18k/'+classifier+'/deep relu-sigmoid results k'+str(n_folds)+".txt"
+filename = output_dir+'classification/single_component_small_18k/'+classifier+'/doc2vec relu results k'+str(n_folds)+".txt"
 if os.path.exists(filename):
     append_write = 'a' # append if already exists
 else:
