@@ -179,6 +179,14 @@ model = keras.Model(inputs, outputs)
 model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy'])
 model.summary()
 
+    # =============================================================================
+    # Multi embedding
+    # =============================================================================
+col1, col2 = tf.keras.Input(shape=(10,)), tf.keras.Input(shape=(10,))
+col1_embeded = tf.keras.layers.Embedding(500, 64)(col1)
+col2_embedded = tf.keras.layers.Embedding(100, 64)(col2)
+#...
+
 # =============================================================================input_sequences
 # Fit model
 # =============================================================================
