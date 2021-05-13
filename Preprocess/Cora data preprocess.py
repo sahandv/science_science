@@ -22,8 +22,8 @@ This is a preprocessing script for Cora dataset [McCallumIRJ]
 # =============================================================================
 # Init
 # =============================================================================
-dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/clean/single_component_small/'      # ryzen
-# dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'      # c1314
+# dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/clean/single_component_small/'      # ryzen
+dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'      # c1314
 
 
 import json   
@@ -119,6 +119,7 @@ sample = merged.sample(5)
 # =============================================================================
 # Further pre-process to get unique abstracts
 # =============================================================================
+data = merged.copy()
 data = pd.read_csv(dir_path+'extractions_with_id.csv')
 
 # =============================================================================
@@ -129,10 +130,10 @@ merged = pd.merge(papers_list_labeled, data, on='filename')
 merged.to_csv(dir_path+'extractions_with_unique_id_labeled.csv',index=False)
 sample = merged.sample(5)
 
+# =============================================================================
+# 
+# =============================================================================
 data = merged.copy()
-# =============================================================================
-# Save to disk
-# =============================================================================
 data = pd.read_csv(dir_path+'extractions_with_id.csv')
 
 data_clean = data[pd.notna(data['Abstract'])]
