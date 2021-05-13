@@ -4,7 +4,6 @@ pandas
 nltk
 spacy
 scikit-learn
-scikit-image
 scipy
 seaborn
 wordcloud
@@ -17,3 +16,4 @@ networkx
 netgraph
 yellowbrick
 plotly
+stellargraph
