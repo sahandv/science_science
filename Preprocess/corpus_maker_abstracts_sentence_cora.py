@@ -37,19 +37,23 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/extractions_with_unique_id_labeled_single_component.csv'
-citations_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/citations_filtered.csv'
+dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'
+
+data_path_rel = dir_root+'extractions_with_unique_id_labeled_single_component.csv'
+citations_path = dir_root+'citations_filtered_single_component.csv'
+filter_path = dir_root+'clean/single_component_small_18k/corpus_idx_original'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
 # data_path_rel = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
 citations = pd.read_csv(citations_path)
+data_filter = pd.read_csv(filter_path)
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
 
 root_dir = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'
-subdir = 'clean/single_component/' # no_lemmatization_no_stopwords
+subdir = 'clean/single_component_small_18k_tmp/' # no_lemmatization_no_stopwords
 gc.collect()
 
 data_full_relevant['PY'] = 2010
@@ -75,6 +79,12 @@ all_citations.columns = ['citation_id']
 citations_mask = list(all_citations.groupby('citation_id').groups.keys())
 
 data_full_relevant = data_full_relevant[data_full_relevant['id'].isin(citations_mask)]
+
+# =============================================================================
+# Filter by other filters - not necessary again, unless want to reproduce data
+# =============================================================================
+data_full_relevant = data_full_relevant[data_full_relevant['id'].isin(data_filter['id'].values.tolist())]
+
 # =============================================================================
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
@@ -369,6 +379,11 @@ keywords = []
 keywords_index = []
 abstracts_pure = []
 
+data_with_abstract['TI'] = data_with_abstract['TI'].str.strip()
+data_with_abstract['AB'] = data_with_abstract['AB'].str.strip()
+abstracts_super_pure = list(data_with_abstract['TI']+'. '+data_with_abstract['AB'])
+# abstracts_super_pure[0] = abstracts_super_pure[0][40:]
+
 for index,paper in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
     keywords_str = paper['DE']
     keywords_index_str = paper['ID']
@@ -396,6 +411,9 @@ data_with_abstract['AB_KW_split'] = abstracts
 # =============================================================================
 # Strip and lowe case 
 # =============================================================================
+abstracts_super_pure = [str.lower(x) for x in abstracts_super_pure]
+abstracts_super_pure = [str.strip(x) for x in abstracts_super_pure]
+
 abstracts_pure = [list(map(str.strip, x)) for x in abstracts_pure]
 abstracts_pure = [list(map(str.lower, x)) for x in abstracts_pure]
 
@@ -420,7 +438,7 @@ del tmp_data
 
 tmp_data = []
 for string_list in tqdm(abstracts_pure, total=len(abstracts_pure)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts_pure = tmp_data.copy()
 del tmp_data
@@ -554,6 +572,22 @@ for words in tqdm(keywords_index, total=len(keywords_index)):
 
 
 # =============================================================================
+# GB to US for abstracts_super_pure
+# =============================================================================
+print("\nGB to US")
+tmp = []
+for p in tqdm(abstracts_super_pure, total=len(abstracts_super_pure)):
+    for gb, us in kd.gb2us.items():
+        p = p.replace(gb, us)
+    tmp.append(p)
+    # tmp.append(kw.replace_british_american(p,kd.gb2us))
+abstracts_super_pure = tmp.copy()
+
+print(abstracts_super_pure[50],'\n----\n',tmp[50])
+
+del tmp
+
+# =============================================================================
 # Remove substrings : 
 #   be careful with this one! It might remove parts of a string or half of a word
 # =============================================================================
@@ -655,10 +689,15 @@ corpus_keywords = pd.DataFrame(corpus_keywords,columns=['words'])
 corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
 corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
+abstracts_super_pure = pd.DataFrame(abstracts_super_pure,columns=['words'])
+
+
+
 corpus_abstract_pure.shape
 corpus_abstract.to_csv(root_dir+subdir+'abstract_title all-lem',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
 corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title very pure',index=False,header=False)
+abstracts_super_pure.to_csv(root_dir+subdir+'abstract_title super duper pure',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
