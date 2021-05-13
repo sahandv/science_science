@@ -534,7 +534,7 @@ def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3,s
 
 def replace_british_american(text, mydict):
     for gb, us in mydict.items():
-        text = text.replace(us, gb)
+        text = text.replace(gb, us)
     return text
 
 def get_abstract_keywords(corpus,keywords_wanted,max_df=0.9,max_features=None):
