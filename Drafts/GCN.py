@@ -13,6 +13,7 @@ from stellargraph.mapper import FullBatchNodeGenerator
 from stellargraph.layer import GCN
 from stellargraph import StellarGraph, StellarDiGraph
 
+import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras import layers, optimizers, losses, metrics, Model
 from sklearn import preprocessing, model_selection
@@ -121,6 +122,9 @@ df.head(20)
 # =============================================================================
 # # Get embeddings using x_out
 # =============================================================================
+best_model = tf.keras.models.load_model('models/best_model.h5')
+# layer_name = 'embedding'
+# embedding_model = Model(inputs=best_model.input,outputs=best_model.get_layer(layer_name).output)
 embedding_model = Model(inputs=x_inp, outputs=x_out)
 emb = embedding_model.predict(all_gen)
 
@@ -140,6 +144,7 @@ ax.scatter(
     cmap="jet",
     alpha=0.7,
 )
+
 ax.set(
     aspect="equal",
     xlabel="$X_1$",
