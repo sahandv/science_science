@@ -7,7 +7,7 @@ Created on Mon May  3 15:46:31 2021
 """
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
+from tensorflow import keras 
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ def plot_graphs(history, string):
   plt.show()
   
     # =============================================================================
-    # prepare data
+    # prepare 
     # =============================================================================
 corpus = [
     '1 red brown fox',
