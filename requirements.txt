@@ -1,4 +1,5 @@
-numpy
+tensorflow
+tensorflow-datasets
 tqdm
 pandas
 nltk
@@ -11,7 +12,6 @@ matplotlib
 pillow
 tabulate
 gensim
-pyLDAvis
 networkx
 netgraph
 yellowbrick
