@@ -46,7 +46,7 @@ training_labels = []
 testing_sentences = []
 testing_labels = []
 
-imdb,info = tfds.load("imdb_reviews",with_info=True,as_supervised=True) 
+imdb,info = tfds.load("imdb_reviews",data_dir='data/tfds',with_info=True,as_supervised=True) 
 train_data,test_data = imdb['train'],imdb['test']
 # you may download tokenized ones (even ones with subword tokenization): "imdb_reviews/subwords8k" 
 # then to initialize tokenizer object do: tokenizer = info.features['text'].encoder
