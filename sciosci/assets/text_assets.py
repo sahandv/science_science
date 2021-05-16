@@ -57,6 +57,38 @@ def tokenize_series_fast(data,delimiter=None,flatten=False): # Not accurate, but
     return result,flatten
 
 
+def reverse_word_index(word_index:dict):
+    """
+    Reverse a dictionary of items. This is mainly used to reverse word index of a  vocabulary
+
+    Parameters
+    ----------
+    word_index : dict
+
+    Returns
+    -------
+    reverse_word_index: dict
+
+    """
+    return dict([(value, key) for (key, value) in word_index.items()])
+  
+def decode_sequence(text,word_index):
+    """
+    Decode sequence: Using the word index, returns a text from a sequence. 
+
+    Parameters
+    ----------
+    text : list
+        List or iterable of sequences.
+    word_index : dict
+        vocabulary of the tokenizer as Python dictionary.
+    Returns
+    -------
+    decoded_sequence: str
+
+    """
+    return ' '.join([reverse_word_index(word_index).get(i, '[??]') for i in text])
+
 def corpus_tokenize(sentences):
 # =============================================================================
 #     Tokenize corpus by gensim
