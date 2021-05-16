@@ -291,7 +291,7 @@ def draw_graph_from_csr(sparse_mat,size=(10, 10),dpi = 100,fname="graph_out.png"
 
 def distance_matrix_from_points(points):
     """
-    
+    Calculate cosine distance of points/vectors
 
     Parameters
     ----------
@@ -447,14 +447,22 @@ def bert_sentence_gen(corpus):
 
 
 def compute_pc(X,npc=1):
-# =============================================================================
-#     Compute the principal components. 
-#          DO NOT MAKE THE DATA ZERO MEAN!
-#    
-#     :param X: X[i,:] is a data point
-#     :param npc: number of principal components to remove
-#     :return: component_[i,:] is the i-th pc
-# =============================================================================
+    """
+    Compute the principal components. 
+        DO NOT MAKE THE DATA ZERO MEAN!
+
+    Parameters
+    ----------
+    X : 
+        X[i,:] is a data point.
+    npc : int, optional
+        Number of principal components to remove. The default is 1.
+
+    Returns
+    -------
+    omponent_[i,:] is the i-th pc
+
+    """
     from sklearn.decomposition import TruncatedSVD
     
     svd = TruncatedSVD(n_components=npc, n_iter=7, random_state=0)
@@ -462,12 +470,21 @@ def compute_pc(X,npc=1):
     return svd.components_
 
 def remove_pc(X, npc=1):
-# =============================================================================
-#     Remove the projection on the principal components
-#     :param X: X[i,:] is a data point
-#     :param npc: number of principal components to remove
-#     :return: XX[i, :] is the data point after removing its projection
-# =============================================================================
+    """
+    Remove the projection on the principal components
+
+    Parameters
+    ----------
+    X : 
+        X[i,:] is a data point.
+    npc : int, optional
+        Number of principal components to remove. The default is 1.
+
+    Returns
+    -------
+    X[i, :] is the data point after removing its projection.
+
+    """
     pc = compute_pc(X, npc)
     if npc==1:
         XX = X - X.dot(pc.transpose()) * pc
