@@ -18,3 +18,5 @@ yellowbrick
 plotly
 stellargraph
 tokenizers
+pydot
+graphviz
