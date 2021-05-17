@@ -5,6 +5,7 @@ Created on Mon May  3 15:46:31 2021
 
 @author: github.com/sahandv
 """
+import gc
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -14,9 +15,12 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tokenizers import Tokenizer,BertWordPieceTokenizer, models, pre_tokenizers, decoders, trainers, processors
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
-
+from sciosci.assets import text_assets as ta
+from sciosci.assets import ann_assets as anna
+from sklearn.model_selection import train_test_split
 # !wget 'https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt'
+
+tokenizer = 'word'
 
 # =============================================================================
 ## Next Word Prediction task
@@ -25,29 +29,29 @@ from tqdm import tqdm
 # For character prediction see
 # https://www.tensorflow.org/tutorials/text/text_generation
 # =============================================================================
-
-def plot_graphs(history, string):
-  plt.plot(history.history[string])
-  plt.plot(history.history['val_'+string])
-  plt.xlabel("Epochs")
-  plt.ylabel(string)
-  plt.legend([string, 'val_'+string])
-  plt.show()
-  
-    # =============================================================================
-    # prepare 
-    # =============================================================================
 # dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
 dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
 
-corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure',names=['abstract'])
-corpus['abstract'] = "[DOC] "+corpus['abstract'] 
-corpus = corpus['abstract'].values.tolist()
+    # =============================================================================
+    # Load and prepare features
+    # =============================================================================
+corpus_idx = pd.read_csv(dir_root+'clean/single_component_small_18k/corpus_idx_original')['id'].values.tolist()
+net_vecs = pd.read_csv(dir_root+'embeddings/single_component_small_18k/n2v 300-70-20 p1q05').drop('Unnamed: 0',axis=1)
+net_vecs.columns = ['net_cid_'+str(x) for x in range(len(net_vecs.columns))]
+
 data_path_rel = dir_root+'extractions_with_unique_id_labeled_single_component.csv'
 data = pd.read_csv(data_path_rel)
+data = data[data['id'].isin(corpus_idx)]
+    # =============================================================================
+    # Load and tokenize text
+    # =============================================================================
+corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure',names=['abstract'])
+corpus['abstract'] = "[documentembeddingtoken] "+corpus['abstract'] 
+# corpus.to_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure with [DOC]',header=False,index=False)
+corpus = corpus['abstract'].values.tolist()
 
 text_lens = np.array([len(p.split()) for p in corpus])
-max_paragraph_len = int(np.percentile(text_lens, 95))
+max_paragraph_len = int(np.percentile(text_lens, 95)) # take Nth percentile as the sentence length threshold
 
 # corpus = [
 #     '1 red brown fox',
@@ -56,99 +60,258 @@ max_paragraph_len = int(np.percentile(text_lens, 95))
 #     'black cat loves chicken wings as well',
 #     'brown fox hates cats'
 #     ]
+
 embedding_dim = 128
 num_epochs = 500
-
+vocab_limit = 30000
+if tokenizer=='word':
 ##################
-# word tokenize
+# TF word tokenize
 ##################
-# oov is out of vocabulary token replacement. you can num_words=int
-tokenizer = tf.keras.preprocessing.text.Tokenizer(oov_token='[OOV_TKN]')#(oov_token='<oov_tkn>') 
-tokenizer.fit_on_texts(corpus)
-total_words = len(tokenizer.word_index)+1
+    # oov is out of vocabulary token replacement. you can num_words=int
+    tokenizer = tf.keras.preprocessing.text.Tokenizer(oov_token='[OOV_TKN]',num_words=vocab_limit)#(oov_token='<oov_tkn>') 
+    tokenizer.fit_on_texts(corpus)
+    total_words = len(tokenizer.word_index)+1
+    word_index = tokenizer.word_index
+    print(total_words)
+    # print(tokenizer.word_index)
+    print(tokenizer.word_index['documentembeddingtoken'])
+    
+    n = 6
+    ##################
+    # unlimited length
+    ##################
+    # extract n-gram sequences from n=2 to n=number_of_grams_in_sentences 
+    input_sequences = []
+    input_sequences_doc_id = []
+    for cid,sent in tqdm(enumerate(corpus),total=len(corpus)):
+        token_list = tokenizer.texts_to_sequences([sent])[0]
+        for i in range(n,len(token_list)):
+            n_gram_sentence = token_list[:i+1]
+            input_sequences.append(n_gram_sentence)   
+            input_sequences_doc_id.append(cid)
+    ##################
+    # limited length
+    ##################
+    # OR extract n-gram sequences from n=2 to n=min(number_of_grams_in_sentences,max_paragraph_len )
+    input_sequences = []
+    input_sequences_doc_id = []
+    for cid,sent in tqdm(enumerate(corpus),total=len(corpus)):
+        token_list = tokenizer.texts_to_sequences([sent])[0]
+        for i in range(n,min(len(token_list),max_paragraph_len)):
+            n_gram_sentence = token_list[:i+1]
+            input_sequences.append(n_gram_sentence)
+            input_sequences_doc_id.append(cid)
 
-index = tokenizer.word_index
-print(total_words)
-# print(tokenizer.word_index)
-print(tokenizer.word_index['doc_embedding'])
 
-# extract n-gram sequences from n=2 to n=number_of_grams_in_sentences 
-input_sequences = []
-
-for sent in tqdm(corpus):
-    token_list = tokenizer.texts_to_sequences([sent])[0]
-    for i in range(1,len(token_list)):
-        n_gram_sentence = token_list[:i+1]
-        input_sequences.append(n_gram_sentence)
-
-
-# OR extract n-gram sequences from n=2 to n=min(number_of_grams_in_sentences,max_paragraph_len )
-input_sequences = []
-for sent in tqdm(corpus):
-    token_list = tokenizer.texts_to_sequences([sent])[0]
-    for i in range(1,min(len(token_list),max_paragraph_len)):
-        n_gram_sentence = token_list[:i+1]
-        input_sequences.append(n_gram_sentence)
-
-
-
+if tokenizer=='bpe':
 ##################
 # BPE tokenize
 ##################
-tokenizer = Tokenizer(models.BPE(unk_token="[UNK]"))
-tokenizer.enable_padding(pad_id=3, pad_token="[PAD]")
-tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=True)
-tokenizer.decoder = decoders.ByteLevel()
-tokenizer.post_processor = processors.ByteLevel(trim_offsets=True)
-trainer = trainers.BpeTrainer(vocab_size=20000, min_frequency=2,special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[DOC]"])
-tokenizer.train([
-# 	"./path/to/dataset/1.txt",
-# 	"./path/to/dataset/2.txt",
-	dir_root+'clean/single_component_small_18k/abstract_title super duper pure'
-], trainer=trainer)
-tokenizer.save(dir_root+"clean/single_component_small_18k/byte-level-bpe.tokenizer.json", pretty=True)
+    tokenizer = Tokenizer(models.BPE(unk_token="[UNK]"))
+    tokenizer.enable_padding(pad_id=3, pad_token="[PAD]")
+    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=True)
+    tokenizer.decoder = decoders.ByteLevel()
+    tokenizer.post_processor = processors.ByteLevel(trim_offsets=True)
+    trainer = trainers.BpeTrainer(vocab_size=20000, min_frequency=2,special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]", "[documentembeddingtoken]"])
+    tokenizer.train([
+    # 	"./path/to/dataset/1.txt",
+    # 	"./path/to/dataset/2.txt",
+    	dir_root+'clean/single_component_small_18k/abstract_title super duper pure'
+    ], trainer=trainer)
+    tokenizer.save(dir_root+"clean/single_component_small_18k/byte-level-bpe.tokenizer.json", pretty=True)
+    
+    tokenizer = Tokenizer.from_file(dir_root+"clean/single_component_small_18k/byte-level-bpe.tokenizer.json")
+    output = tokenizer.encode_batch(["I can feel the magic, can you?"])
+    print(output[0].tokens)
+    print(output[0].ids)
 
-tokenizer = Tokenizer.from_file(dir_root+"clean/single_component_small_18k/byte-level-bpe.tokenizer.json")
-output = tokenizer.encode_batch(["I can feel the magic, can you?"])
-print(output[0].tokens)
-print(output[0].ids)
-
+if tokenizer=='bert':
 ##################
 # BERT WP tokenize
 ##################
-tokenizer = BertWordPieceTokenizer("data/vocabs/bert-base-uncased-vocab.txt", lowercase=True)
+    tokenizer = BertWordPieceTokenizer("data/vocabs/bert-base-uncased-vocab.txt", lowercase=True)
 
 
 
+    # =============================================================================
+    # Prepare sequences
+    # =============================================================================
+print("Preparing sequences")
+revers_word_index = ta.reverse_word_index(word_index)
 
 # you can add maxlen=int. you can add padding='post', default is 'pre'. you can truncate='post' to remove from the end, default is 'pre' again
 max_seq_len = max([len(x) for x in input_sequences])
 # max_seq_len = int(max_paragraph_len)
-input_sequences = pad_sequences(input_sequences,maxlen=max_seq_len,padding='pre') 
+input_sequences = pad_sequences(input_sequences,maxlen=max_seq_len,padding='pre')
 input_sequences = np.array(input_sequences)
-input_sequences_tmp = input_sequences[:30,:]
+input_sequences_tmp = input_sequences[:3000,:]
 
+    # =============================================================================
+    # Prepare model inputs and outputs
+    # =============================================================================
 # create X and Y
-xs,labels = input_sequences[:,:-1],input_sequences[:,-1]
-ys = tf.keras.utils.to_categorical(labels,num_classes=total_words)
+X,labels = input_sequences[:,:-1],input_sequences[:,-1]
+input_df = pd.DataFrame(X)
+input_df['Y'] = labels
+input_df['corpus_index'] = input_sequences_doc_id
+input_df_sample = input_df.sample(10)
+x2 = net_vecs.values
+
+# shuffle dataset
+input_df = input_df.sample(frac=1)
+
+# split train test
+msk = np.random.rand(len(input_df)) < 0.8
+train = input_df[msk]
+test = input_df[~msk]
+
+n_classes = vocab_limit
+
+train_corpus_idx = train['corpus_index'].values
+train_y = train['Y'].values
+train_x1 = train[list(range(max_seq_len-1))].values
+
+test_corpus_idx = test['corpus_index'].values
+test_y = test['Y'].values
+test_x1 = test[list(range(max_seq_len-1))].values
+
+
+# corpus_idx = train_corpus_idx
+# y = train_y
+
+# Xtrain, Xtest, Labeltrain, Labeltest = train_test_split(X, labels, test_size=0.2, random_state=100,shuffle=True)
+# ys = tf.keras.utils.to_categorical(labels,num_classes=total_words) # Not suitable for large data
+
+
+def _input_fn(x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2):
+    """
+    Generator function for tensorflow.    
+
+    Parameters
+    ----------
+    x1 : np.array
+    x2 : np.array
+    y : np.array, optional
+    corpus_idx : np.array, optional
+        Will use this id to map x2 to x1 dimension. This is intended to conserve space.
+    n_classes: int
+        Number of classes. This is usually the vocabulary size
+    Returns
+    -------
+    Generator function.
+
+    """
+    # if corpus_idx!=None:
+        # Map x2 to x1 dims
+        # x2 = corpus_idx.merge(x2,on='index',how='left').drop('index',axis=1)
+    
+    def generator():
+        for i in range(train_x1.shape[0]):
+            yield {"input_1":x1[i],"input_2":x2[corpus_idx[i]]}, np.eye(n_classes)[y[i]]
+            
+    dataset = tf.data.Dataset.from_generator(generator,output_signature=(
+        {"input_1":tf.TensorSpec(shape=(x1.shape[1],), dtype=tf.float32),
+         "input_2":tf.TensorSpec(shape=(x2.shape[1],), dtype=tf.float32)},
+        tf.TensorSpec(shape=(n_classes,), dtype=tf.float32),
+        ))
+    dataset = dataset.batch(batch_size)
+    return dataset
+    
+
+class DataGenerator(tf.keras.utils.Sequence):
+    """
+    Generates data for Keras
+    Sequence based data generator.
+    """
+    def __init__(self,x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2,to_fit=True):
+        self.x1 = x1
+        self.x2 = x2
+        self.y = y
+        self.n_classes = n_classes
+        self.corpus_idx = corpus_idx
+        self.batch_size = batch_size
+        self.to_fit = to_fit
+        self.ids = list(range(len(x1)))
+        
+    def __len__(self):
+        return int(np.floor(self.x1.shape[0] / self.batch_size))
+    
+    def __getitem__(self, index):
+        """
+        Generate one batch of data
+        
+        Parameters
+        -------
+        index: index of the batch
+        
+        Returns
+        -------
+        X and y when fitting. X only when predicting
+        """
+        list_IDs_temp = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
+        
+        X1 = self._generate_X1(list_IDs_temp)
+        X2 = self._generate_X2(list_IDs_temp)
+        
+        if self.to_fit:
+            y = self._generate_y(list_IDs_temp)
+            return [X1,X2], y
+        else:
+            return [X1,X2]
+        
+    def _generate_y(self, list_IDs_temp):
+        y_batch = np.empty((self.batch_size), dtype=int)
+        for i in list_IDs_temp:
+            y_batch[i] = self.y[i]
+        return tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes) 
+        
+    def _generate_X1(self, list_IDs_temp):
+        x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
+        for i in list_IDs_temp:
+            x_batch[i,] = self.x1[i]
+        return(x_batch) 
+       
+    def _generate_X2(self, list_IDs_temp):
+        x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
+        for i in list_IDs_temp:
+            x_batch[i,] = self.x2[self.corpus_idx[i]]
+        return(x_batch)
+
+train_gen = DataGenerator(x1=train_x1, x2=x2,y=train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=1)
+valid_gen = DataGenerator(x1=test_x1, x2=x2,y=test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=1)
 
     # =============================================================================
     # Train
     # =============================================================================
-inputs = tf.keras.Input(shape=(None,), dtype="int32")
-inputs = tf.keras.Input(shape=(None,), dtype="int32")
-x = tf.keras.layers.Embedding(total_words,embedding_dim,input_length=max_seq_len-1)(inputs)
-# x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)
-x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150,return_sequences=True))(x)
-x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x)
-# x = tf.keras.layers.Dense(6,activation='relu')(x)
-outputs = tf.keras.layers.Dense(total_words, activation="softmax")(x)
-model = keras.Model(inputs, outputs)
+inputs = tf.keras.Input(shape=(None,), dtype="int32",name='input_1')
+inputs_netvec = tf.keras.Input(shape=(300,), dtype="int32",name='input_2')
+# inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
+
+x_1 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs)
+x_1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150,return_sequences=True))(x_1)
+x_1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x_1)
+x_1 = tf.keras.Model(inputs=inputs, outputs=x_1)
+
+x_2 = tf.keras.layers.Dense(100,activation='relu')(inputs_netvec)
+x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
+
+# x_3 = tf.keras.layers.Dense(100,activation='relu')(inputs_aux)
+# x_3 = tf.keras.Model(inputs=inputs_aux, outputs=x_3)
+
+x = tf.keras.layers.concatenate([x_1.output, x_2.output], name='combination')
+x = tf.keras.layers.Dense(400,activation='relu')(x)
+x = tf.keras.layers.Dense(100,activation='relu')(x)
+outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
+model = keras.Model(inputs=[x_1.input, x_2.input], outputs=outputs)
 
 adam = tf.keras.optimizers.Adam(lr=0.01)
 
 model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
 model.summary()
+tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
+
+
 
 callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
 checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
@@ -158,16 +321,22 @@ tensorboard = tf.keras.callbacks.TensorBoard(
                           write_images=True
                         )
 
-history = model.fit(xs, ys,
+# history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=32),
+#                     epochs=num_epochs, 
+#                     validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=32),
+#                     verbose=1,
+#                     callbacks=[callback, checkpoint,tensorboard])
+
+
+history = model.fit(train_gen,
                     epochs=num_epochs, 
-                    # validation_data=(padded_seq_test, testing_labels_final),
+                    validation_data=valid_gen,
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
-
     # =============================================================================
     # Result vis
     # =============================================================================
-plot_graphs(history,'accuracy')
+anna.plot_graphs(history,'accuracy')
 
     # =============================================================================
     # Test and predict 
