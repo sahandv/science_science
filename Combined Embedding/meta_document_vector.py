@@ -170,12 +170,15 @@ n_classes = vocab_limit
 
 train_corpus_idx = train['corpus_index'].values
 train_y = train['Y'].values
+# train_y_cat = tf.keras.utils.to_categorical(train_y, num_classes=n_classes)
 train_x1 = train[list(range(max_seq_len-1))].values
+train_x2 = pd.DataFrame(train['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
 
 test_corpus_idx = test['corpus_index'].values
 test_y = test['Y'].values
+# test_y_cat = tf.keras.utils.to_categorical(test_y, num_classes=n_classes)
 test_x1 = test[list(range(max_seq_len-1))].values
-
+test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
 
 # corpus_idx = train_corpus_idx
 # y = train_y
@@ -183,6 +186,12 @@ test_x1 = test[list(range(max_seq_len-1))].values
 # Xtrain, Xtest, Labeltrain, Labeltest = train_test_split(X, labels, test_size=0.2, random_state=100,shuffle=True)
 # ys = tf.keras.utils.to_categorical(labels,num_classes=total_words) # Not suitable for large data
 
+# del train, test, msk, input_df, X, x2
+gc.collect()
+
+##################
+# Generator functional
+##################
 
 def _input_fn(x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2):
     """
@@ -207,18 +216,21 @@ def _input_fn(x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2):
         # x2 = corpus_idx.merge(x2,on='index',how='left').drop('index',axis=1)
     
     def generator():
-        for i in range(train_x1.shape[0]):
+        for i in range(x1.shape[0]):
             yield {"input_1":x1[i],"input_2":x2[corpus_idx[i]]}, np.eye(n_classes)[y[i]]
-            
-    dataset = tf.data.Dataset.from_generator(generator,output_signature=(
-        {"input_1":tf.TensorSpec(shape=(x1.shape[1],), dtype=tf.float32),
-         "input_2":tf.TensorSpec(shape=(x2.shape[1],), dtype=tf.float32)},
-        tf.TensorSpec(shape=(n_classes,), dtype=tf.float32),
-        ))
+    
+    dataset = tf.data.Dataset.from_generator(generator, output_types=({"input_1": tf.int64, "input_2": tf.float64}, tf.int64))
+    # dataset = tf.data.Dataset.from_generator(generator,output_signature=(
+    #     {"input_1":tf.TensorSpec(shape=(x1.shape[1],), dtype=tf.float32),
+    #      "input_2":tf.TensorSpec(shape=(x2.shape[1],), dtype=tf.float32)},
+    #     tf.TensorSpec(shape=(n_classes,), dtype=tf.float32),
+    #     ))
     dataset = dataset.batch(batch_size)
     return dataset
     
-
+##################
+# Generator object
+##################
 class DataGenerator(tf.keras.utils.Sequence):
     """
     Generates data for Keras
@@ -249,49 +261,87 @@ class DataGenerator(tf.keras.utils.Sequence):
         -------
         X and y when fitting. X only when predicting
         """
-        list_IDs_temp = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
+        ID_list = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
         
-        X1 = self._generate_X1(list_IDs_temp)
-        X2 = self._generate_X2(list_IDs_temp)
+        X1 = self._generate_X1(ID_list)
+        X2 = self._generate_X2(ID_list)
         
         if self.to_fit:
-            y = self._generate_y(list_IDs_temp)
+            y = self._generate_y(ID_list)
             return [X1,X2], y
         else:
             return [X1,X2]
         
-    def _generate_y(self, list_IDs_temp):
+    def _generate_y(self, ID_list):
         y_batch = np.empty((self.batch_size), dtype=int)
-        for i in list_IDs_temp:
+        for i in ID_list:
             y_batch[i] = self.y[i]
         return tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes) 
         
-    def _generate_X1(self, list_IDs_temp):
+    def _generate_X1(self, ID_list):
         x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
-        for i in list_IDs_temp:
+        for i in ID_list:
             x_batch[i,] = self.x1[i]
         return(x_batch) 
        
-    def _generate_X2(self, list_IDs_temp):
+    def _generate_X2(self, ID_list):
         x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
-        for i in list_IDs_temp:
+        for i in ID_list:
             x_batch[i,] = self.x2[self.corpus_idx[i]]
         return(x_batch)
 
-train_gen = DataGenerator(x1=train_x1, x2=x2,y=train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=1)
-valid_gen = DataGenerator(x1=test_x1, x2=x2,y=test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=1)
+train_dataset = DataGenerator(x1=train_x1, x2=x2,y=train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=1)
+valid_dataset = DataGenerator(x1=test_x1, x2=x2,y=test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=1)
 
+##################
+# Generator tf.data
+##################
+def y_generator(y:np.array,n_classes:int):
+    for label in y:
+        yield tf.keras.utils.to_categorical(y,n_classes)
+        
+def x_generator(x,x2,corpus_idx):
+    for i,idx in enumerate(corpus_idx):
+        yield [x[i],x2[idx]]
+
+train_x_dataset = tf.data.Dataset.from_generator(x_generator,output_types=(tf.float32,tf.float32),output_shapes=((None,train_x1.shape[1]),(None,x2.shape[1])),args=[train_x1,x2,train_corpus_idx])
+train_y_dataset = tf.data.Dataset.from_generator(y_generator,output_types=tf.int32,output_shapes=((None,n_classes)),args=[train_y,n_classes])
+train_dataset = tf.data.Dataset.zip((train_x_dataset,train_y_dataset))
+
+
+valid_x_dataset = tf.data.Dataset.from_generator(x_generator,output_types=(tf.float32,tf.float32),output_shapes=((None,train_x1.shape[1]),(None,x2.shape[1])),args=[test_x1,x2,test_corpus_idx])
+valid_y_dataset = tf.data.Dataset.from_generator(y_generator,output_types=tf.int32,output_shapes=((None,n_classes)),args=[test_y,n_classes])
+valid_dataset = tf.data.Dataset.zip((valid_x_dataset,valid_y_dataset))
+
+del msk, input_df, train, test
+gc.collect()
+
+train_dataset = train_dataset.shuffle(5000).batch(32)
+valid_dataset = valid_dataset.shuffle(5000).batch(32)
+
+##################
+# Generator tf.data
+##################
+def generator(x1,x2,corpus_idx,y,n_classes):
+    for i in range(x1.shape[0]):
+        yield {"input_1":x1[i],"input_2":x2[corpus_idx[i]]}, np.eye(n_classes)[y[i]]
+
+train_dataset = tf.data.Dataset.from_generator(generator,args=[train_x1,x2,train_corpus_idx,train_y,n_classes],output_types=({"input_1": tf.float32, "input_2": tf.float32}, tf.int8))
+train_dataset = train_dataset.batch(32)
+
+test_dataset = tf.data.Dataset.from_generator(generator,args=[test_x1,x2,test_corpus_idx,test_y,n_classes],output_types=({"input_1": tf.float32, "input_2": tf.float32}, tf.int8))
+test_dataset = test_dataset.batch(32)
     # =============================================================================
     # Train
     # =============================================================================
-inputs = tf.keras.Input(shape=(None,), dtype="int32",name='input_1')
+inputs_seq = tf.keras.Input(shape=(None,), dtype="int32",name='input_1')
 inputs_netvec = tf.keras.Input(shape=(300,), dtype="int32",name='input_2')
 # inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
 
-x_1 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs)
+x_1 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
 x_1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150,return_sequences=True))(x_1)
 x_1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x_1)
-x_1 = tf.keras.Model(inputs=inputs, outputs=x_1)
+x_1 = tf.keras.Model(inputs=inputs_seq, outputs=x_1)
 
 x_2 = tf.keras.layers.Dense(100,activation='relu')(inputs_netvec)
 x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
@@ -311,8 +361,6 @@ model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'
 model.summary()
 tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
 
-
-
 callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
 checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
 tensorboard = tf.keras.callbacks.TensorBoard(
@@ -321,18 +369,26 @@ tensorboard = tf.keras.callbacks.TensorBoard(
                           write_images=True
                         )
 
-# history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=32),
-#                     epochs=num_epochs, 
-#                     validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=32),
-#                     verbose=1,
-#                     callbacks=[callback, checkpoint,tensorboard])
-
-
-history = model.fit(train_gen,
+history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=2),
                     epochs=num_epochs, 
-                    validation_data=valid_gen,
+                    validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=2),
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
+
+
+history = model.fit(train_dataset,
+                    epochs=num_epochs, 
+                    validation_data=test_dataset,
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+history = model.fit([train_x1,train_x2],train_y_cat,
+                    epochs=num_epochs, 
+                    validation_data=([test_x1,test_x2],test_y_cat),
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+
     # =============================================================================
     # Result vis
     # =============================================================================
