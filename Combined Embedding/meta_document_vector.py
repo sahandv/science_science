@@ -29,8 +29,8 @@ tokenizer = 'word'
 # For character prediction see
 # https://www.tensorflow.org/tutorials/text/text_generation
 # =============================================================================
-# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
-dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
+dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
+# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
 
     # =============================================================================
     # Load and prepare features
@@ -64,6 +64,9 @@ max_paragraph_len = int(np.percentile(text_lens, 95)) # take Nth percentile as t
 embedding_dim = 128
 num_epochs = 500
 vocab_limit = 30000
+n_classes = vocab_limit
+n_docs = len(corpus_idx)+1
+
 if tokenizer=='word':
 ##################
 # TF word tokenize
@@ -166,7 +169,6 @@ msk = np.random.rand(len(input_df)) < 0.8
 train = input_df[msk]
 test = input_df[~msk]
 
-n_classes = vocab_limit
 
 train_corpus_idx = train['corpus_index'].values
 train_y = train['Y'].values
@@ -335,13 +337,19 @@ test_dataset = test_dataset.batch(32)
     # Train
     # =============================================================================
 inputs_seq = tf.keras.Input(shape=(None,), dtype="int32",name='input_1')
-inputs_netvec = tf.keras.Input(shape=(300,), dtype="int32",name='input_2')
+inputs_doc = tf.keras.Input(shape=(1,), dtype="int32",name='input_2')
+inputs_netvec = tf.keras.Input(shape=(300,), dtype="int32",name='input_3')
 # inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
 
-x_1 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
-x_1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150,return_sequences=True))(x_1)
-x_1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x_1)
-x_1 = tf.keras.Model(inputs=inputs_seq, outputs=x_1)
+x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
+x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150,return_sequences=True))(x_11)
+x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x_11)
+x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
+
+x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1)(inputs_doc)
+x_12 = tf.keras.layers.Flatten()(x_12) 
+x_12 = tf.keras.layers.Dense(300,activation='relu')(x_12)
+x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
 
 x_2 = tf.keras.layers.Dense(100,activation='relu')(inputs_netvec)
 x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
@@ -349,11 +357,11 @@ x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
 # x_3 = tf.keras.layers.Dense(100,activation='relu')(inputs_aux)
 # x_3 = tf.keras.Model(inputs=inputs_aux, outputs=x_3)
 
-x = tf.keras.layers.concatenate([x_1.output, x_2.output], name='combination')
+x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='combination')
 x = tf.keras.layers.Dense(400,activation='relu')(x)
 x = tf.keras.layers.Dense(100,activation='relu')(x)
 outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
-model = keras.Model(inputs=[x_1.input, x_2.input], outputs=outputs)
+model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
 
 adam = tf.keras.optimizers.Adam(lr=0.01)
 
