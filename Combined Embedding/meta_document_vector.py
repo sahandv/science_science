@@ -390,9 +390,9 @@ history = model.fit(train_dataset,
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
 
-history = model.fit([train_x1,train_x2],train_y_cat,
+history = model.fit([train_x1,train_corpus_idx,train_x2],train_y_cat,
                     epochs=num_epochs, 
-                    validation_data=([test_x1,test_x2],test_y_cat),
+                    validation_data=([test_x1,test_corpus_idx,test_x2],test_y_cat),
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
 
