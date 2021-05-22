@@ -34,9 +34,9 @@ np.random.seed(seed)
 # =============================================================================
 dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/'
 # dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/'
-# data = pd.read_csv(dir_path+'citations_filtered_single_component.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
-data = pd.read_csv(dir_path+'clean/single_component_small_18k/network_cocitation with_d2v300D_supernodes')#network with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
-data.columns = ['referring_id','cited_id','count']
+data = pd.read_csv(dir_path+'citations_filtered_single_component.csv')# with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+# data = pd.read_csv(dir_path+'clean/single_component_small_18k/network_cocitation with_d2v300D_supernodes')#network with_d2v300D_supernodes.csv')#, names=['referring_id','cited_id'],sep='\t')
+data.columns = ['referring_id','cited_id']#,'count']
 data['referring_id'] = data['referring_id'].astype(int).astype(str)
 data['cited_id'] = data['cited_id'].astype(int).astype(str)
 
@@ -67,14 +67,14 @@ gc.collect()
 # =============================================================================
 # Train
 # =============================================================================
-node2vec = Node2Vec(graph, dimensions=300, walk_length=70, num_walks=20, workers=1, p=1, q=1,seed=seed)
+node2vec = Node2Vec(graph, dimensions=100, walk_length=70, num_walks=20, workers=1, p=1, q=0.5,seed=seed)
 model = node2vec.fit(window=10, min_count=1)
-model.save(dir_path+'models/single_component_small_18k/cocite sn dw 300-70-20 p1q1')
+model.save(dir_path+'models/single_component_small_18k/n2v 100-70-20 p1q05')
 
 # =============================================================================
 # Get embeddings
 # =============================================================================
-model_name = 'cocite sn dw 300-70-20 p1q1'
+model_name = 'n2v 100-70-20 p1q05'
 model = Word2Vec.load(dir_path+'models/single_component_small_18k/'+model_name)
 embeddings = []
 idx_true = []
