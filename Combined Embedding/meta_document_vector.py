@@ -229,7 +229,38 @@ def _input_fn(x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2):
     #     ))
     dataset = dataset.batch(batch_size)
     return dataset
+
+##################
+# Generator object - updated - reference https://medium.com/analytics-vidhya/write-your-own-custom-data-generator-for-tensorflow-keras-1252b64e41c3
+##################
+class CustomDataGen(tf.keras.utils.Sequence):
     
+    def __init__(self, df, X_col, y_col,
+                 batch_size,
+                 input_size=(224, 224, 3),
+                 shuffle=True):
+        
+        self.df = df.copy()
+        self.X_col = X_col
+        self.y_col = y_col
+        self.batch_size = batch_size
+        self.input_size = input_size
+        self.shuffle = shuffle
+        
+        self.n = len(self.df)
+        self.n_name = df[y_col['name']].nunique()
+        self.n_type = df[y_col['type']].nunique()
+    
+    def on_epoch_end(self):
+        pass
+    
+    def __getitem__(self, index):
+        pass
+    
+    def __len__(self):
+        return self.n // self.batch_size
+
+
 ##################
 # Generator object
 ##################
