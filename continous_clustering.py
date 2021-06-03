@@ -151,8 +151,8 @@ class CK_Means:
             
     def initialize_rand_node_generate(self,data):
         self.centroids = {}   
-        Mat = np.matrix(X)
-        self.golbal_boundaries = list(np.array([np.array(Mat.max(0))[0],np.array(Mat.min(0))[0]]).T)
+        mat = np.matrix(X)
+        self.golbal_boundaries = list(np.array([np.array(mat.max(0))[0],np.array(mat.min(0))[0]]).T)
         for i in range(self.k):
             self.centroids[i] = np.array([np.random.uniform(x[1],x[0]) for x in self.golbal_boundaries])
     
@@ -181,6 +181,19 @@ class CK_Means:
         return stable
     
     def fit(self,data):
+        """
+        Perform clustering for T1
+
+        Parameters
+        ----------
+        data : 2D numpy array.
+            Array of feature arrays.
+
+        Returns
+        -------
+        None.
+
+        """
         # Initialize centroids
         print('Initializing centroids')
         if self.initializer=='random_generated':
@@ -208,13 +221,25 @@ class CK_Means:
                 print('\nCentroids are stable within tolerance. Stopping.')
                 break
 
+
+
     def fit_update(self,data):
-        # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max.
+        # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
+
+        self.cluster_boundaries = {}
+        for classification in self.classifications:
+            mat = np.matrix(self.classifications[classification],axis=0)
+            self.cluster_boundaries[classification] = np.array([np.array(mat.min(0))[0],np.array(mat.max(0))[0]])
+            
         # If the new node is within boundary thresholds of any cluster, add to the cluster. 
+        
+        
         # This will automatically update the cluster boundaries.
         # Else, skip the node and put into a temp basket. 
         # If more than minimum_nodes can fit into a new cluster, then create a new cluster. Else
         pass
+
+
 
     def predict(self,featureset):
         if self.distance_metric=='cosine':
@@ -223,6 +248,7 @@ class CK_Means:
             distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
         classification = distances.index(min(distances))
         return classification
+
 
 
     def fit_legacy(self,data):
