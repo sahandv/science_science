@@ -14,6 +14,7 @@ import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from random import randint
+from scipy import spatial
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
@@ -99,29 +100,128 @@ print(maxx)
 print('\n- Custom clustering --------------------')
 print(n_clusters)
 
-class CKMeans():
-    def __init__(self,k=5,tol=0.001,max_iter=300):
+
+
+class K_Means:
+    def __init__(self, k=2, tol=0.001, max_iter=300,seed=None,initializer='random_generated',distance_metric='euclidean'):
         self.k = k
         self.tol = tol
         self.max_iter = max_iter
+        self.centroids_history = []
+        self.centroids = {}
+        self.seed = seed
+        self.initializer = initializer
+        self.distance_metric = distance_metric
+        if seed != None:
+            np.random.seed(seed)
+        
+    def initialize_rand_node_select(self,data):
+        self.centroids = {}   
+        for i in range(self.k):
+            self.centroids[i] = data[i]    
+            
+    def initialize_rand_node_generate(self,data):
+        self.centroids = {}   
+        Mat = np.matrix(X)
+        self.boundaries = list(np.array([np.array(Mat.max(0))[0],np.array(Mat.min(0))[0]]).T)
+        for i in range(self.k):
+            self.centroids[i] = np.array([np.random.uniform(x[1],x[0]) for x in self.boundaries])
     
+    def initialize_clusters(self):
+        self.classifications = {}
+        for i in range(self.k):
+            self.classifications[i] = []
+    
+    def assign_clusters(self,data):
+        for featureset in data:
+            if self.distance_metric=='cosine':
+                distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
+            if self.distance_metric=='euclidean':
+                distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
+            classification = distances.index(min(distances)) #argmin: get the index of the closest centroid to this featureset/node
+            self.classifications[classification].append(featureset)
+    
+    def centroid_stable(self):
+        stable = True
+        for c in self.centroids:
+            original_centroid = self.centroids_history[-1][c] 
+            current_centroid = self.centroids[c]
+            if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
+                print(np.sum((current_centroid-original_centroid)/original_centroid*100.0))
+                stable = False
+        return stable
+    
+    def fit(self,data):
+        # Initialize centroids
+        print('Initializing centroids')
+        if self.initializer=='random_generated':
+            self.initialize_rand_node_generate(data)
+        elif self.initializer=='random_selected':
+            self.initialize_rand_node_select(data)
+        
+        # Iterate over data
+        for iteration in tqdm(range(self.max_iter),total=self.max_iter):
+            
+            # Initialize clusters
+            self.initialize_clusters()
+            
+            # Iterate over data rows and assign clusters
+            self.assign_clusters(data)
+                
+            # Update centroids
+            prev_centroids = dict(self.centroids)
+            self.centroids_history.append(prev_centroids)
+            for classification in self.classifications:
+                self.centroids[classification] = np.average(self.classifications[classification],axis=0)
+            
+            # Compare change to stop iteration
+            if self.centroid_stable():
+                break
+
+    def fit_update(self,data):
+        pass
+
+    def predict(self,featureset):
+        if self.distance_metric=='cosine':
+            distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
+        if self.distance_metric=='euclidean':
+            distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
+        classification = distances.index(min(distances))
+        return classification
 
 
-# centroid initialization
+    def fit_legacy(self,data):
+        # Initialize centroids
+        self.initialize_rand_node_select(self,data)
+        
+        for i in range(self.max_iter):
+            
+            # Initialize clusters
+            self.classifications = {}
+            for i in range(self.k):
+                self.classifications[i] = []
+                
+            # Iterate over data rows and assign clusters
+            for featureset in data:
+                distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
+                classification = distances.index(min(distances))
+                self.classifications[classification].append(featureset)
 
-# distance calculator
+            # Update centroids
+            prev_centroids = dict(self.centroids)
+            
+            for classification in self.classifications:
+                self.centroids[classification] = np.average(self.classifications[classification],axis=0)
 
-# cluster assignment
+            optimized = True
 
-# centroid assignment
+            for c in self.centroids:
+                original_centroid = prev_centroids[c]
+                current_centroid = self.centroids[c]
+                if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
+                    print(np.sum((current_centroid-original_centroid)/original_centroid*100.0))
+                    optimized = False
 
-
-
-
-
-
-
-
-
-
+            if optimized:
+                break
 
