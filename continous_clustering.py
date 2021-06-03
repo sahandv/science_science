@@ -102,8 +102,35 @@ print(n_clusters)
 
 
 
-class K_Means:
-    def __init__(self, k=2, tol=0.001, max_iter=300,seed=None,initializer='random_generated',distance_metric='euclidean'):
+class CK_Means:
+    def __init__(self, k:int=2, tol:float=0.001, max_iter:int=300, boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,initializer:str='random_generated',distance_metric:str='euclidean'):
+        """
+    
+        Parameters
+        ----------
+        k : int, optional
+            The number of clusters for initial time slot. The default is 2.
+        tol : float, optional
+            Tolerance for centroid stability measure. The default is 0.001.
+        max_iter : int, optional
+            Maximum number of iterations . The default is 300.
+        boundary_thresh : float or None, optional
+            Threshold to assign a node to a cluster out of the boundary of current nodes. The default is 0.5.
+            If None, will automatically estimate.
+        minimum_nodes : int, optional
+            DESCRIPTION. The default is 10.
+        seed : TYPE, optional
+            DESCRIPTION. The default is None.
+        initializer : str, optional
+            DESCRIPTION. The default is 'random_generated'.
+        distance_metric : str, optional
+            DESCRIPTION. The default is 'euclidean'.
+
+        Returns
+        -------
+        None.
+
+        """
         self.k = k
         self.tol = tol
         self.max_iter = max_iter
@@ -112,6 +139,8 @@ class K_Means:
         self.seed = seed
         self.initializer = initializer
         self.distance_metric = distance_metric
+        self.boundary_thresh = boundary_thresh
+        self.minimum_nodes = minimum_nodes
         if seed != None:
             np.random.seed(seed)
         
@@ -123,9 +152,9 @@ class K_Means:
     def initialize_rand_node_generate(self,data):
         self.centroids = {}   
         Mat = np.matrix(X)
-        self.boundaries = list(np.array([np.array(Mat.max(0))[0],np.array(Mat.min(0))[0]]).T)
+        self.golbal_boundaries = list(np.array([np.array(Mat.max(0))[0],np.array(Mat.min(0))[0]]).T)
         for i in range(self.k):
-            self.centroids[i] = np.array([np.random.uniform(x[1],x[0]) for x in self.boundaries])
+            self.centroids[i] = np.array([np.random.uniform(x[1],x[0]) for x in self.golbal_boundaries])
     
     def initialize_clusters(self):
         self.classifications = {}
@@ -176,9 +205,15 @@ class K_Means:
             
             # Compare change to stop iteration
             if self.centroid_stable():
+                print('\nCentroids are stable within tolerance. Stopping.')
                 break
 
     def fit_update(self,data):
+        # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max.
+        # If the new node is within boundary thresholds of any cluster, add to the cluster. 
+        # This will automatically update the cluster boundaries.
+        # Else, skip the node and put into a temp basket. 
+        # If more than minimum_nodes can fit into a new cluster, then create a new cluster. Else
         pass
 
     def predict(self,featureset):
