@@ -205,7 +205,7 @@ class CK_Means:
     def predict(self,featureset):
         assert len(featureset.shape)==2
         labels = list()
-        for row in featureset:
+        for row in tqdm(featureset,total=X.shape[0]):
             if self.distance_metric=='cosine':
                 distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
             if self.distance_metric=='euclidean':
