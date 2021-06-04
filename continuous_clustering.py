@@ -100,32 +100,50 @@ print(maxx)
 print('\n- Custom clustering --------------------')
 print(n_clusters)
 
+model = CK_Means(verbose=1)
+model.fit(X)
+cents = model.centroids_history
+labels = model.predict(X)
+
+
 
 
 class CK_Means:
-    def __init__(self, k:int=2, tol:float=0.001, max_iter:int=300, boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,initializer:str='random_generated',distance_metric:str='euclidean'):
+    def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
+                 boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,
+                 initializer:str='random_generated',distance_metric:str='euclidean',
+                 verbose:int=1):
         """
     
         Parameters
         ----------
         k : int, optional
-            The number of clusters for initial time slot. The default is 2.
+            The number of clusters for initial time slot. The default is 5.
         tol : float, optional
-            Tolerance for centroid stability measure. The default is 0.001.
+            Tolerance for centroid stability measure. The default is 0.00001.
         max_iter : int, optional
-            Maximum number of iterations . The default is 300.
+            Maximum number of iterations. The default is 300.
+        patience : int, optional
+            patience for telerance of stability. It is served as the minimum number of iterations after stability of centroids to continue the iters. The default is 2.
         boundary_thresh : float or None, optional
             Threshold to assign a node to a cluster out of the boundary of current nodes. The default is 0.5.
             If None, will automatically estimate.
         minimum_nodes : int, optional
-            DESCRIPTION. The default is 10.
-        seed : TYPE, optional
-            DESCRIPTION. The default is None.
+            Minimum number of nodes to make a new cluster. The default is 10.
+        seed : int, optional
+            If seed is set, a seed will be used to make the results reproducable. The default is None.
         initializer : str, optional
-            DESCRIPTION. The default is 'random_generated'.
+            Centroid initialization. The options are:
+                'random_generated' randomly generated centroid based on upper and lower bounds of data.  
+                'random_selected' randomly selects an existing node as initialization point.
+                The default is 'random_generated'.
         distance_metric : str, optional
-            DESCRIPTION. The default is 'euclidean'.
-
+            Options are 'euclidean' and 'cosine' distance metrics. The default is 'euclidean'.
+        verbose : int, optional
+            '1' outputs iterations
+            '2' outputs debug data such as distances for tolerance on each iteration
+            The default is 1.
+        
         Returns
         -------
         None.
@@ -141,8 +159,17 @@ class CK_Means:
         self.distance_metric = distance_metric
         self.boundary_thresh = boundary_thresh
         self.minimum_nodes = minimum_nodes
+        self.patience = patience
+        self.verbose = verbose
         if seed != None:
             np.random.seed(seed)
+        
+    def labels(self):
+        if self.classifications:
+            
+        else:
+            print('Please fit the model first.')
+            return False
         
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
@@ -176,10 +203,21 @@ class CK_Means:
             original_centroid = self.centroids_history[-1][c] 
             current_centroid = self.centroids[c]
             if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
-                print(np.sum((current_centroid-original_centroid)/original_centroid*100.0))
+                if self.verbose>1:
+                    print(np.sum((current_centroid-original_centroid)/original_centroid*100.0),'>',self.tol)
                 stable = False
         return stable
     
+    
+    def predict(self,featureset):
+        if self.distance_metric=='cosine':
+            distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
+        if self.distance_metric=='euclidean':
+            distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
+        classification = distances.index(min(distances))
+        return classification
+
+
     def fit(self,data):
         """
         Perform clustering for T1
@@ -196,6 +234,7 @@ class CK_Means:
         """
         # Initialize centroids
         print('Initializing centroids')
+        patience_counter = 0
         if self.initializer=='random_generated':
             self.initialize_rand_node_generate(data)
         elif self.initializer=='random_selected':
@@ -218,9 +257,15 @@ class CK_Means:
             
             # Compare change to stop iteration
             if self.centroid_stable():
-                print('\nCentroids are stable within tolerance. Stopping.')
-                break
-
+                patience_counter+=1
+                if self.verbose>1:
+                    print('\nCentroids are stable within tolerance. remaining patience:',self.patience-patience_counter)
+                if patience_counter>self.patience:
+                    print('\nCentroids are stable within tolerance. Stopping.')
+                    break
+            else:
+                patience_counter=0
+                
 
 
     def fit_update(self,data):
@@ -240,22 +285,11 @@ class CK_Means:
         pass
 
 
-
-    def predict(self,featureset):
-        if self.distance_metric=='cosine':
-            distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
-        if self.distance_metric=='euclidean':
-            distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
-        classification = distances.index(min(distances))
-        return classification
-
-
-
     def fit_legacy(self,data):
         # Initialize centroids
         self.initialize_rand_node_select(self,data)
         
-        for i in range(self.max_iter):
+        for i in tqdm(range(self.max_iter),total=self.max_iter):
             
             # Initialize clusters
             self.classifications = {}
