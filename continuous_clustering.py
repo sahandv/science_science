@@ -107,7 +107,6 @@ labels = model.predict(X)
 
 
 
-
 class CK_Means:
     def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
                  boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,
@@ -164,12 +163,6 @@ class CK_Means:
         if seed != None:
             np.random.seed(seed)
         
-    def labels(self):
-        if self.classifications:
-            
-        else:
-            print('Please fit the model first.')
-            return False
         
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
@@ -210,12 +203,15 @@ class CK_Means:
     
     
     def predict(self,featureset):
-        if self.distance_metric=='cosine':
-            distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
-        if self.distance_metric=='euclidean':
-            distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
-        classification = distances.index(min(distances))
-        return classification
+        assert len(featureset.shape)==2
+        labels = list()
+        for row in featureset:
+            if self.distance_metric=='cosine':
+                distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
+            if self.distance_metric=='euclidean':
+                distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
+            labels.append(distances.index(min(distances)))
+        return labels
 
 
     def fit(self,data):
