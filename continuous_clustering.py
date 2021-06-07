@@ -28,13 +28,13 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
 
 from sciosci.assets import text_assets as ta
-from DEC.DEC_keras import DEC_simple_run
+# from DEC.DEC_keras import DEC_simple_run
 
 # =============================================================================
 # Load data and init
 # =============================================================================
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
@@ -100,21 +100,15 @@ print(maxx)
 print('\n- Custom clustering --------------------')
 print(n_clusters)
 
-model = CK_Means(verbose=1)
+model = CK_Means(verbose=1,k=n_clusters)
 model.fit(X)
 cents = model.centroids_history
 labels = model.predict(X)
-
-
+classes = model.classifications
 
 class CK_Means:
-    def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
-                 boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,
-                 initializer:str='random_generated',distance_metric:str='euclidean',
-                 verbose:int=1):
-        """
-    
-        Parameters
+    """
+        Initialization Parameters
         ----------
         k : int, optional
             The number of clusters for initial time slot. The default is 5.
@@ -139,15 +133,26 @@ class CK_Means:
         distance_metric : str, optional
             Options are 'euclidean' and 'cosine' distance metrics. The default is 'euclidean'.
         verbose : int, optional
-            '1' outputs iterations
+            '1' outputs iterations and steps
             '2' outputs debug data such as distances for tolerance on each iteration
             The default is 1.
+            
+        Class Parameters
+        ----------
+        centroids_history: list
+            List of centroids in each iteration. Can be used to plot the evolution.
+        centoids: dict
+            Current centroid values
+        classifications: dict
+            Vectors within each class. Can be used to visualize the classes.
         
-        Returns
-        -------
-        None.
 
         """
+    def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
+                 boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,
+                 initializer:str='random_generated',distance_metric:str='euclidean',
+                 verbose:int=1):
+        
         self.k = k
         self.tol = tol
         self.max_iter = max_iter
@@ -159,11 +164,15 @@ class CK_Means:
         self.boundary_thresh = boundary_thresh
         self.minimum_nodes = minimum_nodes
         self.patience = patience
-        self.verbose = verbose
+        self.v = verbose
         if seed != None:
             np.random.seed(seed)
         
-        
+    def verbose(self,value=1,**outputs):
+        if value<=self.v:
+            for output in outputs.items():
+                print(output[1])
+
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
         for i in range(self.k):
@@ -196,16 +205,15 @@ class CK_Means:
             original_centroid = self.centroids_history[-1][c] 
             current_centroid = self.centroids[c]
             if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
-                if self.verbose>1:
-                    print(np.sum((current_centroid-original_centroid)/original_centroid*100.0),'>',self.tol)
+                self.verbose(2,to_print=str(np.sum((current_centroid-original_centroid)/original_centroid*100.0))+' > '+str(self.tol))
                 stable = False
         return stable
     
     
-    def predict(self,featureset):
-        assert len(featureset.shape)==2
+    def predict(self,data):
+        assert len(data.shape)==2, "Incorrect shapes. Expecting a 2D np.array."
         labels = list()
-        for row in tqdm(featureset,total=X.shape[0]):
+        for featureset in data:
             if self.distance_metric=='cosine':
                 distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
             if self.distance_metric=='euclidean':
@@ -229,14 +237,14 @@ class CK_Means:
 
         """
         # Initialize centroids
-        print('Initializing centroids')
+        self.verbose(1,to_print='Initializing centroids')
         patience_counter = 0
         if self.initializer=='random_generated':
             self.initialize_rand_node_generate(data)
         elif self.initializer=='random_selected':
             self.initialize_rand_node_select(data)
         
-        # Iterate over data
+        # Iterations
         for iteration in tqdm(range(self.max_iter),total=self.max_iter):
             
             # Initialize clusters
@@ -251,13 +259,12 @@ class CK_Means:
             for classification in self.classifications:
                 self.centroids[classification] = np.average(self.classifications[classification],axis=0)
             
-            # Compare change to stop iteration
+            # Compare centroid change to stop iteration
             if self.centroid_stable():
                 patience_counter+=1
-                if self.verbose>1:
-                    print('\nCentroids are stable within tolerance. remaining patience:',self.patience-patience_counter)
+                self.verbose(2,to_print='\nCentroids are stable within tolerance. remaining patience:'+str(self.patience-patience_counter))
                 if patience_counter>self.patience:
-                    print('\nCentroids are stable within tolerance. Stopping.')
+                    self.verbose(1,to_print='\nCentroids are stable within tolerance. Stopping.')
                     break
             else:
                 patience_counter=0
