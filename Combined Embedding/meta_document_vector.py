@@ -19,8 +19,17 @@ from sciosci.assets import text_assets as ta
 from sciosci.assets import ann_assets as anna
 from sklearn.model_selection import train_test_split
 # !wget 'https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt'
+from tensorflow.keras import mixed_precision
 
 tokenizer = 'word'
+
+# =============================================================================
+# Prepare GPU
+# =============================================================================
+mixed_precision.set_global_policy('mixed_float16')
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # =============================================================================
 ## Next Word Prediction task
@@ -29,8 +38,8 @@ tokenizer = 'word'
 # For character prediction see
 # https://www.tensorflow.org/tutorials/text/text_generation
 # =============================================================================
-dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
-# dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
+# dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
+dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
 
     # =============================================================================
     # Load and prepare features
@@ -63,8 +72,7 @@ max_paragraph_len = int(np.percentile(text_lens, 95)) # take Nth percentile as t
 
 embedding_dim = 128
 num_epochs = 500
-vocab_limit = 30000
-n_classes = vocab_limit
+vocab_limit = 50000
 n_docs = len(corpus_idx)+1
 
 if tokenizer=='word':
@@ -80,7 +88,7 @@ if tokenizer=='word':
     # print(tokenizer.word_index)
     print(tokenizer.word_index['documentembeddingtoken'])
     
-    n = 6
+    n = 100
     ##################
     # unlimited length
     ##################
@@ -106,6 +114,7 @@ if tokenizer=='word':
             input_sequences.append(n_gram_sentence)
             input_sequences_doc_id.append(cid)
 
+n_classes = vocab_limit#total_words
 
 if tokenizer=='bpe':
 ##################
@@ -174,13 +183,20 @@ train_corpus_idx = train['corpus_index'].values
 train_y = train['Y'].values
 # train_y_cat = tf.keras.utils.to_categorical(train_y, num_classes=n_classes)
 train_x1 = train[list(range(max_seq_len-1))].values
-train_x2 = pd.DataFrame(train['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
+train_x2 = pd.DataFrame(train['corpus_index']).reset_index()
+train_x2.columns = ['train_index','index']
+train_x2 = train_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1)
+train_x2 = train_x2.drop('train_index',axis=1).values
 
 test_corpus_idx = test['corpus_index'].values
 test_y = test['Y'].values
 # test_y_cat = tf.keras.utils.to_categorical(test_y, num_classes=n_classes)
 test_x1 = test[list(range(max_seq_len-1))].values
-test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
+# test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
+test_x2 = pd.DataFrame(test['corpus_index']).reset_index()
+test_x2.columns = ['test_index','index']
+test_x2 = test_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1)
+test_x2 = test_x2.drop('test_index',axis=1).values
 
 # corpus_idx = train_corpus_idx
 # y = train_y
@@ -190,6 +206,120 @@ test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_
 
 # del train, test, msk, input_df, X, x2
 gc.collect()
+
+
+
+
+##################
+# Generator object - updated - reference https://medium.com/analytics-vidhya/write-your-own-custom-data-generator-for-tensorflow-keras-1252b64e41c3
+##################
+class DataGenerator(tf.keras.utils.Sequence):
+    """
+    Generates data for Keras
+    Sequence based data generator.
+    """
+    def __init__(self,x1,x2,y=None,corpus_idx=None,n_classes:int=None,n_docs:int=None,batch_size=5,to_fit=True):
+        self.x1 = x1
+        self.x2 = x2
+        self.y = y
+        self.n_classes = n_classes
+        self.n_docs = n_docs
+        self.corpus_idx = corpus_idx
+        self.batch_size = batch_size
+        self.to_fit = to_fit
+        self.ids = list(range(len(x1)))
+        self.IDmemory = None
+        self.Imemory = None
+        
+    def __len__(self):
+        return int(np.floor(self.x1.shape[0] / self.batch_size))
+    
+    def __getitem__(self, index):
+        """
+        Generate one batch of data
+        
+        Parameters
+        -------
+        index: index of the batch
+        
+        Returns
+        -------
+        X and y when fitting. X only when predicting
+        W
+        Exptected network inputs:
+           [ inputs_seq , inputs_doc , inputs_netvec ]
+        
+        """
+        ID_list = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
+        self.Imemory = index
+        
+        input_1 = self._generate_input_1(ID_list)
+        input_2 = self._generate_input_2(ID_list)
+        input_3 = self._generate_input_3(ID_list)
+        
+        if self.to_fit:
+            y = self._generate_y(ID_list)
+            return [input_1,input_2,input_3], y
+        else:
+            return [input_1,input_2,input_3]
+        
+    def _generate_y(self, ID_list):
+        y_batch = np.empty((self.batch_size), dtype=int)
+        for n,i in enumerate(ID_list):
+            y_batch[n] = self.y[i]
+        return tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes) 
+        
+    def _generate_input_1(self, ID_list): 
+        #inputs_seq
+        self.IDmemory = ID_list
+        
+        x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
+        for n,i in enumerate(ID_list):
+            x_batch[n,] = self.x1[i]
+        return(x_batch) 
+       
+    def _generate_input_2(self, ID_list): 
+        #inputs_doc
+        x_batch = np.empty((self.batch_size), dtype=int)
+        for n,i in enumerate(ID_list):
+            x_batch[n] = self.corpus_idx[i]
+        return tf.keras.utils.to_categorical(x_batch, num_classes=self.n_docs) 
+            
+    def _generate_input_3(self, ID_list): 
+        #inputs_netvec
+        x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
+        for n,i in enumerate(ID_list):
+            x_batch[n,] = self.x2[i]
+        return(x_batch) 
+
+    
+    # def _generate_input_3(self, ID_list): 
+    #     #inputs_netvec
+    #     x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
+    #     for i in ID_list:
+    #         x_batch[i,] = self.x2[self.corpus_idx[i]]
+    #     return(x_batch)
+
+train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=32)
+valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=32)
+
+##################
+# Generator tf.data
+##################
+def generator(x1,x2,corpus_idx,y,n_classes,n_docs):
+    for i in range(x1.shape[0]):
+        yield {"input_1":x1[i],"input_2":np.eye(n_docs)[corpus_idx[i]],"input_3":x2[i]}, np.eye(n_classes)[y[i]]
+
+# tmp = generator(train_x1,train_x2,train_corpus_idx,train_y,n_classes,n_docs)
+
+train_dataset = tf.data.Dataset.from_generator(generator,args=[train_x1,x2,train_corpus_idx,train_y,n_classes,n_docs],output_types=({"input_1": tf.int32, "input_2": tf.int32, "input_3": tf.float32}, tf.int8)).batch(2)
+
+# for i,tt in enumerate(tmp):
+#     print(tt)
+#     if i>1:
+#         break
+
+valid_dataset = tf.data.Dataset.from_generator(generator,args=[test_x1,x2,test_corpus_idx,test_y,n_classes,n_docs],output_types=({"input_1": tf.int32, "input_2": tf.int32, "input_3": tf.float32}, tf.int8)).batch(2)
 
 ##################
 # Generator functional
@@ -231,102 +361,6 @@ def _input_fn(x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2):
     return dataset
 
 ##################
-# Generator object - updated - reference https://medium.com/analytics-vidhya/write-your-own-custom-data-generator-for-tensorflow-keras-1252b64e41c3
-##################
-class CustomDataGen(tf.keras.utils.Sequence):
-    
-    def __init__(self, df, X_col, y_col,
-                 batch_size,
-                 input_size=(224, 224, 3),
-                 shuffle=True):
-        
-        self.df = df.copy()
-        self.X_col = X_col
-        self.y_col = y_col
-        self.batch_size = batch_size
-        self.input_size = input_size
-        self.shuffle = shuffle
-        
-        self.n = len(self.df)
-        self.n_name = df[y_col['name']].nunique()
-        self.n_type = df[y_col['type']].nunique()
-    
-    def on_epoch_end(self):
-        pass
-    
-    def __getitem__(self, index):
-        pass
-    
-    def __len__(self):
-        return self.n // self.batch_size
-
-
-##################
-# Generator object
-##################
-class DataGenerator(tf.keras.utils.Sequence):
-    """
-    Generates data for Keras
-    Sequence based data generator.
-    """
-    def __init__(self,x1,x2,y=None,n_classes:int=None,corpus_idx=None,batch_size=2,to_fit=True):
-        self.x1 = x1
-        self.x2 = x2
-        self.y = y
-        self.n_classes = n_classes
-        self.corpus_idx = corpus_idx
-        self.batch_size = batch_size
-        self.to_fit = to_fit
-        self.ids = list(range(len(x1)))
-        
-    def __len__(self):
-        return int(np.floor(self.x1.shape[0] / self.batch_size))
-    
-    def __getitem__(self, index):
-        """
-        Generate one batch of data
-        
-        Parameters
-        -------
-        index: index of the batch
-        
-        Returns
-        -------
-        X and y when fitting. X only when predicting
-        """
-        ID_list = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
-        
-        X1 = self._generate_X1(ID_list)
-        X2 = self._generate_X2(ID_list)
-        
-        if self.to_fit:
-            y = self._generate_y(ID_list)
-            return [X1,X2], y
-        else:
-            return [X1,X2]
-        
-    def _generate_y(self, ID_list):
-        y_batch = np.empty((self.batch_size), dtype=int)
-        for i in ID_list:
-            y_batch[i] = self.y[i]
-        return tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes) 
-        
-    def _generate_X1(self, ID_list):
-        x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
-        for i in ID_list:
-            x_batch[i,] = self.x1[i]
-        return(x_batch) 
-       
-    def _generate_X2(self, ID_list):
-        x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
-        for i in ID_list:
-            x_batch[i,] = self.x2[self.corpus_idx[i]]
-        return(x_batch)
-
-train_dataset = DataGenerator(x1=train_x1, x2=x2,y=train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=1)
-valid_dataset = DataGenerator(x1=test_x1, x2=x2,y=test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=1)
-
-##################
 # Generator tf.data
 ##################
 def y_generator(y:np.array,n_classes:int):
@@ -352,24 +386,12 @@ gc.collect()
 train_dataset = train_dataset.shuffle(5000).batch(32)
 valid_dataset = valid_dataset.shuffle(5000).batch(32)
 
-##################
-# Generator tf.data
-##################
-def generator(x1,x2,corpus_idx,y,n_classes):
-    for i in range(x1.shape[0]):
-        yield {"input_1":x1[i],"input_2":x2[corpus_idx[i]]}, np.eye(n_classes)[y[i]]
-
-train_dataset = tf.data.Dataset.from_generator(generator,args=[train_x1,x2,train_corpus_idx,train_y,n_classes],output_types=({"input_1": tf.float32, "input_2": tf.float32}, tf.int8))
-train_dataset = train_dataset.batch(32)
-
-test_dataset = tf.data.Dataset.from_generator(generator,args=[test_x1,x2,test_corpus_idx,test_y,n_classes],output_types=({"input_1": tf.float32, "input_2": tf.float32}, tf.int8))
-test_dataset = test_dataset.batch(32)
     # =============================================================================
     # Train
     # =============================================================================
-inputs_seq = tf.keras.Input(shape=(None,), dtype="int32",name='input_1')
-inputs_doc = tf.keras.Input(shape=(1,), dtype="int32",name='input_2')
-inputs_netvec = tf.keras.Input(shape=(300,), dtype="int32",name='input_3')
+inputs_seq = tf.keras.Input(shape=(None,), dtype="float16",name='input_1')
+inputs_doc = tf.keras.Input(shape=(None,), dtype="float16",name='input_2')
+inputs_netvec = tf.keras.Input(shape=(300,), dtype="float16",name='input_3')
 # inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
 
 x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
@@ -378,8 +400,7 @@ x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x_11)
 x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
 
 x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1)(inputs_doc)
-x_12 = tf.keras.layers.Flatten()(x_12) 
-x_12 = tf.keras.layers.Dense(300,activation='relu')(x_12)
+x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
 x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
 
 x_2 = tf.keras.layers.Dense(100,activation='relu')(inputs_netvec)
@@ -392,6 +413,8 @@ x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='co
 x = tf.keras.layers.Dense(400,activation='relu')(x)
 x = tf.keras.layers.Dense(100,activation='relu')(x)
 outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
+
+
 model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
 
 adam = tf.keras.optimizers.Adam(lr=0.01)
@@ -417,13 +440,132 @@ history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_id
 
 history = model.fit(train_dataset,
                     epochs=num_epochs, 
-                    validation_data=test_dataset,
+                    validation_data=valid_dataset,
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
 
 history = model.fit([train_x1,train_corpus_idx,train_x2],train_y_cat,
                     epochs=num_epochs, 
                     validation_data=([test_x1,test_corpus_idx,test_x2],test_y_cat),
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+# =============================================================================
+# A more simple network
+# =============================================================================
+def generator(x1,x2,corpus_idx,y,n_classes,n_docs):
+    for i in range(x1.shape[0]):
+        yield x1[i], np.eye(n_classes)[y[i]]
+
+# tmp = generator(train_x1,train_x2,train_corpus_idx,train_y,n_classes,n_docs)
+train_dataset = tf.data.Dataset.from_generator(generator,args=[train_x1,x2,train_corpus_idx,train_y,n_classes,n_docs],output_types=(tf.int32, tf.int8)).batch(2)
+
+class DataGenerator(tf.keras.utils.Sequence):
+    """
+    Generates data for Keras
+    Sequence based data generator.
+    """
+    def __init__(self,x1,x2,y=None,corpus_idx=None,n_classes:int=None,n_docs:int=None,batch_size=5,to_fit=True):
+        self.x1 = x1
+        self.x2 = x2
+        self.y = y
+        self.n_classes = n_classes
+        self.n_docs = n_docs
+        self.corpus_idx = corpus_idx
+        self.batch_size = batch_size
+        self.to_fit = to_fit
+        self.ids = list(range(len(x1)))
+        self.IDmemory = None
+        self.Imemory = None
+        
+    def __len__(self):
+        return int(np.floor(self.x1.shape[0] / self.batch_size))
+    
+    def __getitem__(self, index):
+        """
+        Generate one batch of data
+        
+        Parameters
+        -------
+        index: index of the batch
+        
+        Returns
+        -------
+        X and y when fitting. X only when predicting
+        W
+        Exptected network inputs:
+           [ inputs_seq , inputs_doc , inputs_netvec ]
+        
+        """
+        ID_list = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
+        self.Imemory = index
+        
+        input_1 = self._generate_input_1(ID_list)
+        # input_2 = self._generate_input_2(ID_list)
+        # input_3 = self._generate_input_3(ID_list)
+        
+        if self.to_fit:
+            y = self._generate_y(ID_list)
+            return input_1, y
+        else:
+            return input_1
+        
+    def _generate_y(self, ID_list):
+        y_batch = np.empty((self.batch_size), dtype=int)
+        for n,i in enumerate(ID_list):
+            y_batch[n] = self.y[i]
+        return tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes) 
+        
+    def _generate_input_1(self, ID_list): 
+        #inputs_seq
+        self.IDmemory = ID_list
+        
+        x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
+        for n,i in enumerate(ID_list):
+            x_batch[n,] = self.x1[i]
+        return(x_batch) 
+       
+    def _generate_input_2(self, ID_list): 
+        #inputs_doc
+        x_batch = np.empty((self.batch_size), dtype=int)
+        for n,i in enumerate(ID_list):
+            x_batch[n] = self.corpus_idx[i]
+        return tf.keras.utils.to_categorical(x_batch, num_classes=self.n_docs) 
+            
+    def _generate_input_3(self, ID_list): 
+        #inputs_netvec
+        x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
+        for n,i in enumerate(ID_list):
+            x_batch[n,] = self.x2[i]
+        return(x_batch) 
+
+train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=5)
+
+
+inputs = tf.keras.Input(shape=(None,), dtype="int32", name="input_1")
+x = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs)
+# x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(x)
+x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x)
+# x = tf.keras.layers.Dense(6,activation='relu')(x)
+outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
+model = keras.Model(inputs, outputs)
+
+adam = tf.keras.optimizers.Adam(lr=0.01)
+
+model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
+model.summary()
+
+callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
+checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
+tensorboard = tf.keras.callbacks.TensorBoard(
+                          log_dir='.\logs',
+                          histogram_freq=1,
+                          write_images=True
+                        )
+
+history = model.fit(train_dataset,
+                    epochs=num_epochs, 
+                    # validation_data=(padded_seq_test, testing_labels_final),
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
 
