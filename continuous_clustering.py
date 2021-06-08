@@ -35,15 +35,25 @@ from sciosci.assets import text_assets as ta
 # =============================================================================
 # Prepare
 # =============================================================================
-def plot_3D(X,Y,predictions):
+def plot_3D(X,labels,predictions,opacity=0.7):
+    """
+    Parameters
+    ----------
+    X : 2D np.array 
+        Each row is expected to have values for X, Y, and Z dimensions.
+    labels : iterable
+        A 1D iterable (list or array) for labels of hover names.
+    predictions : iterable
+        A 1D iterable (list or array) for class labels. Must not be factorized.
+    """
     X_df = pd.DataFrame(X_3d)
     X_df['class'] = predictions
     X_df.columns = ['x_ax','y_ax','z_ax','class']
     X_df = X_df.reset_index()
-    X_df['labels'] = Y
+    X_df['labels'] = labels
     # X_grouped = X_df.groupby('class').groups
     
-    fig = px.scatter_3d(X_df, x='x_ax', y='y_ax',z='z_ax', color='class', opacity=0.7,hover_name='labels') #.iloc[X_grouped[i]]
+    fig = px.scatter_3d(X_df, x='x_ax', y='y_ax',z='z_ax', color='class', opacity=opacity,hover_name='labels') #.iloc[X_grouped[i]]
     plot(fig)
     
 class CK_Means:
@@ -85,8 +95,6 @@ class CK_Means:
             Current centroid values
         classifications: dict
             Vectors within each class. Can be used to visualize the classes.
-        
-
         """
     def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
                  boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,
