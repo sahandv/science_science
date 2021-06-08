@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import plotly.express as px
+from plotly.offline import plot
 from random import randint
 from scipy import spatial
 
@@ -31,81 +33,19 @@ from sciosci.assets import text_assets as ta
 # from DEC.DEC_keras import DEC_simple_run
 
 # =============================================================================
-# Load data and init
+# Prepare
 # =============================================================================
-datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
-
-
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
-label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
-
-# data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
-# label_address =  datapath+"Corpus/KPRIS/labels"
-
-vectors = pd.read_csv(data_address)#,header=None)
-labels = pd.read_csv(label_address)
-labels.columns = ['label']
-
-try:
-    vectors = vectors.drop('Unnamed: 0',axis=1)
-    print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
-except:
-    print('\nVector shapes seem to be good:',vectors.shape)
-
-labels_f = pd.factorize(labels.label)
-X = vectors.values
-Y = labels_f[0]
-n_clusters = len(list(labels.groupby('label').groups.keys())) 
-
-results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
-# =============================================================================
-# Evaluation method
-# =============================================================================
-def evaluate(X,Y,predicted_labels):
+def plot_3D(X,Y,predictions):
+    X_df = pd.DataFrame(X_3d)
+    X_df['class'] = predictions
+    X_df.columns = ['x_ax','y_ax','z_ax','class']
+    X_df = X_df.reset_index()
+    X_df['labels'] = Y
+    # X_grouped = X_df.groupby('class').groups
     
-    df = pd.DataFrame(predicted_labels,columns=['label'])
-    if len(df.groupby('label').groups)<2:
-        return [0,0,0,0,0]
+    fig = px.scatter_3d(X_df, x='x_ax', y='y_ax',z='z_ax', color='class', opacity=0.7,hover_name='labels') #.iloc[X_grouped[i]]
+    plot(fig)
     
-    try:
-        sil = silhouette_score(X, predicted_labels, metric='euclidean')
-    except:
-        sil = 0
-        
-    return [sil,
-            homogeneity_score(Y, predicted_labels),
-            normalized_mutual_info_score(Y, predicted_labels),
-            adjusted_mutual_info_score(Y, predicted_labels),
-            adjusted_rand_score(Y, predicted_labels)]
-
-# =============================================================================
-# Cluster benchmark
-# =============================================================================
-print('\n- k-means random -----------------------')
-for fold in tqdm(range(5)):
-    seed = randint(0,10**5)
-    model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
-    predicted_labels = model.labels_
-    tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-    tmp_results = pd.Series(tmp_results, index = results.columns)
-    results = results.append(tmp_results, ignore_index=True)
-mean = results.mean(axis=0)
-maxx = results.max(axis=0)
-print(mean)
-print(maxx)
-# =============================================================================
-# Cluster 
-# =============================================================================
-print('\n- Custom clustering --------------------')
-print(n_clusters)
-
-model = CK_Means(verbose=1,k=n_clusters)
-model.fit(X)
-cents = model.centroids_history
-labels = model.predict(X)
-classes = model.classifications
-
 class CK_Means:
     """
         Initialization Parameters
@@ -171,7 +111,55 @@ class CK_Means:
     def verbose(self,value=1,**outputs):
         if value<=self.v:
             for output in outputs.items():
-                print(output[1])
+                print('\n> '+str(output[0])+':',output[1])
+
+    def get_class_min_bounding_box(self,classifications):
+        """
+        Parameters
+        ----------
+        classifications : dict
+            Dict of classifications provided by self.classifications
+
+        Returns
+        -------
+        list
+            list of minimum bounding boxes for each cluster/class.
+
+        """
+        self.ndbbox = []
+        for i in classifications:
+            i = np.array(classifications[i])
+            try:
+                self.ndbbox.append(np.array([i.min(axis=0,keepdims=True)[0],i.max(axis=0,keepdims=True)[0]]))
+            except :
+                self.ndbbox.append(np.zeros((2,i.shape[1])))
+                self.verbose(2,warning='Class is empty! returning zero box.')
+        return self.ndbbox
+
+    def get_class_radius(self,classifications,centroids):
+        """        
+        Parameters
+        ----------
+        classifications : dict
+            Dict of classifications provided by self.classifications
+        centroids : dict
+            Dict of centroids, provided by self.centroids.
+
+        Returns
+        -------
+        list
+            list of cluster/class radius.
+
+        """
+        self.radius = []
+        for i in classifications:
+            cluster = np.array(classifications[i])
+            centroid = np.array(centroids[i])
+            try:
+                self.radius.append(max([np.linalg.norm(vector-centroid) for vector in cluster]))
+            except:
+                self.radius.append(0)
+        return self.radius
 
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
@@ -187,9 +175,11 @@ class CK_Means:
     
     def initialize_clusters(self):
         self.classifications = {}
+        self.class_radius = {}
         for i in range(self.k):
             self.classifications[i] = []
-    
+            self.class_radius[i] = None
+            
     def assign_clusters(self,data):
         for featureset in data:
             if self.distance_metric=='cosine':
@@ -197,6 +187,7 @@ class CK_Means:
             if self.distance_metric=='euclidean':
                 distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
             classification = distances.index(min(distances)) #argmin: get the index of the closest centroid to this featureset/node
+            
             self.classifications[classification].append(featureset)
     
     def centroid_stable(self):
@@ -205,7 +196,7 @@ class CK_Means:
             original_centroid = self.centroids_history[-1][c] 
             current_centroid = self.centroids[c]
             if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
-                self.verbose(2,to_print=str(np.sum((current_centroid-original_centroid)/original_centroid*100.0))+' > '+str(self.tol))
+                self.verbose(2,debug=str(np.sum((current_centroid-original_centroid)/original_centroid*100.0))+' > '+str(self.tol))
                 stable = False
         return stable
     
@@ -224,20 +215,16 @@ class CK_Means:
 
     def fit(self,data):
         """
-        Perform clustering for T1
+        Perform clustering for T0
 
         Parameters
         ----------
         data : 2D numpy array.
             Array of feature arrays.
 
-        Returns
-        -------
-        None.
-
         """
         # Initialize centroids
-        self.verbose(1,to_print='Initializing centroids')
+        self.verbose(1,debug='Initializing centroids')
         patience_counter = 0
         if self.initializer=='random_generated':
             self.initialize_rand_node_generate(data)
@@ -262,10 +249,10 @@ class CK_Means:
             # Compare centroid change to stop iteration
             if self.centroid_stable():
                 patience_counter+=1
-                self.verbose(2,to_print='\nCentroids are stable within tolerance. remaining patience:'+str(self.patience-patience_counter))
                 if patience_counter>self.patience:
-                    self.verbose(1,to_print='\nCentroids are stable within tolerance. Stopping.')
+                    self.verbose(1,debug='Centroids are stable within tolerance. Stopping.')
                     break
+                self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
             else:
                 patience_counter=0
                 
@@ -322,4 +309,92 @@ class CK_Means:
 
             if optimized:
                 break
+
+# =============================================================================
+# Load data and init
+# =============================================================================
+# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+
+
+data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
+label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
+
+# data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
+# label_address =  datapath+"Corpus/KPRIS/labels"
+
+vectors = pd.read_csv(data_address)#,header=None)
+labels = pd.read_csv(label_address)
+labels.columns = ['label']
+
+try:
+    vectors = vectors.drop('Unnamed: 0',axis=1)
+    print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
+except:
+    print('\nVector shapes seem to be good:',vectors.shape)
+
+labels_f = pd.factorize(labels.label)
+X = vectors.values
+Y = labels_f[0]
+n_clusters = len(list(labels.groupby('label').groups.keys())) 
+
+results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
+# =============================================================================
+# Evaluation method
+# =============================================================================
+def evaluate(X,Y,predicted_labels):
+    
+    df = pd.DataFrame(predicted_labels,columns=['label'])
+    if len(df.groupby('label').groups)<2:
+        return [0,0,0,0,0]
+    
+    try:
+        sil = silhouette_score(X, predicted_labels, metric='euclidean')
+    except:
+        sil = 0
+        
+    return [sil,
+            homogeneity_score(Y, predicted_labels),
+            normalized_mutual_info_score(Y, predicted_labels),
+            adjusted_mutual_info_score(Y, predicted_labels),
+            adjusted_rand_score(Y, predicted_labels)]
+
+# =============================================================================
+# Cluster benchmark
+# =============================================================================
+print('\n- k-means random -----------------------')
+for fold in tqdm(range(5)):
+    seed = randint(0,10**5)
+    model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
+    predicted_labels = model.labels_
+    tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print(mean)
+print(maxx)
+
+
+# =============================================================================
+# Cluster 
+# =============================================================================
+print('\n- Custom clustering --------------------')
+print(n_clusters)
+
+model = CK_Means(verbose=1,k=n_clusters)
+model.fit(X)
+cents = model.centroids_history
+preds = model.predict(X)
+classes = model.classifications
+centroids = model.centroids
+radius = model.get_class_radius(model.classifications,model.centroids)
+
+X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X)
+
+plot_3D(X_3d,labels,preds)
+
+
+
+
 
