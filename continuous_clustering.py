@@ -384,15 +384,18 @@ print(n_clusters)
 
 model = CK_Means(verbose=1,k=n_clusters)
 model.fit(X)
-cents = model.centroids_history
-preds = model.predict(X)
-classes = model.classifications
-centroids = model.centroids
+predicted_labels = model.predict(X)
+
 radius = model.get_class_radius(model.classifications,model.centroids)
+minimum_bbox = model.get_class_min_bounding_box(model.classifications)
+
+
+tmp_results = ['Ck-means T0','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+tmp_results = pd.Series(tmp_results, index = results.columns)
+results = results.append(tmp_results, ignore_index=True)
 
 X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X)
-
-plot_3D(X_3d,labels,preds)
+plot_3D(X_3d,labels,predicted_labels)
 
 
 
