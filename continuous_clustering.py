@@ -31,6 +31,25 @@ from sklearn import preprocessing
 
 from sciosci.assets import text_assets as ta
 # from DEC.DEC_keras import DEC_simple_run
+# =============================================================================
+# Evaluation method
+# =============================================================================
+def evaluate(X,Y,predicted_labels):
+    
+    df = pd.DataFrame(predicted_labels,columns=['label'])
+    if len(df.groupby('label').groups)<2:
+        return [0,0,0,0,0]
+    
+    try:
+        sil = silhouette_score(X, predicted_labels, metric='euclidean')
+    except:
+        sil = 0
+        
+    return [sil,
+            homogeneity_score(Y, predicted_labels),
+            normalized_mutual_info_score(Y, predicted_labels),
+            adjusted_mutual_info_score(Y, predicted_labels),
+            adjusted_rand_score(Y, predicted_labels)]
 
 # =============================================================================
 # Prepare
@@ -121,54 +140,6 @@ class CK_Means:
             for output in outputs.items():
                 print('\n> '+str(output[0])+':',output[1])
 
-    def get_class_min_bounding_box(self,classifications):
-        """
-        Parameters
-        ----------
-        classifications : dict
-            Dict of classifications provided by self.classifications
-
-        Returns
-        -------
-        list
-            list of minimum bounding boxes for each cluster/class.
-
-        """
-        self.ndbbox = []
-        for i in classifications:
-            i = np.array(classifications[i])
-            try:
-                self.ndbbox.append(np.array([i.min(axis=0,keepdims=True)[0],i.max(axis=0,keepdims=True)[0]]))
-            except :
-                self.ndbbox.append(np.zeros((2,i.shape[1])))
-                self.verbose(2,warning='Class is empty! returning zero box.')
-        return self.ndbbox
-
-    def get_class_radius(self,classifications,centroids):
-        """        
-        Parameters
-        ----------
-        classifications : dict
-            Dict of classifications provided by self.classifications
-        centroids : dict
-            Dict of centroids, provided by self.centroids.
-
-        Returns
-        -------
-        list
-            list of cluster/class radius.
-
-        """
-        self.radius = []
-        for i in classifications:
-            cluster = np.array(classifications[i])
-            centroid = np.array(centroids[i])
-            try:
-                self.radius.append(max([np.linalg.norm(vector-centroid) for vector in cluster]))
-            except:
-                self.radius.append(0)
-        return self.radius
-
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
         for i in range(self.k):
@@ -208,6 +179,56 @@ class CK_Means:
                 stable = False
         return stable
     
+    def get_class_min_bounding_box(self,classifications):
+        """
+        Parameters
+        ----------
+        classifications : dict
+            Dict of classifications provided by self.classifications
+
+        Returns
+        -------
+        list
+            list of minimum bounding boxes for each cluster/class.
+
+        """
+        self.ndbbox = []
+        for i in classifications:
+            i = np.array(classifications[i])
+            try:
+                self.ndbbox.append(np.array([i.min(axis=0,keepdims=True)[0],i.max(axis=0,keepdims=True)[0]]))
+            except :
+                self.ndbbox.append(np.zeros((2,i.shape[1])))
+                self.verbose(2,warning='Class is empty! returning zero box.')
+        return self.ndbbox
+
+    def get_class_radius(self,classifications,centroids,distance_metric='euclidean'):
+        """        
+        Parameters
+        ----------
+        classifications : dict
+            Dict of classifications provided by self.classifications
+        centroids : dict
+            Dict of centroids, provided by self.centroids.
+
+        Returns
+        -------
+        list
+            list of cluster/class radius.
+
+        """
+        self.radius = []
+        for i in classifications:
+            cluster = np.array(classifications[i])
+            centroid = np.array(centroids[i])
+            try:
+                if distance_metric == 'euclidean':
+                    self.radius.append(max([np.linalg.norm(vector-centroid) for vector in cluster]))
+                if distance_metric == 'cosine':
+                    self.radius.append(max([spatial.distance.cosine(vector,centroid) for vector in cluster]))
+            except:
+                self.radius.append(0)
+        return self.radius
     
     def predict(self,data):
         assert len(data.shape)==2, "Incorrect shapes. Expecting a 2D np.array."
@@ -266,14 +287,11 @@ class CK_Means:
                 
 
 
-    def fit_update(self,data):
+    def fit_update(self,additional_data,previous_data):
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
+        self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+        self.model.get_class_min_bounding_box(self.classifications)
 
-        self.cluster_boundaries = {}
-        for classification in self.classifications:
-            mat = np.matrix(self.classifications[classification],axis=0)
-            self.cluster_boundaries[classification] = np.array([np.array(mat.min(0))[0],np.array(mat.max(0))[0]])
-            
         # If the new node is within boundary thresholds of any cluster, add to the cluster. 
         
         
@@ -347,25 +365,6 @@ Y = labels_f[0]
 n_clusters = len(list(labels.groupby('label').groups.keys())) 
 
 results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
-# =============================================================================
-# Evaluation method
-# =============================================================================
-def evaluate(X,Y,predicted_labels):
-    
-    df = pd.DataFrame(predicted_labels,columns=['label'])
-    if len(df.groupby('label').groups)<2:
-        return [0,0,0,0,0]
-    
-    try:
-        sil = silhouette_score(X, predicted_labels, metric='euclidean')
-    except:
-        sil = 0
-        
-    return [sil,
-            homogeneity_score(Y, predicted_labels),
-            normalized_mutual_info_score(Y, predicted_labels),
-            adjusted_mutual_info_score(Y, predicted_labels),
-            adjusted_rand_score(Y, predicted_labels)]
 
 # =============================================================================
 # Cluster benchmark
@@ -390,21 +389,45 @@ print(maxx)
 print('\n- Custom clustering --------------------')
 print(n_clusters)
 
-model = CK_Means(verbose=1,k=n_clusters)
-model.fit(X)
-predicted_labels = model.predict(X)
+X_0 = X[:-5000]
+X_0.shape
+Y_0 = Y[:-5000]
+Y_0.shape
+
+model = CK_Means(verbose=1,k=n_clusters,distance_metric='cosine')
+model.fit(X_0)
+predicted_labels = model.predict(X_0)
+
+tmp_results = ['Ck-means T0','cosine']+evaluate(X_0,Y_0,predicted_labels)
+tmp_results = pd.Series(tmp_results, index = results.columns)
+results = results.append(tmp_results, ignore_index=True)
+
+X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X_0)
+plot_3D(X_3d,labels[:-5000],predicted_labels)
+
+X_1 = X[-5000:-2500]
+Y_1 = Y[-5000:-2500]
 
 radius = model.get_class_radius(model.classifications,model.centroids)
 minimum_bbox = model.get_class_min_bounding_box(model.classifications)
 
 
-tmp_results = ['Ck-means T0','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-tmp_results = pd.Series(tmp_results, index = results.columns)
-results = results.append(tmp_results, ignore_index=True)
-
-X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X)
-plot_3D(X_3d,labels,predicted_labels)
-
+for i in X_1:
+    distances = [np.linalg.norm(i-model.centroids[centroid]) for centroid in model.centroids]
+    classification = distances.index(min(distances))
+    #is it inside class?
+        #yes: assign it
+        #no: is it within threshold?
+            #yes: assign in and update class
+            #no: 
+                #put it into a temprory new cluster with radius of threshold. 
+                #k=k+1
+                #after the end of the loop, is cluster population<minimum_nodes?
+                    #yes: destroy cluster and assign nodes to nearby clusters
+                    #no: keep it.
+                
+            
+    model.classifications[classification].append(i)
 
 
 
