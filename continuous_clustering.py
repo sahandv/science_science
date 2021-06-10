@@ -293,7 +293,42 @@ class CK_Means:
         self.model.get_class_min_bounding_box(self.classifications)
 
         # If the new node is within boundary thresholds of any cluster, add to the cluster. 
+        self.update_assigned_labels = {}
+        self.update_classes = []
         
+        for i in tqdm(additional_data,total=additional_data.shape[0]):
+            distances = [np.linalg.norm(i-self.centroids[centroid]) for centroid in self.centroids]
+            distance = min(distances)
+            classification = distances.index(distance)
+            radius = self.radius[classification]
+            
+            # is it inside class or within threshold?
+            if distance <= radius+self.boundary_thresh:
+                #yes: assign it
+                self.classifications[classification].append(i)
+                self.update_assigned_labels[i].append(classification)
+                
+                # no: 
+            else:
+                # put it into a temprory new cluster
+                self.classifications[model.k].append(i)
+                self.k+=1
+                self.update_classes.append(self.k)
+            
+            # update centroids
+            prev_centroids = dict(self.centroids)
+            self.centroids_history.append(prev_centroids)
+            for classification in self.classifications:
+                self.centroids[classification] = np.average(self.classifications[classification],axis=0)
+                
+            self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+            
+            
+                
+        #after the end of the loop, is cluster population<minimum_nodes?
+            #yes: destroy cluster and assign nodes to nearby clusters
+            #no: keep it.
+                    
         
         # This will automatically update the cluster boundaries.
         # Else, skip the node and put into a temp basket. 
@@ -408,26 +443,8 @@ plot_3D(X_3d,labels[:-5000],predicted_labels)
 X_1 = X[-5000:-2500]
 Y_1 = Y[-5000:-2500]
 
-radius = model.get_class_radius(model.classifications,model.centroids)
-minimum_bbox = model.get_class_min_bounding_box(model.classifications)
 
-
-for i in X_1:
-    distances = [np.linalg.norm(i-model.centroids[centroid]) for centroid in model.centroids]
-    classification = distances.index(min(distances))
-    #is it inside class?
-        #yes: assign it
-        #no: is it within threshold?
-            #yes: assign in and update class
-            #no: 
-                #put it into a temprory new cluster with radius of threshold. 
-                #k=k+1
-                #after the end of the loop, is cluster population<minimum_nodes?
-                    #yes: destroy cluster and assign nodes to nearby clusters
-                    #no: keep it.
-                
             
-    model.classifications[classification].append(i)
 
 
 
