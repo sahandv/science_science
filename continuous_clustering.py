@@ -102,8 +102,8 @@ class CK_Means:
         distance_metric : str, optional
             Options are 'euclidean' and 'cosine' distance metrics. The default is 'euclidean'.
         verbose : int, optional
-            '1' outputs iterations and steps
-            '2' outputs debug data such as distances for tolerance on each iteration
+            '1' outputs main iterations and steps
+            '2' outputs debug data within each iteration, such as distances for tolerance
             The default is 1.
             
         Class Parameters
@@ -289,29 +289,37 @@ class CK_Means:
 
     def fit_update(self,additional_data,previous_data):
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
+        self.verbose(1,debug='Initiating cluster distances and boundaries...')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
         self.model.get_class_min_bounding_box(self.classifications)
 
-        # If the new node is within boundary thresholds of any cluster, add to the cluster. 
-        self.update_assigned_labels = {}
+        self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
         self.update_classes = []
         
-        for i in tqdm(additional_data,total=additional_data.shape[0]):
-            distances = [np.linalg.norm(i-self.centroids[centroid]) for centroid in self.centroids]
+        self.verbose(1,debug='Assigning ')
+        for vec in tqdm(additional_data,total=additional_data.shape[0]):
+            # If the new node is within boundary thresholds of any cluster, add to the cluster.
+            #measure distance from centroids 
+            if self.distance_metric=='cosine':
+                distances = [spatial.distance.cosine(vec,self.centroids[centroid]) for centroid in self.centroids]
+            if self.distance_metric=='euclidean':
+                distances = [np.linalg.norm(vec-self.centroids[centroid]) for centroid in self.centroids]
+            #nominate closest class
             distance = min(distances)
             classification = distances.index(distance)
+            #get the radius of the class
             radius = self.radius[classification]
             
-            # is it inside class or within threshold?
+            # is it inside class or within class threshold?
             if distance <= radius+self.boundary_thresh:
                 #yes: assign it
-                self.classifications[classification].append(i)
-                self.update_assigned_labels[i].append(classification)
-                
+                self.classifications[classification].append(vec)
+                # self.update_assigned_labels[vec].append(classification)
+                self.update_assigned_labels = self.update_assigned_labels.append(list(vec)+[classification])
                 # no: 
             else:
-                # put it into a temprory new cluster
-                self.classifications[model.k].append(i)
+                # put it into a temprory new cluster and give it a name (K+1)
+                self.classifications[model.k].append(vec)
                 self.k+=1
                 self.update_classes.append(self.k)
             
@@ -320,20 +328,26 @@ class CK_Means:
             self.centroids_history.append(prev_centroids)
             for classification in self.classifications:
                 self.centroids[classification] = np.average(self.classifications[classification],axis=0)
-                
+            # update radiuses 
             self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
-            
-            
                 
+        self.verbose(1,debug='Initial assignment completed.')
+        self.verbose(1,debug='Cleaning up now...')
         #after the end of the loop, is cluster population<minimum_nodes?
-            #yes: destroy cluster and assign nodes to nearby clusters
-            #no: keep it.
-                    
+        for ucl in self.update_classes:
+            #yes: destroy cluster and assign nodes to nearby clusters.
+            if len(self.classifications[ucl])<self.minimum_nodes:
+                try:
+                    self.verbose(2,debug='Destroying class due to low population '+str(ucl))
+                    self.classifications[ucl].pop(ucl)
+                except KeyError:
+                    print('A KeyError detected. Unable to remove the class with class population under the threshold from self.classifications.')
+                
+            self.update_assigned_labels[self.update_assigned_labels['label']==ucl]['label'] = None
         
-        # This will automatically update the cluster boundaries.
-        # Else, skip the node and put into a temp basket. 
-        # If more than minimum_nodes can fit into a new cluster, then create a new cluster. Else
-        pass
+        self.verbose(1,debug='Assigning orphaned nodes...')
+
+
 
 
     def fit_legacy(self,data):
