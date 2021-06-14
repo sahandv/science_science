@@ -5,6 +5,7 @@ Created on Mon May  3 15:46:31 2021
 
 @author: github.com/sahandv
 """
+import os
 import gc
 import numpy as np
 import pandas as pd
@@ -26,6 +27,7 @@ tokenizer = 'word'
 # =============================================================================
 # Prepare GPU
 # =============================================================================
+os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
 mixed_precision.set_global_policy('mixed_float16')
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
@@ -88,7 +90,7 @@ if tokenizer=='word':
     # print(tokenizer.word_index)
     print(tokenizer.word_index['documentembeddingtoken'])
     
-    n = 100
+    n = 25
     ##################
     # unlimited length
     ##################
@@ -271,7 +273,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         
     def _generate_input_1(self, ID_list): 
         #inputs_seq
-        self.IDmemory = ID_list
+        # self.IDmemory = ID_list
         
         x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
         for n,i in enumerate(ID_list):
@@ -300,8 +302,80 @@ class DataGenerator(tf.keras.utils.Sequence):
     #         x_batch[i,] = self.x2[self.corpus_idx[i]]
     #     return(x_batch)
 
-train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=32)
-valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=32)
+train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,
+                              n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=48)
+valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,
+                              n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=48)
+
+# for item in train_dataset:
+#     print(item)
+
+
+    # =============================================================================
+    # Train
+    # =============================================================================
+inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
+inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
+inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
+# inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
+
+x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
+x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False))(x_11)
+# x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(50))(x_11)
+x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
+
+x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1)(inputs_doc)
+x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
+x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
+
+x_2 = tf.keras.layers.Dense(128,activation='relu')(inputs_netvec)
+x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
+
+# x_3 = tf.keras.layers.Dense(100,activation='relu')(inputs_aux)
+# x_3 = tf.keras.Model(inputs=inputs_aux, outputs=x_3)
+
+x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='combination')
+x = tf.keras.layers.Dense(128,activation='relu')(x)
+# x = tf.keras.layers.Dense(64,activation='relu')(x)
+outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
+
+
+model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
+
+adam = tf.keras.optimizers.Adam(lr=0.01)
+
+model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
+model.summary()
+tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
+
+callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
+checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
+tensorboard = tf.keras.callbacks.TensorBoard(
+                          log_dir='.\logs',
+                          histogram_freq=1,
+                          write_images=True
+                        )
+history = model.fit(train_dataset,
+                    epochs=num_epochs, 
+                    validation_data=valid_dataset,
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+
+history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=2),
+                    epochs=num_epochs, 
+                    validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=2),
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+
+history = model.fit([train_x1,train_corpus_idx,train_x2],train_y_cat,
+                    epochs=num_epochs, 
+                    validation_data=([test_x1,test_corpus_idx,test_x2],test_y_cat),
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+
 
 ##################
 # Generator tf.data
@@ -385,70 +459,6 @@ gc.collect()
 
 train_dataset = train_dataset.shuffle(5000).batch(32)
 valid_dataset = valid_dataset.shuffle(5000).batch(32)
-
-    # =============================================================================
-    # Train
-    # =============================================================================
-inputs_seq = tf.keras.Input(shape=(None,), dtype="float16",name='input_1')
-inputs_doc = tf.keras.Input(shape=(None,), dtype="float16",name='input_2')
-inputs_netvec = tf.keras.Input(shape=(300,), dtype="float16",name='input_3')
-# inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
-
-x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
-x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150,return_sequences=True))(x_11)
-x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(150))(x_11)
-x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
-
-x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1)(inputs_doc)
-x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
-x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
-
-x_2 = tf.keras.layers.Dense(100,activation='relu')(inputs_netvec)
-x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
-
-# x_3 = tf.keras.layers.Dense(100,activation='relu')(inputs_aux)
-# x_3 = tf.keras.Model(inputs=inputs_aux, outputs=x_3)
-
-x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='combination')
-x = tf.keras.layers.Dense(400,activation='relu')(x)
-x = tf.keras.layers.Dense(100,activation='relu')(x)
-outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
-
-
-model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
-
-adam = tf.keras.optimizers.Adam(lr=0.01)
-
-model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
-model.summary()
-tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
-
-callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
-checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
-tensorboard = tf.keras.callbacks.TensorBoard(
-                          log_dir='.\logs',
-                          histogram_freq=1,
-                          write_images=True
-                        )
-
-history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=2),
-                    epochs=num_epochs, 
-                    validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=2),
-                    verbose=1,
-                    callbacks=[callback, checkpoint,tensorboard])
-
-
-history = model.fit(train_dataset,
-                    epochs=num_epochs, 
-                    validation_data=valid_dataset,
-                    verbose=1,
-                    callbacks=[callback, checkpoint,tensorboard])
-
-history = model.fit([train_x1,train_corpus_idx,train_x2],train_y_cat,
-                    epochs=num_epochs, 
-                    validation_data=([test_x1,test_corpus_idx,test_x2],test_y_cat),
-                    verbose=1,
-                    callbacks=[callback, checkpoint,tensorboard])
 
 # =============================================================================
 # A more simple network
