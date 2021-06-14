@@ -330,23 +330,44 @@ class CK_Means:
                 self.centroids[classification] = np.average(self.classifications[classification],axis=0)
             # update radiuses 
             self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
-                
+        
+        self.verbose(1,debug='Finalizing initial assignment by calculating final radius and boundaries.')
+        self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+        self.model.get_class_min_bounding_box(self.classifications)
+        
         self.verbose(1,debug='Initial assignment completed.')
-        self.verbose(1,debug='Cleaning up now...')
+        self.verbose(1,debug='Cleaning up now by removing low population classes...')
         #after the end of the loop, is cluster population<minimum_nodes?
         for ucl in self.update_classes:
             #yes: destroy cluster and assign nodes to nearby clusters.
             if len(self.classifications[ucl])<self.minimum_nodes:
                 try:
-                    self.verbose(2,debug='Destroying class due to low population '+str(ucl))
+                    self.verbose(2,debug='Popping and centroid class due to low population '+str(ucl))
                     self.classifications[ucl].pop(ucl)
+                    self.centroids[ucl].pop(ucl)
                 except KeyError:
                     print('A KeyError detected. Unable to remove the class with class population under the threshold from self.classifications.')
                 
             self.update_assigned_labels[self.update_assigned_labels['label']==ucl]['label'] = None
+            self.orphan_idx = self.update_assigned_labels[self.update_assigned_labels['label']==None].index
+            self.orphan_vecs = self.update_assigned_labels[self.update_assigned_labels['label']==None].drop('label',axis=1)
+            
+        self.verbose(1,debug='Recalculating radius and boundaries.')
+        self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+        self.model.get_class_min_bounding_box(self.classifications)
+        
         
         self.verbose(1,debug='Assigning orphaned nodes...')
-
+        for orphan in self.orphan_vecs.iterrows():
+            orphan.index
+            
+            if self.distance_metric=='cosine':
+                distances = [spatial.distance.cosine(orphan.values,self.centroids[centroid]) for centroid in self.centroids]
+            if self.distance_metric=='euclidean':
+                distances = [np.linalg.norm(orphan.values-self.centroids[centroid]) for centroid in self.centroids]
+            #nominate closest class
+            distance = min(distances)
+            if distance<
 
 
 
