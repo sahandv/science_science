@@ -116,7 +116,7 @@ class CK_Means:
             Vectors within each class. Can be used to visualize the classes.
         """
     def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
-                 boundary_thresh:float=0.5, minimum_nodes:int=10, seed=None,
+                 boundary_thresh:float=0.5, boundary_thresh_growth:float=1.1,minimum_nodes:int=10, seed=None,
                  initializer:str='random_generated',distance_metric:str='euclidean',
                  verbose:int=1):
         
@@ -132,6 +132,7 @@ class CK_Means:
         self.minimum_nodes = minimum_nodes
         self.patience = patience
         self.v = verbose
+        self.boundary_thresh_growth = boundary_thresh_growth
         if seed != None:
             np.random.seed(seed)
         
@@ -331,11 +332,12 @@ class CK_Means:
             # update radiuses 
             self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
         
-        self.verbose(1,debug='Finalizing initial assignment by calculating final radius and boundaries.')
-        self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
-        self.model.get_class_min_bounding_box(self.classifications)
-        
+        # self.verbose(1,debug='Finalizing initial assignment by calculating final radius and boundaries.')
+        # self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+        # self.model.get_class_min_bounding_box(self.classifications)
         self.verbose(1,debug='Initial assignment completed.')
+        
+        # Clean the new classes up
         self.verbose(1,debug='Cleaning up now by removing low population classes...')
         #after the end of the loop, is cluster population<minimum_nodes?
         for ucl in self.update_classes:
@@ -345,30 +347,44 @@ class CK_Means:
                     self.verbose(2,debug='Popping and centroid class due to low population '+str(ucl))
                     self.classifications[ucl].pop(ucl)
                     self.centroids[ucl].pop(ucl)
+                    self.update_classes.remove(ucl)
                 except KeyError:
-                    print('A KeyError detected. Unable to remove the class with class population under the threshold from self.classifications.')
-                
-            self.update_assigned_labels[self.update_assigned_labels['label']==ucl]['label'] = None
-            self.orphan_idx = self.update_assigned_labels[self.update_assigned_labels['label']==None].index
-            self.orphan_vecs = self.update_assigned_labels[self.update_assigned_labels['label']==None].drop('label',axis=1)
+                    print('A KeyError detected. Unable to remove the class with class population under the threshold from self.classifications or self.centroids.')
+                    sys.exit(1)
+                    
+                self.verbose(2,debug='Unassigning nodes from removed class '+str(ucl))
+                self.update_assigned_labels[self.update_assigned_labels['label']==ucl]['label'] = None
+        
+        self.verbose(2,debug='Recording nodes with None labels, AKA orphaned nodes.')
+        self.orphan_idx = self.update_assigned_labels[self.update_assigned_labels['label']==None].index
+        self.orphan_vecs = self.update_assigned_labels[self.update_assigned_labels['label']==None].drop('label',axis=1)
             
-        self.verbose(1,debug='Recalculating radius and boundaries.')
+        self.verbose(1,debug='Recalculating radius and boundaries for all remaining classes.')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
         self.model.get_class_min_bounding_box(self.classifications)
         
         
-        self.verbose(1,debug='Assigning orphaned nodes...')
-        for orphan in self.orphan_vecs.iterrows():
-            orphan.index
-            
+        self.verbose(1,debug='Reassigning orphaned nodes...')
+        for orphan in self.orphan_vecs.iterrows():            
             if self.distance_metric=='cosine':
                 distances = [spatial.distance.cosine(orphan.values,self.centroids[centroid]) for centroid in self.centroids]
             if self.distance_metric=='euclidean':
                 distances = [np.linalg.norm(orphan.values-self.centroids[centroid]) for centroid in self.centroids]
             #nominate closest class
             distance = min(distances)
-            if distance<
+            if distance< radius+(self.boundary_thresh*self.boundary_thresh_growth):
+                classification = distances.index(distance) # BUG: Distance index won't be the same as class index.
+                #get the radius of the class
+                radius = self.radius[classification]
+                
+                
+                
+        self.verbose(1,debug='Checking for class intersections by comparing centroid distances to sum of radiuses.')
 
+        
+    def fit_new(self,additional_data):
+        
+        
 
 
     def fit_legacy(self,data):
