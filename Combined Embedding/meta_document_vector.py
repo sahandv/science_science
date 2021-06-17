@@ -78,7 +78,7 @@ max_paragraph_len = int(np.percentile(text_lens, 95)) # take Nth percentile as t
 #     'brown fox hates cats'
 #     ]
 
-embedding_dim = 128
+embedding_dim = 100
 num_epochs = 500
 vocab_limit = 50000
 n_docs = len(corpus_idx)+1
@@ -158,7 +158,7 @@ if tokenizer=='bert':
     # =============================================================================
     # Prepare sequences
     # =============================================================================
-print("Preparing sequences")
+print("\nPreparing sequences")
 revers_word_index = ta.reverse_word_index(word_index)
 
 # you can add maxlen=int. you can add padding='post', default is 'pre'. you can truncate='post' to remove from the end, default is 'pre' again
@@ -295,7 +295,12 @@ class DataGenerator(tf.keras.utils.Sequence):
         inputs_1,inputs_2,inputs_3 = self._generate_input_123(ID_list)
 
         y = self._generate_y(ID_list)
-        return [inputs_1,inputs_2,inputs_3], y
+        if self.n_inputs==1:
+            return [inputs_2,inputs_3], y
+        if self.n_inputs==2:
+            return [inputs_1,inputs_3], y
+        if self.n_inputs==3:
+            return [inputs_1,inputs_2,inputs_3], y
 
     
     def _generate_y(self, ID_list):
@@ -340,7 +345,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         
             
         
-    
+
     # def _generate_input_3(self, ID_list): 
     #     #inputs_netvec
     #     x_batch = np.empty((self.batch_size,self.x2.shape[1]), dtype=int)
@@ -348,48 +353,41 @@ class DataGenerator(tf.keras.utils.Sequence):
     #         x_batch[i,] = self.x2[self.corpus_idx[i]]
     #     return(x_batch)
 
-train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,
-                              n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=48)
-valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,
-                              n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=48)
+train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,n_inputs=1,
+                              n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=1)
+valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_inputs=1,
+                              n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=1)
 
-# for item in train_dataset:
+# for item in train_dataset:z
 #     print(item)
 
-
     # =============================================================================
-    # Train
+    # Train 1 inputs
     # =============================================================================
-inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
 inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
-inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
-# inputs_aux= tf.keras.Input(shape=(3,), dtype="int32",name='features input')
+x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1,name='doc_embedding')(inputs_doc)
+x_12 = tf.keras.layers.Flatten(name='doc_flatten')(x_12)
+x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
 
-x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1)(inputs_seq)
-x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False))(x_11)
-# x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(50))(x_11)
-x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
+# x_12 = tf.keras.layers.Reshape((100,))(x_12)
+# # x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
 
-x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1)(inputs_doc)
-x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
+# x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
 x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
 
-x_2 = tf.keras.layers.Dense(128,activation='relu')(inputs_netvec)
+
+inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
+x_2 = tf.keras.layers.Dense(128,activation='relu',name='net_vec_dense_1')(inputs_netvec)
 x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
 
-# x_3 = tf.keras.layers.Dense(100,activation='relu')(inputs_aux)
-# x_3 = tf.keras.Model(inputs=inputs_aux, outputs=x_3)
-
-x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='combination')
-x = tf.keras.layers.Dense(128,activation='relu')(x)
+x = tf.keras.layers.concatenate([x_12.output, x_2.output], name='concatenate')
+x = tf.keras.layers.Dense(128,activation='relu',name='main_dense_1')(x)
 # x = tf.keras.layers.Dense(64,activation='relu')(x)
-outputs = tf.keras.layers.Dense(n_classes, activation="softmax")(x)
+outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
 
-
-model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
+model = keras.Model(inputs=[x_12.input, x_2.input], outputs=outputs)
 
 adam = tf.keras.optimizers.Adam(lr=0.01)
-
 model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
 model.summary()
 tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
@@ -401,6 +399,98 @@ tensorboard = tf.keras.callbacks.TensorBoard(
                           histogram_freq=1,
                           write_images=True
                         )
+
+history = model.fit(train_dataset,
+                    epochs=num_epochs, 
+                    validation_data=valid_dataset,
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+    # =============================================================================
+    # Train 2 inputs
+    # =============================================================================
+inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
+x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
+x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False,name='token_LSTM'),name='token_bidirectional')(x_11)
+# x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(50))(x_11)
+x_11 = tf.keras.layers.Dense(100,activation='relu',name='token_dense')(x_11)
+x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
+
+inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
+x_2 = tf.keras.layers.Dense(128,activation='relu',name='net_vec_dense_1')(inputs_netvec)
+x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
+
+x = tf.keras.layers.concatenate([x_11.output, x_2.output], name='concatenate')
+x = tf.keras.layers.Dense(128,activation='relu',name='main_dense_1')(x)
+# x = tf.keras.layers.Dense(64,activation='relu')(x)
+outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
+
+model = keras.Model(inputs=[x_11.input, x_2.input], outputs=outputs)
+
+adam = tf.keras.optimizers.Adam(lr=0.01)
+model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
+model.summary()
+tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
+
+callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
+checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
+tensorboard = tf.keras.callbacks.TensorBoard(
+                          log_dir='.\logs',
+                          histogram_freq=1,
+                          write_images=True
+                        )
+
+history = model.fit(train_dataset,
+                    epochs=num_epochs, 
+                    validation_data=valid_dataset,
+                    verbose=1,
+                    callbacks=[callback, checkpoint,tensorboard])
+
+    # =============================================================================
+    # Train 3 inputs
+    # =============================================================================
+inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
+x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
+x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False,name='token_LSTM'),name='token_bidirectional')(x_11)
+# x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(50))(x_11)
+x_11 = tf.keras.layers.Dense(100,activation='relu',name='token_dense')(x_11)
+x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
+
+inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
+x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1,name='doc_embedding')(inputs_doc)
+# x_12 = tf.keras.layers.Flatten(name='doc_flatten')(x_12)
+# x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
+
+# x_12 = tf.keras.layers.Reshape((100,))(x_12)
+# # x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
+
+x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
+x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
+
+inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
+x_2 = tf.keras.layers.Dense(128,activation='relu',name='net_vec_dense_1')(inputs_netvec)
+x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
+
+x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='concatenate')
+x = tf.keras.layers.concatenate([x_11.output, x_2.output], name='concatenate')
+x = tf.keras.layers.Dense(128,activation='relu',name='main_dense_1')(x)
+# x = tf.keras.layers.Dense(64,activation='relu')(x)
+outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
+
+model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
+adam = tf.keras.optimizers.Adam(lr=0.01)
+model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
+model.summary()
+tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
+
+callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
+checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
+tensorboard = tf.keras.callbacks.TensorBoard(
+                          log_dir='.\logs',
+                          histogram_freq=1,
+                          write_images=True
+                        )
+ 
 history = model.fit(train_dataset,
                     epochs=num_epochs, 
                     validation_data=valid_dataset,
@@ -408,18 +498,18 @@ history = model.fit(train_dataset,
                     callbacks=[callback, checkpoint,tensorboard])
 
 
-history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=2),
-                    epochs=num_epochs, 
-                    validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=2),
-                    verbose=1,
-                    callbacks=[callback, checkpoint,tensorboard])
+# history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=2),
+#                     epochs=num_epochs, 
+#                     validation_data=_input_fn(test_x1, x2,test_y,n_classes=n_classes,corpus_idx=test_corpus_idx,batch_size=2),
+#                     verbose=1,
+#                     callbacks=[callback, checkpoint,tensorboard])
 
 
-history = model.fit([train_x1,train_corpus_idx,train_x2],train_y_cat,
-                    epochs=num_epochs, 
-                    validation_data=([test_x1,test_corpus_idx,test_x2],test_y_cat),
-                    verbose=1,
-                    callbacks=[callback, checkpoint,tensorboard])
+# history = model.fit([train_x1,train_corpus_idx,train_x2],train_y_cat,
+#                     epochs=num_epochs, 
+#                     validation_data=([test_x1,test_corpus_idx,test_x2],test_y_cat),
+#                     verbose=1,
+#                     callbacks=[callback, checkpoint,tensorboard])
 
 
 
