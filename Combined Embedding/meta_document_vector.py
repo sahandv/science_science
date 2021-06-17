@@ -28,6 +28,7 @@ num_epochs = 500
 vocab_limit = 50000
 min_paragraph_len = 50  #percentage of each paragraph
 n_inputs = 3 #network type selection
+batch_size = 256
 
 # =============================================================================
 # Prepare GPU
@@ -354,9 +355,9 @@ class DataGenerator(tf.keras.utils.Sequence):
     #     return(x_batch)
 
 train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,n_inputs=n_inputs,
-                              n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=128)
+                              n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=batch_size)
 valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_inputs=n_inputs,
-                              n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=128)
+                              n_classes=n_classes,n_docs=n_docs,corpus_idx=test_corpus_idx,batch_size=batch_size)
 
 # for item in train_dataset:
 #     print(item)
@@ -451,10 +452,6 @@ if n_inputs==3:
     x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1,name='doc_embedding')(inputs_doc)
     x_12 = tf.keras.layers.Flatten(name='doc_flatten')(x_12)
     x_12 = tf.keras.layers.Dense(50,activation='relu')(x_12)
-    
-    # x_12 = tf.keras.layers.Reshape((100,))(x_12)
-    # # x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
-    
     # x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
     x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
     
@@ -463,7 +460,6 @@ if n_inputs==3:
     x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
     
     x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='concatenate')
-    x = tf.keras.layers.concatenate([x_11.output, x_2.output], name='concatenate')
     x = tf.keras.layers.Dense(128,activation='relu',name='main_dense_1')(x)
     # x = tf.keras.layers.Dense(64,activation='relu')(x)
     outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
