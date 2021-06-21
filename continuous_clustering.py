@@ -382,7 +382,7 @@ class CK_Means:
         self.verbose(1,debug='Checking for class intersections by comparing centroid distances to sum of radiuses.')
 
         
-    def fit_new(self,additional_data):
+    # def fit_new(self,additional_data):
         
         
 
