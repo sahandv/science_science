@@ -23,12 +23,12 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras import mixed_precision
 
 tokenizer = 'word'
-embedding_dim = 100
+embedding_dim = 128
 num_epochs = 500
 vocab_limit = 50000
-min_paragraph_len = 50  #percentage of each paragraph
+min_paragraph_len = 35  #percentage of each paragraph
 n_inputs = 3 #network type selection
-batch_size = 256
+batch_size = 512
 
 # =============================================================================
 # Prepare GPU
@@ -363,7 +363,7 @@ valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_inputs=n_inputs
 #     print(item)
 
     # =============================================================================
-    # Train 1 inputs (netvec & docvec)
+    # Network 1 inputs (netvec & docvec)
     # =============================================================================
 if n_inputs==1:
     inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
@@ -403,7 +403,7 @@ if n_inputs==1:
                             )
 
     # =============================================================================
-    # Train 2 inputs (netvec & wordvec)
+    # Network 2 inputs (netvec & wordvec)
     # =============================================================================
 if n_inputs==2:
     inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
@@ -438,14 +438,15 @@ if n_inputs==2:
                             )
 
     # =============================================================================
-    # Train 3 inputs (all)
+    # Network 3 inputs (all)
     # =============================================================================
 if n_inputs==3:
     inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
     x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
-    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False,name='token_LSTM'),name='token_bidirectional')(x_11)
-    # x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(50))(x_11)
-    x_11 = tf.keras.layers.Dense(100,activation='relu',name='token_dense')(x_11)
+    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
+    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,name='token_LSTM_2'),name='token_bidirectional_2')(x_11)
+    x_11 = tf.keras.layers.Dense(300,activation='relu',name='token_dense_1')(x_11)
+    x_11 = tf.keras.layers.Dense(200,activation='relu',name='token_dense_2')(x_11)
     x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
     
     inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
@@ -456,12 +457,13 @@ if n_inputs==3:
     x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
     
     inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
-    x_2 = tf.keras.layers.Dense(128,activation='relu',name='net_vec_dense_1')(inputs_netvec)
+    x_2 = tf.keras.layers.Dense(200,activation='relu',name='net_vec_dense_1')(inputs_netvec)
+    x_2 = tf.keras.layers.Dense(100,activation='relu',name='net_vec_dense_2')(x_2)
     x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
     
     x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='concatenate')
-    x = tf.keras.layers.Dense(128,activation='relu',name='main_dense_1')(x)
-    # x = tf.keras.layers.Dense(64,activation='relu')(x)
+    x = tf.keras.layers.Dense(150,activation='relu',name='main_dense_1')(x)
+    x = tf.keras.layers.Dense(100,activation='relu',name='main_dense_2')(x)
     outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
     
     model = keras.Model(inputs=[x_11.input,x_12.input, x_2.input], outputs=outputs)
@@ -470,7 +472,7 @@ if n_inputs==3:
     model.summary()
     tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
     
-    callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
+    callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=25)
     checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
     tensorboard = tf.keras.callbacks.TensorBoard(
                               log_dir='.\logs',
@@ -478,12 +480,18 @@ if n_inputs==3:
                               write_images=True
                             )
  
+    # =============================================================================
+    # Train
+    # =============================================================================
 history = model.fit(train_dataset,
                     epochs=num_epochs, 
                     validation_data=valid_dataset,
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
 
+anna.plot_graphs(history,'accuracy')
+
+#%%
 
 # history = model.fit(_input_fn(train_x1, x2,train_y,n_classes=n_classes,corpus_idx=train_corpus_idx,batch_size=2),
 #                     epochs=num_epochs, 
