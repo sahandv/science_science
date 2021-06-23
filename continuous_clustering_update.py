@@ -241,8 +241,9 @@ class CK_Means:
 
         """
         self.radius = []
-        for i in classifications:
-            cluster = np.array(classifications[i])
+        for i in classifications.groupby('class').groups:
+            
+            cluster = classifications[classifications['class']==i][self.columns_vector].values
             centroid = np.array(centroids[i])
             try:
                 if distance_metric == 'euclidean':
@@ -447,8 +448,8 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
