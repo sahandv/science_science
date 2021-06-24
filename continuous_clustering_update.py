@@ -158,6 +158,7 @@ class CK_Means:
     
     def initialize_clusters(self,data):
         # self.classifications = {}
+        
         self.columns_vector = [str(i) for i in range(data.shape[1])]
         self.columns = ['t','class']+self.columns_vector
         self.classifications = pd.DataFrame(data)
@@ -190,15 +191,30 @@ class CK_Means:
         # for i,featureset in enumerate(data):
         for i,row in classifications[self.columns_vector].iterrows():
             self.classifications['class'][i] = self.assign_cluster(row.values)
+            
+    def assign_clusters_pandas(self,classifications):
+        """
+        Parameters
+        ----------
+        Parameters
+        ----------
+        classifications: Pandas DataFrame
+            Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t'). 
+
+        """
+        self.classifications['class'] = self.classifications[self.columns_vector].apply(lambda x: self.assign_cluster(x),axis = 1)
     
     def centroid_stable(self):
         stable = True
         for c in self.centroids:
             original_centroid = self.centroids_history[-1][c] 
             current_centroid = self.centroids[c]
-            if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
-                self.verbose(2,debug=str(np.sum((current_centroid-original_centroid)/original_centroid*100.0))+' > '+str(self.tol))
+            movement = abs(np.sum((current_centroid-original_centroid)/abs(original_centroid)*100.0))
+            if movement > self.tol:
+                self.verbose(2,debug=str(movement)+' > '+str(self.tol))
                 stable = False
+            else:
+                self.verbose(2,debug=str(movement)+' < '+str(self.tol))
         return stable
     
     def get_class_min_bounding_box(self,classifications):
@@ -215,7 +231,8 @@ class CK_Means:
 
         """
         self.ndbbox = []
-        for i in classifications.groupby('class').groups:
+        labels = classifications.groupby('class').groups
+        for i in labels:
             # i = np.array(classifications[i])
             vecs = classifications[classifications['class']==i][self.columns_vector].values
             try:
@@ -241,15 +258,15 @@ class CK_Means:
 
         """
         self.radius = []
-        for i in classifications.groupby('class').groups:
-            
-            cluster = classifications[classifications['class']==i][self.columns_vector].values
+        labels = classifications.groupby('class').groups
+        for i in labels:
+            vecs = classifications[classifications['class']==i][self.columns_vector].values
             centroid = np.array(centroids[i])
             try:
                 if distance_metric == 'euclidean':
-                    self.radius.append(max([np.linalg.norm(vector-centroid) for vector in cluster]))
+                    self.radius.append(max([np.linalg.norm(vector-centroid) for vector in vecs]))
                 if distance_metric == 'cosine':
-                    self.radius.append(max([spatial.distance.cosine(vector,centroid) for vector in cluster]))
+                    self.radius.append(max([spatial.distance.cosine(vector,centroid) for vector in vecs]))
             except:
                 self.radius.append(0)
         return self.radius
@@ -277,27 +294,29 @@ class CK_Means:
 
         """
         # Initialize centroids
-        self.verbose(1,debug='Initializing centroids')
+        self.verbose(1,debug='Initializing centroids using method: '+self.initializer)
         patience_counter = 0
         if self.initializer=='random_generated':
             self.initialize_rand_node_generate(data)
         elif self.initializer=='random_selected':
             self.initialize_rand_node_select(data)
+        self.verbose(1,debug='Initialized centroids')
         
         # Iterations
         for iteration in tqdm(range(self.max_iter),total=self.max_iter):
             
             # Initialize clusters
-            self.initialize_clusters()
+            self.initialize_clusters(data)
             
             # Iterate over data rows and assign clusters
-            self.assign_clusters(data)
+            self.assign_clusters_pandas(self.classifications)
                 
             # Update centroids
             prev_centroids = dict(self.centroids)
             self.centroids_history.append(prev_centroids)
-            for classification in self.classifications:
-                self.centroids[classification] = np.average(self.classifications[classification],axis=0)
+            for i in self.classifications.groupby('class').groups:
+                vecs = self.classifications[self.classifications['class']==i][self.columns_vector].values
+                self.centroids[i] = np.average(vecs,axis=0)
             
             # Compare centroid change to stop iteration
             if self.centroid_stable():
@@ -308,8 +327,6 @@ class CK_Means:
                 self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
             else:
                 patience_counter=0
-                
-
 
     def fit_update(self,additional_data,previous_data):
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
@@ -409,42 +426,6 @@ class CK_Means:
         
         
 
-
-    def fit_legacy(self,data):
-        # Initialize centroids
-        self.initialize_rand_node_select(self,data)
-        
-        for i in tqdm(range(self.max_iter),total=self.max_iter):
-            
-            # Initialize clusters
-            self.classifications = {}
-            for i in range(self.k):
-                self.classifications[i] = []
-                
-            # Iterate over data rows and assign clusters
-            for featureset in data:
-                distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
-                classification = distances.index(min(distances))
-                self.classifications[classification].append(featureset)
-
-            # Update centroids
-            prev_centroids = dict(self.centroids)
-            
-            for classification in self.classifications:
-                self.centroids[classification] = np.average(self.classifications[classification],axis=0)
-
-            optimized = True
-
-            for c in self.centroids:
-                original_centroid = prev_centroids[c]
-                current_centroid = self.centroids[c]
-                if np.sum((current_centroid-original_centroid)/original_centroid*100.0) > self.tol:
-                    print(np.sum((current_centroid-original_centroid)/original_centroid*100.0))
-                    optimized = False
-
-            if optimized:
-                break
-
 # =============================================================================
 # Load data and init
 # =============================================================================
@@ -503,9 +484,18 @@ X_0.shape
 Y_0 = Y[:-5000]
 Y_0.shape
 
-model = CK_Means(verbose=1,k=n_clusters,distance_metric='cosine')
+model = CK_Means(verbose=2,k=n_clusters,distance_metric='cosine')
 model.fit(X_0)
 predicted_labels = model.predict(X_0)
+
+
+# start_time = time.time()
+# model.initialize_rand_node_generate(X_0)
+# print("--- %s seconds ---" % (time.time() - start_time))
+
+# model.initialize_clusters(X_0)
+# classifications = model.classifications
+# model.assign_clusters(X_0)
 
 tmp_results = ['Ck-means T0','cosine']+evaluate(X_0,Y_0,predicted_labels)
 tmp_results = pd.Series(tmp_results, index = results.columns)

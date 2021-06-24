@@ -445,8 +445,7 @@ if n_inputs==3:
     x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
     x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
     x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,name='token_LSTM_2'),name='token_bidirectional_2')(x_11)
-    x_11 = tf.keras.layers.Dense(300,activation='relu',name='token_dense_1')(x_11)
-    x_11 = tf.keras.layers.Dense(200,activation='relu',name='token_dense_2')(x_11)
+    x_11 = tf.keras.layers.Dense(200,activation='relu',name='token_dense_1')(x_11)
     x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
     
     inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
@@ -462,7 +461,7 @@ if n_inputs==3:
     x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
     
     x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='concatenate')
-    x = tf.keras.layers.Dense(150,activation='relu',name='main_dense_1')(x)
+    x = tf.keras.layers.Dense(200,activation='relu',name='main_dense_1')(x)
     x = tf.keras.layers.Dense(100,activation='relu',name='main_dense_2')(x)
     outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
     
