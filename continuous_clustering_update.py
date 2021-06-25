@@ -157,8 +157,14 @@ class CK_Means:
             self.centroids[i] = np.array([np.random.uniform(x[1],x[0]) for x in self.golbal_boundaries])
     
     def initialize_clusters(self,data):
-        # self.classifications = {}
-        
+        """
+        Make a Pandas DataFrame self.classifications from the 2D data, with empty class and T=0
+
+        Parameters
+        ----------
+        data : 2D numpy array.
+
+        """
         self.columns_vector = [str(i) for i in range(data.shape[1])]
         self.columns = ['t','class']+self.columns_vector
         self.classifications = pd.DataFrame(data)
@@ -169,7 +175,26 @@ class CK_Means:
         self.class_radius = {}
         for i in range(self.k):
             self.class_radius[i] = None
-            
+    
+    def add_to_clusters(self,data,t):
+        """
+        Update self.classifications using the new 2D data
+
+        Parameters
+        ----------
+        data : 2D numpy array.
+        t : int
+            Time-stamp of data (e.g. 0,1,2,3,..,n)
+
+        """
+        self.columns
+        classifications = pd.DataFrame(data)
+        classifications.insert(0,'class',None,0)
+        classifications.insert(0,'t',None,0)
+        classifications.columns = self.columns
+        classifications['t'] = t
+        self.classifications = self.classifications.append(classifications)
+    
     def assign_cluster(self,vector):
         if self.distance_metric=='cosine':
             distances = [spatial.distance.cosine(vector,self.centroids[centroid]) for centroid in self.centroids]
@@ -328,7 +353,7 @@ class CK_Means:
             else:
                 patience_counter=0
 
-    def fit_update(self,additional_data,previous_data):
+    def fit_update(self,additional_data,previous_data,t):
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
         self.verbose(1,debug='Initiating cluster distances and boundaries...')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
@@ -337,14 +362,19 @@ class CK_Means:
         self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
         self.update_classes = []
         
-        self.verbose(1,debug='Assigning ')
-        for vec in tqdm(additional_data,total=additional_data.shape[0]):
+        self.verbose(1,debug='Updating self.classifications with new data.')
+        # Update clusters with new data and empty classes
+        index_start = self.classifications.index[-1]+1
+        self.add_to_clusters(additional_data,t)
+        
+        self.verbose(1,debug='Assigning...')
+        for i,row in self.iloc[1:].classifications[self.columns_vector].iterrows():
             # If the new node is within boundary thresholds of any cluster, add to the cluster.
             #measure distance from centroids 
             if self.distance_metric=='cosine':
-                distances = [spatial.distance.cosine(vec,self.centroids[centroid]) for centroid in self.centroids]
+                distances = [spatial.distance.cosine(row.values,self.centroids[centroid]) for centroid in self.centroids]
             if self.distance_metric=='euclidean':
-                distances = [np.linalg.norm(vec-self.centroids[centroid]) for centroid in self.centroids]
+                distances = [np.linalg.norm(row.values-self.centroids[centroid]) for centroid in self.centroids]
             #nominate closest class
             distance = min(distances)
             classification = distances.index(distance)
@@ -354,13 +384,13 @@ class CK_Means:
             # is it inside class or within class threshold?
             if distance <= radius+self.boundary_thresh:
                 #yes: assign it
-                self.classifications[classification].append(vec)
+                self.classifications['class'][i] = classification
                 # self.update_assigned_labels[vec].append(classification)
-                self.update_assigned_labels = self.update_assigned_labels.append(list(vec)+[classification])
+                self.update_assigned_labels = self.update_assigned_labels.append(list(row.value)+[classification])
                 # no: 
             else:
                 # put it into a temprory new cluster and give it a name (K+1)
-                self.classifications[model.k].append(vec)
+                self.classifications[model.k].append(row.value)
                 self.k+=1
                 self.update_classes.append(self.k)
             
@@ -429,8 +459,8 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
@@ -456,22 +486,6 @@ n_clusters = len(list(labels.groupby('label').groups.keys()))
 
 results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
 
-# =============================================================================
-# Cluster benchmark
-# =============================================================================
-print('\n- k-means random -----------------------')
-for fold in tqdm(range(5)):
-    seed = randint(0,10**5)
-    model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
-    predicted_labels = model.labels_
-    tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
-    tmp_results = pd.Series(tmp_results, index = results.columns)
-    results = results.append(tmp_results, ignore_index=True)
-mean = results.mean(axis=0)
-maxx = results.max(axis=0)
-print(mean)
-print(maxx)
-
 
 # =============================================================================
 # Cluster 
@@ -487,7 +501,6 @@ Y_0.shape
 model = CK_Means(verbose=2,k=n_clusters,distance_metric='cosine')
 model.fit(X_0)
 predicted_labels = model.predict(X_0)
-
 
 # start_time = time.time()
 # model.initialize_rand_node_generate(X_0)
@@ -511,5 +524,20 @@ Y_1 = Y[-5000:-2500]
             
 
 
+# =============================================================================
+# Cluster benchmark
+# =============================================================================
+print('\n- k-means random -----------------------')
+for fold in tqdm(range(5)):
+    seed = randint(0,10**5)
+    model = KMeans(n_clusters=n_clusters,n_init=20, init='random', random_state=seed).fit(X)
+    predicted_labels = model.labels_
+    tmp_results = ['k-means random','seed '+str(seed)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
+mean = results.mean(axis=0)
+maxx = results.max(axis=0)
+print(mean)
+print(maxx)
 
 
