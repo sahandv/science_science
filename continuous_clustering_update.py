@@ -368,35 +368,37 @@ class CK_Means:
         self.add_to_clusters(additional_data,t)
         
         self.verbose(1,debug='Assigning...')
-        for i,row in self.iloc[1:].classifications[self.columns_vector].iterrows():
-            # If the new node is within boundary thresholds of any cluster, add to the cluster.
-            #measure distance from centroids 
-            if self.distance_metric=='cosine':
-                distances = [spatial.distance.cosine(row.values,self.centroids[centroid]) for centroid in self.centroids]
-            if self.distance_metric=='euclidean':
-                distances = [np.linalg.norm(row.values-self.centroids[centroid]) for centroid in self.centroids]
-            #nominate closest class
-            distance = min(distances)
-            classification = distances.index(distance)
-            #get the radius of the class
-            radius = self.radius[classification]
+        for iteration in tqdm(range(self.max_iter),total=self.max_iter):
+            for i,row in self.iloc[1:].classifications[self.columns_vector].iterrows():
+                # If the new node is within boundary thresholds of any cluster, add to the cluster.
+                #measure distance from centroids 
+                if self.distance_metric=='cosine':
+                    distances = [spatial.distance.cosine(row.values,self.centroids[centroid]) for centroid in self.centroids]
+                if self.distance_metric=='euclidean':
+                    distances = [np.linalg.norm(row.values-self.centroids[centroid]) for centroid in self.centroids]
+                #nominate closest class
+                distance = min(distances)
+                classification = distances.index(distance)
+                #get the radius of the class
+                radius = self.radius[classification]
+                
+                # is it inside class or within class threshold?
+                if distance <= radius+self.boundary_thresh:
+                    #yes: assign it
+                    self.classifications['class'][i] = classification
+                    # self.update_assigned_labels[vec].append(classification)
+                    self.update_assigned_labels = self.update_assigned_labels.append(list(row.value)+[classification])
+                    # no: 
+                else:
+                    # put it into a temprory new cluster and give it a name (K+1)
+                    self.classifications[model.k].append(row.value)
+                    self.k+=1
+                    self.update_classes.append(self.k)
+                    self.classifications['class'][i] = self.k
             
-            # is it inside class or within class threshold?
-            if distance <= radius+self.boundary_thresh:
-                #yes: assign it
-                self.classifications['class'][i] = classification
-                # self.update_assigned_labels[vec].append(classification)
-                self.update_assigned_labels = self.update_assigned_labels.append(list(row.value)+[classification])
-                # no: 
-            else:
-                # put it into a temprory new cluster and give it a name (K+1)
-                self.classifications[model.k].append(row.value)
-                self.k+=1
-                self.update_classes.append(self.k)
+            # update centroids using time-aware weighting scheme
+            self.centroids_history.append(dict(self.centroids));
             
-            # update centroids
-            prev_centroids = dict(self.centroids)
-            self.centroids_history.append(prev_centroids)
             for classification in self.classifications:
                 self.centroids[classification] = np.average(self.classifications[classification],axis=0)
             # update radiuses 
@@ -470,7 +472,7 @@ label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small
 # label_address =  datapath+"Corpus/KPRIS/labels"
 
 vectors = pd.read_csv(data_address)#,header=None)
-labels = pd.read_csv(label_address)
+labels = pd.read_csv(label_address)#,names=['label'])
 labels.columns = ['label']
 
 try:
@@ -497,22 +499,25 @@ X_0 = X[:-5000]
 X_0.shape
 Y_0 = Y[:-5000]
 Y_0.shape
+for fold in range(1):
+    np.random.seed(randint(0,10**5))
+    model = CK_Means(verbose=0,k=n_clusters,distance_metric='cosine')
+    model.fit(X)
+    predicted_labels = model.predict(X)
+    
+    # start_time = time.time()
+    # model.initialize_rand_node_generate(X_0)
+    # print("--- %s seconds ---" % (time.time() - start_time))
+    
+    # model.initialize_clusters(X_0)
+    # classifications = model.classifications
+    # model.assign_clusters(X_0)
+    
+    tmp_results = ['Ck-means T0','cosine']+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
 
-model = CK_Means(verbose=2,k=n_clusters,distance_metric='cosine')
-model.fit(X_0)
-predicted_labels = model.predict(X_0)
 
-# start_time = time.time()
-# model.initialize_rand_node_generate(X_0)
-# print("--- %s seconds ---" % (time.time() - start_time))
-
-# model.initialize_clusters(X_0)
-# classifications = model.classifications
-# model.assign_clusters(X_0)
-
-tmp_results = ['Ck-means T0','cosine']+evaluate(X_0,Y_0,predicted_labels)
-tmp_results = pd.Series(tmp_results, index = results.columns)
-results = results.append(tmp_results, ignore_index=True)
 
 X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X_0)
 plot_3D(X_3d,labels[:-5000],predicted_labels)
@@ -520,7 +525,7 @@ plot_3D(X_3d,labels[:-5000],predicted_labels)
 X_1 = X[-5000:-2500]
 Y_1 = Y[-5000:-2500]
 
-
+model.get_class_radius(model.classifications,model.centroids,'cosine')
             
 
 
@@ -540,4 +545,15 @@ maxx = results.max(axis=0)
 print(mean)
 print(maxx)
 
+print('\n- meanshift random -----------------------')
+for fold in tqdm(range(2,5)):
+    seed = randint(0,10**5)
+    np.random.seed(seed)
+    from sklearn.cluster import MeanShift
+    model_ms = MeanShift(bandwidth=fold).fit(X)
+    predicted_labels = model_ms.labels_
+    tmp_results = ['mean shift','band='+str(fold)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
 
+np.unique(predicted_labels).shape
