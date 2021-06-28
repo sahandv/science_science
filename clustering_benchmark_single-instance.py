@@ -57,7 +57,7 @@ X = vectors.values
 Y = labels_f[0]
 n_clusters = len(list(labels.groupby('label').groups.keys())) 
 
-results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','NMI','AMI','ARI'])
+results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','Completeness','NMI','AMI','ARI'])
 # =============================================================================
 # Evaluation method
 # =============================================================================
@@ -65,7 +65,7 @@ def evaluate(X,Y,predicted_labels):
     
     df = pd.DataFrame(predicted_labels,columns=['label'])
     if len(df.groupby('label').groups)<2:
-        return [0,0,0,0,0]
+        return [0,0,0,0,0,0]
     
     try:
         sil = silhouette_score(X, predicted_labels, metric='euclidean')
@@ -74,6 +74,7 @@ def evaluate(X,Y,predicted_labels):
         
     return [sil,
             homogeneity_score(Y, predicted_labels),
+            homogeneity_score(predicted_labels, Y),
             normalized_mutual_info_score(Y, predicted_labels),
             adjusted_mutual_info_score(Y, predicted_labels),
             adjusted_rand_score(Y, predicted_labels)]
