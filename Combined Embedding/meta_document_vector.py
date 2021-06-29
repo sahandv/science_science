@@ -33,9 +33,9 @@ batch_size = 512
 # =============================================================================
 # Prepare GPU
 # =============================================================================
-from numba import cuda 
-device = cuda.get_current_device()
-device.reset()
+# from numba import cuda 
+# device = cuda.get_current_device()
+# device.reset()
 
 
 os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
@@ -296,6 +296,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         inputs_1,inputs_2,inputs_3 = self._generate_input_123(ID_list)
 
         y = self._generate_y(ID_list)
+        if self.n_inputs==0:
+            return inputs_3, y
         if self.n_inputs==1:
             return [inputs_2,inputs_3], y
         if self.n_inputs==2:
@@ -362,6 +364,46 @@ valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_inputs=n_inputs
 # for item in train_dataset:
 #     print(item)
 
+    # =============================================================================
+    # Network 0 inputs (netvec & docvec)
+    # =============================================================================
+if n_inputs==0:
+    # inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
+    # x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1,name='doc_embedding')(inputs_doc)
+    # x_12 = tf.keras.layers.Flatten(name='doc_flatten')(x_12)
+    # x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
+    
+    # x_12 = tf.keras.layers.Reshape((100,))(x_12)
+    # # x_12 = tf.keras.layers.Dense(15,activation='relu')(x_12)
+    
+    # x_12 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(10))(x_12)
+    # x_12 = tf.keras.Model(inputs=inputs_doc, outputs=x_12)
+    
+    
+    inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
+    x_2 = tf.keras.layers.Dense(256,activation='relu',name='net_vec_dense_1')(inputs_netvec)
+    # x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
+    
+    # x = tf.keras.layers.concatenate([x_12.output, x_2.output], name='concatenate')
+    x = tf.keras.layers.Dense(128,activation='relu',name='main_dense_1')(x_2)
+    # x = tf.keras.layers.Dense(64,activation='relu')(x)
+    outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
+    
+    model = keras.Model(inputs=inputs_netvec, outputs=outputs)
+    
+    adam = tf.keras.optimizers.Adam(lr=0.01)
+    model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
+    model.summary()
+    tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
+    
+    callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=35)
+    checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
+    tensorboard = tf.keras.callbacks.TensorBoard(
+                              log_dir='.\logs',
+                              histogram_freq=1,
+                              write_images=True
+                            )
+    
     # =============================================================================
     # Network 1 inputs (netvec & docvec)
     # =============================================================================
@@ -443,9 +485,9 @@ if n_inputs==2:
 if n_inputs==3:
     inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
     x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
-    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
-    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,name='token_LSTM_2'),name='token_bidirectional_2')(x_11)
-    x_11 = tf.keras.layers.Dense(200,activation='relu',name='token_dense_1')(x_11)
+    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
+    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,name='token_LSTM_2'),name='token_bidirectional_2')(x_11)
+    x_11 = tf.keras.layers.Dense(200,activation='relu',name='token_dense')(x_11)
     x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
     
     inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
@@ -457,11 +499,12 @@ if n_inputs==3:
     
     inputs_netvec = tf.keras.Input(shape=(300,), name='input_3')
     x_2 = tf.keras.layers.Dense(200,activation='relu',name='net_vec_dense_1')(inputs_netvec)
+    # x_2 = tf.keras.layers.BatchNormalization()(x_2)
     x_2 = tf.keras.layers.Dense(100,activation='relu',name='net_vec_dense_2')(x_2)
     x_2 = tf.keras.Model(inputs=inputs_netvec, outputs=x_2)
     
     x = tf.keras.layers.concatenate([x_11.output, x_12.output, x_2.output], name='concatenate')
-    x = tf.keras.layers.Dense(200,activation='relu',name='main_dense_1')(x)
+    x = tf.keras.layers.Dense(150,activation='relu',name='main_dense_1')(x)
     x = tf.keras.layers.Dense(100,activation='relu',name='main_dense_2')(x)
     outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
     
@@ -471,7 +514,7 @@ if n_inputs==3:
     model.summary()
     tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
     
-    callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=25)
+    callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=15)
     checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
     tensorboard = tf.keras.callbacks.TensorBoard(
                               log_dir='.\logs',
