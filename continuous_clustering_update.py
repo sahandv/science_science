@@ -87,7 +87,7 @@ class CK_Means:
             The number of clusters for initial time slot. The default is 5.
         tol : float, optional
             Tolerance for centroid stability measure. The default is 0.00001.
-        max_iter : int, optional
+        n_iter : int, optional
             Maximum number of iterations. The default is 300.
         patience : int, optional
             patience for telerance of stability. It is served as the minimum number of iterations after stability of centroids to continue the iters. The default is 2.
@@ -96,6 +96,9 @@ class CK_Means:
             If None, will automatically estimate.
         minimum_nodes : int, optional
             Minimum number of nodes to make a new cluster. The default is 10.
+        a : float, optional, The default is 1.
+            Weight or slope of temporal distance, while a>=0. 
+            The effectiveness of node in centroid calculation will be calculated as in a weight function such as the default V*[1/((a*t)+1)], where t is time delta, and V is vector value.
         seed : int, optional
             If seed is set, a seed will be used to make the results reproducable. The default is None.
         initializer : str, optional
@@ -119,14 +122,15 @@ class CK_Means:
         classifications: Pandas DataFrame
             Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t'). 
         """
-    def __init__(self, k:int=5, tol:float=0.00001, max_iter:int=300, patience=2, 
-                 boundary_thresh:float=0.5, boundary_thresh_growth:float=1.1,minimum_nodes:int=10, seed=None,
+    def __init__(self, k:int=5, tol:float=0.00001, n_iter:int=300, patience=2, 
+                 boundary_thresh:float=0.5, boundary_thresh_growth:float=1.1,
+                 minimum_nodes:int=10, seed=None, a:float=1.0,
                  initializer:str='random_generated',distance_metric:str='euclidean',
                  verbose:int=1):
         
         self.k = k
         self.tol = tol
-        self.max_iter = max_iter
+        self.n_iter = n_iter
         self.centroids_history = []
         self.centroids = {}
         self.seed = seed
@@ -233,7 +237,11 @@ class CK_Means:
     def centroid_stable(self):
         stable = True
         for c in self.centroids:
-            original_centroid = self.centroids_history[-1][c] 
+            try:
+                original_centroid = self.centroids_history[-1][c] 
+            except KeyError:
+                self.verbose(2,debug="New classes and centroids added. considering it a movevement and returning False")
+                stable = False
             current_centroid = self.centroids[c]
             movement = abs(np.sum((current_centroid-original_centroid)/abs(original_centroid)*100.0))
             if movement > self.tol:
@@ -307,7 +315,25 @@ class CK_Means:
                 distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
             labels.append(distances.index(min(distances)))
         return labels
+    
+    def weight(self,a,t):
+        """
+        Default weight function
+        
+        Parameters
+        ----------
+        t : int or array of int
+            Time delta.
+        a : float
+            Temproal value vanishing slope.
 
+        Returns
+        -------
+        float
+            Weight of the value(s) to use in weighted average.
+
+        """
+        return 1/((a*t)+1)
 
     def fit(self,data):
         """
@@ -329,8 +355,7 @@ class CK_Means:
         self.verbose(1,debug='Initialized centroids')
         
         # Iterations
-        for iteration in tqdm(range(self.max_iter),total=self.max_iter):
-            
+        for iteration in tqdm(range(self.n_iter),total=self.n_iter):
             # Initialize clusters
             self.initialize_clusters(data)
             
@@ -354,23 +379,27 @@ class CK_Means:
             else:
                 patience_counter=0
 
-    def fit_update(self,additional_data,previous_data,t):
+    def fit_update(self,additional_data,previous_data,t,n_iter=None):
+        if n_iter==None:
+            n_iter=self.n_iter
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
         self.verbose(1,debug='Initiating cluster distances and boundaries...')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
-        self.model.get_class_min_bounding_box(self.classifications)
+        self.get_class_min_bounding_box(self.classifications)
 
         self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
-        self.update_classes = []
+        self.update_classes = [] # list of new clusters
         
         self.verbose(1,debug='Updating self.classifications with new data.')
         # Update clusters with new data and empty classes
         index_start = self.classifications.index[-1]+1
         self.add_to_clusters(additional_data,t)
         
+        base_k = self.k
+        patience_counter = 0
         self.verbose(1,debug='Assigning...')
-        for iteration in tqdm(range(self.max_iter),total=self.max_iter):
-            for i,row in self.iloc[1:].classifications[self.columns_vector].iterrows():
+        for iteration in tqdm(range(n_iter),total=n_iter):
+            for i,row in self.classifications[self.columns_vector].iterrows():
                 # If the new node is within boundary thresholds of any cluster, add to the cluster.
                 #measure distance from centroids 
                 if self.distance_metric=='cosine':
@@ -388,22 +417,39 @@ class CK_Means:
                     #yes: assign it
                     self.classifications['class'][i] = classification
                     # self.update_assigned_labels[vec].append(classification)
-                    self.update_assigned_labels = self.update_assigned_labels.append(list(row.value)+[classification])
+                    self.update_assigned_labels = self.update_assigned_labels.append(list(row.values)+[classification])
                     # no: 
                 else:
                     # put it into a temprory new cluster and give it a name (K+1)
-                    self.classifications[model.k].append(row.value)
                     self.k+=1
                     self.update_classes.append(self.k)
                     self.classifications['class'][i] = self.k
             
-            # update centroids using time-aware weighting scheme
-            self.centroids_history.append(dict(self.centroids));
+            self.verbose(2,debug='Initial assignment completed for T'+str(t))
             
-            for classification in self.classifications:
-                self.centroids[classification] = np.average(self.classifications[classification],axis=0)
+            # update centroids using time-aware weighting scheme
+            prev_centroids = dict(self.centroids)
+            self.centroids_history.append(prev_centroids)
+            delta_t = abs(self.classifications['t']-self.classifications['t'].values.max())
+            weights = self.weight(1,delta_t)
+            for i in self.classifications.groupby('class').groups:
+                vecs = self.classifications[self.classifications['class']==i][self.columns_vector].values
+                self.centroids[i] = np.average(vecs,axis=0)
+
+                
+
             # update radiuses 
             self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+        
+            # Compare centroid change to stop iteration
+            if self.centroid_stable():
+                patience_counter+=1
+                if patience_counter>self.patience:
+                    self.verbose(1,debug='Centroids are stable within tolerance. Stopping.')
+                    break
+                self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
+            else:
+                patience_counter=0
         
         # self.verbose(1,debug='Finalizing initial assignment by calculating final radius and boundaries.')
         # self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
@@ -462,18 +508,18 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
-label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
+# data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
+# label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
 
-# data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
-# label_address =  datapath+"Corpus/KPRIS/labels"
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
+label_address =  datapath+"Corpus/KPRIS/labels"
 
 vectors = pd.read_csv(data_address)#,header=None)
-labels = pd.read_csv(label_address)#,names=['label'])
+labels = pd.read_csv(label_address,names=['label'])
 labels.columns = ['label']
 
 try:
@@ -494,7 +540,7 @@ results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneit
 # Cluster 
 # =============================================================================
 print('\n- Custom clustering --------------------')
-print(n_clusters)
+print('k=',n_clusters)
 
 X_0 = X[:-5000]
 X_0.shape
@@ -503,8 +549,8 @@ Y_0.shape
 for fold in range(1):
     np.random.seed(randint(0,10**5))
     model = CK_Means(verbose=0,k=n_clusters,distance_metric='cosine')
-    model.fit(X)
-    predicted_labels = model.predict(X)
+    model.fit(X_0)
+    predicted_labels = model.predict(X_0)
     
     # start_time = time.time()
     # model.initialize_rand_node_generate(X_0)
@@ -514,11 +560,14 @@ for fold in range(1):
     # classifications = model.classifications
     # model.assign_clusters(X_0)
     
-    tmp_results = ['Ck-means T0','cosine']+evaluate(X,Y,predicted_labels)
+    tmp_results = ['Ck-means T0','cosine']+evaluate(X_0,Y_0,predicted_labels)
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 
+X_1 = X[5000:]
+Y_1 = Y[5000:]
 
+model.fit_update(X_1,X_0,t=1)
 
 X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X_0)
 plot_3D(X_3d,labels[:-5000],predicted_labels)
