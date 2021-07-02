@@ -144,7 +144,18 @@ class CK_Means:
         if seed != None:
             np.random.seed(seed)
         
-    def verbose(self,value=1,**outputs):
+    def verbose(self,value,**outputs):
+        """
+        Verbose outputs
+
+        Parameters
+        ----------
+        value : int
+            An integer showing the verbose level of an output. Higher verbose value means less important.
+            If the object's initialized verbose level is equal to or lower than this value, it will print.
+        **outputs : kword arguments, 'key'='value'
+            Outputs with keys. Keys will be also printed. More than one key and output pair can be supplied.
+        """
         if value<=self.v:
             for output in outputs.items():
                 print('\n> '+str(output[0])+':',output[1])
@@ -192,7 +203,6 @@ class CK_Means:
             Time-stamp of data (e.g. 0,1,2,3,..,n)
 
         """
-        self.columns
         classifications = pd.DataFrame(data)
         classifications.insert(0,'class',None,0)
         classifications.insert(0,'t',None,0)
@@ -379,7 +389,7 @@ class CK_Means:
             else:
                 patience_counter=0
 
-    def fit_update(self,additional_data,previous_data,t,n_iter=None):
+    def fit_update(self,additional_data,t,n_iter=None,weight=None):
         if n_iter==None:
             n_iter=self.n_iter
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
@@ -388,18 +398,30 @@ class CK_Means:
         self.get_class_min_bounding_box(self.classifications)
 
         self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
-        self.update_classes = [] # list of new clusters
+        
         
         self.verbose(1,debug='Updating self.classifications with new data.')
         # Update clusters with new data and empty classes
         index_start = self.classifications.index[-1]+1
         self.add_to_clusters(additional_data,t)
-        
+        delta_t = abs(self.classifications['t']-self.classifications['t'].values.max())
+        if weight==None:
+            weights = self.weight(1,delta_t)
+        else:
+            try:
+                weights = weight(1,delta_t)
+            except:
+                self.verbose(0,warning='Exception occuured while trying to get the weights. Please make sure to provide a valid weight generating function or use default by not providing anything. The function should accept two slope and delta_t inputs. Now will use the default one.')
+                weights = self.weight(1,delta_t)
         base_k = self.k
         patience_counter = 0
         self.verbose(1,debug='Assigning...')
         for iteration in tqdm(range(n_iter),total=n_iter):
-            for i,row in self.classifications[self.columns_vector].iterrows():
+            self.update_classes = [] # list of new clusters
+            
+            # self.classifications['class'] = self.classifications[self.columns_vector][self.classifications['t']==t].apply(lambda x: self.assign_cluster(x),axis = 1)
+            for i,row in self.classifications[self.columns_vector][self.classifications['t']==t].iterrows():
+                self.verbose(3,debug='Processing row '+str(i)+'/'+str(self.classifications.index[-1]))
                 # If the new node is within boundary thresholds of any cluster, add to the cluster.
                 #measure distance from centroids 
                 if self.distance_metric=='cosine':
@@ -421,22 +443,19 @@ class CK_Means:
                     # no: 
                 else:
                     # put it into a temprory new cluster and give it a name (K+1)
-                    self.k+=1
-                    self.update_classes.append(self.k)
-                    self.classifications['class'][i] = self.k
+                    base_k+=1
+                    self.update_classes.append(base_k)
+                    self.classifications['class'][i] = base_k
             
-            self.verbose(2,debug='Initial assignment completed for T'+str(t))
+            self.verbose(2,debug='Initial assignment completed for T'+str(t)+' in iteration '+str(iteration))
             
             # update centroids using time-aware weighting scheme
             prev_centroids = dict(self.centroids)
             self.centroids_history.append(prev_centroids)
-            delta_t = abs(self.classifications['t']-self.classifications['t'].values.max())
-            weights = self.weight(1,delta_t)
             for i in self.classifications.groupby('class').groups:
                 vecs = self.classifications[self.classifications['class']==i][self.columns_vector].values
-                self.centroids[i] = np.average(vecs,axis=0)
-
-                
+                vecs = vecs*weights[self.classifications['class']==i]
+                self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
 
             # update radiuses 
             self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
@@ -508,8 +527,8 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 # data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
@@ -527,6 +546,7 @@ try:
     print('\nDroped index column. Now '+data_address+' has the shape of: ',vectors.shape)
 except:
     print('\nVector shapes seem to be good:',vectors.shape)
+
 
 labels_f = pd.factorize(labels.label)
 X = vectors.values
@@ -564,10 +584,17 @@ for fold in range(1):
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 
-X_1 = X[5000:]
-Y_1 = Y[5000:]
+X_1 = X[-5000:]
+Y_1 = Y[-5000:]
+classifications = model.classifications
+model.v = 2
+model.fit_update(X_1,t=1)
 
-model.fit_update(X_1,X_0,t=1)
+model.classifications[model.classifications['class']==0]
+
+classifications2 = model.classifications
+
+
 
 X_3d = TSNE(n_components=3, n_iter=500, verbose=2).fit_transform(X_0)
 plot_3D(X_3d,labels[:-5000],predicted_labels)
@@ -577,7 +604,6 @@ Y_1 = Y[-5000:-2500]
 
 model.get_class_radius(model.classifications,model.centroids,'cosine')
             
-
 
 # =============================================================================
 # Cluster benchmark
@@ -596,7 +622,7 @@ print(mean)
 print(maxx)
 
 print('\n- meanshift random -----------------------')
-for fold in tqdm(range(2,5)):
+for fold in tqdm(range(1,3)):
     seed = randint(0,10**5)
     np.random.seed(seed)
     from sklearn.cluster import MeanShift
