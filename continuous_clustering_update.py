@@ -84,34 +84,47 @@ class CK_Means:
         Initialization Parameters
         ----------
         k : int, optional
-            The number of clusters for initial time slot. The default is 5.
+            - The number of clusters for initial time slot. The default is 5.
         tol : float, optional
-            Tolerance for centroid stability measure. The default is 0.00001.
+            - Tolerance for centroid stability measure. The default is 0.00001.
         n_iter : int, optional
-            Maximum number of iterations. The default is 300.
+            - Maximum number of iterations. The default is 300.
         patience : int, optional
-            patience for telerance of stability. It is served as the minimum number of iterations after stability of centroids to continue the iters. The default is 2.
-        boundary_thresh : float or None, optional
-            Threshold to assign a node to a cluster out of the boundary of current nodes. The default is 0.5.
-            If None, will automatically estimate.
+            - patience for telerance of stability. It is served as the minimum 
+            number of iterations after stability of centroids to continue the 
+            iters. The default is 2.
+        boundary_epsilon_coeff : float, optional, 
+            - Coefficient of the boundary Epsilon, to calculate the exact epsilon 
+            for each cluster. Used to assign a node to a cluster out of the 
+            boundary of current nodes. 
+            - Epsilon=Radius*boundary_epsilon
+            - If zero, will not have evolutions.
+            - The default is 5.
+        boundary_epsilon_abs : float, optional
+            **** DEPRECATED ****
+            - Absolute value for boundary epsilon. 
+            - If None, will ignore and use adaptive (boundary_epsilon_coeff) for calculations.
+            - The default is None.
         minimum_nodes : int, optional
-            Minimum number of nodes to make a new cluster. The default is 10.
+            - Minimum number of nodes to make a new cluster. The default is 10.
         a : float, optional, The default is 1.
-            Weight or slope of temporal distance, while a>=0. 
-            The effectiveness of node in centroid calculation will be calculated as in a weight function such as the default V*[1/((a*t)+1)], where t is time delta, and V is vector value.
+            - Weight or slope of temporal distance, while a>=0. 
+            - The effectiveness of node in centroid calculation will be calculated 
+            as in a weight function such as the default function ( V*[1/((a*t)+1)]), 
+            where t is time delta, and V is vector value.
         seed : int, optional
-            If seed is set, a seed will be used to make the results reproducable. The default is None.
+            - If seed is set, a seed will be used to make the results reproducable. The default is None.
         initializer : str, optional
-            Centroid initialization. The options are:
+            - Centroid initialization. The options are:
                 'random_generated' randomly generated centroid based on upper and lower bounds of data.  
                 'random_selected' randomly selects an existing node as initialization point.
                 The default is 'random_generated'.
         distance_metric : str, optional
-            Options are 'euclidean' and 'cosine' distance metrics. The default is 'euclidean'.
+            - Options are 'euclidean' and 'cosine' distance metrics. The default is 'euclidean'.
         verbose : int, optional
-            '1' outputs main iterations and steps
-            '2' outputs debug data within each iteration, such as distances for tolerance
-            The default is 1.
+            - '1' verbosity outputs main iterations and steps
+            - '2' verbosity outputs debug data within each iteration, such as distances for tolerance
+            - The default is 1.
             
         Class Parameters
         ----------
@@ -123,7 +136,7 @@ class CK_Means:
             Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t'). 
         """
     def __init__(self, k:int=5, tol:float=0.00001, n_iter:int=300, patience=2, 
-                 boundary_thresh:float=0.5, boundary_thresh_growth:float=1.1,
+                 boundary_epsilon_coeff:float=5, boundary_epsilon_abs:float=None, boundary_epsilon_growth:float=0,
                  minimum_nodes:int=10, seed=None, a:float=1.0,
                  initializer:str='random_generated',distance_metric:str='euclidean',
                  verbose:int=1):
@@ -136,11 +149,11 @@ class CK_Means:
         self.seed = seed
         self.initializer = initializer
         self.distance_metric = distance_metric
-        self.boundary_thresh = boundary_thresh
+        self.boundary_epsilon_coeff = boundary_epsilon_coeff
         self.minimum_nodes = minimum_nodes
         self.patience = patience
         self.v = verbose
-        self.boundary_thresh_growth = boundary_thresh_growth
+        self.boundary_epsilon_coeff_growth = boundary_epsilon_growth
         if seed != None:
             np.random.seed(seed)
         
@@ -191,6 +204,74 @@ class CK_Means:
         self.class_radius = {}
         for i in range(self.k):
             self.class_radius[i] = None
+
+    def get_distance(self,vec_a,vec_b,distance_metric:str='euclidean'):
+        if distance_metric == 'euclidean':
+            return np.linalg.norm(vec_a-vec_b)
+        if distance_metric == 'cosine':
+            return spatial.distance.cosine(vec_a,vec_b)
+    
+    def get_class_min_bounding_box(self,classifications):
+        """
+        Parameters
+        ----------
+        classifications: Pandas DataFrame
+            Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t').  provided by self.classifications
+
+        Returns
+        -------
+        list
+            list of minimum bounding boxes for each cluster/class.
+
+        """
+        self.ndbbox = []
+        labels = classifications.groupby('class').groups
+        for i in labels:
+            # i = np.array(classifications[i])
+            vecs = classifications[classifications['class']==i][self.columns_vector].values
+            try:
+                self.ndbbox.append(np.array([vecs.min(axis=0,keepdims=True)[0],vecs.max(axis=0,keepdims=True)[0]]))
+            except :
+                self.ndbbox.append(np.zeros((2,i.shape[1])))
+                self.verbose(2,warning='Class is empty! returning zero box.')
+        return self.ndbbox
+
+    def get_min_radius(self,min_radius:float=None):
+        if min_radius==None:
+            return min(self.radius.values())*self.boundary_epsilon_coeff
+        else:
+            return min_radius
+
+    def get_class_radius(self,classifications,centroids,distance_metric:str='euclidean',min_radius:float=None):
+        """        
+        Parameters
+        ----------
+        classifications: Pandas DataFrame
+            Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t').  provided by self.classifications
+        centroids : dict
+            Dict of centroids, provided by self.centroids.
+        distance_metric : str, optional
+        min_radius : flaot, optional
+            A constant value for minimum radius of new-born clusters.
+            If None, will automatically use the smallest radius epsilon from the available radius values.
+            The default is None.
+        Returns
+        -------
+        list
+            list of cluster/class radius.
+
+        """
+        self.radius = {}
+        labels = classifications.groupby('class').groups
+        for i in labels:
+            vecs = classifications[classifications['class']==i][self.columns_vector].values
+            try:
+                centroid = np.array(centroids[i])
+                self.radius[i] = max([self.get_distance(vector,centroid,distance_metric) for vector in vecs])
+            except:
+                self.radius[i] = self.get_min_radius(min_radius=None)
+                self.verbose(2,warning='Exception handled. During radius calculation for class '+str(i)+' an error occuured, so minimum radius was assigned for it.')
+        return self.radius
     
     def add_to_clusters(self,data,t):
         """
@@ -211,10 +292,7 @@ class CK_Means:
         self.classifications = self.classifications.append(classifications)
     
     def assign_cluster(self,vector):
-        if self.distance_metric=='cosine':
-            distances = [spatial.distance.cosine(vector,self.centroids[centroid]) for centroid in self.centroids]
-        if self.distance_metric=='euclidean':
-            distances = [np.linalg.norm(vector-self.centroids[centroid]) for centroid in self.centroids]
+        distances = [self.get_distance(vector,self.centroids[centroid],self.distance_metric) for centroid in self.centroids]
         classification = distances.index(min(distances)) #argmin: get the index of the closest centroid to this featureset/node
         return classification
     
@@ -261,86 +339,19 @@ class CK_Means:
                 self.verbose(2,debug=str(movement)+' < '+str(self.tol))
         return stable
     
-    def get_class_min_bounding_box(self,classifications):
-        """
-        Parameters
-        ----------
-        classifications: Pandas DataFrame
-            Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t').  provided by self.classifications
-
-        Returns
-        -------
-        list
-            list of minimum bounding boxes for each cluster/class.
-
-        """
-        self.ndbbox = []
-        labels = classifications.groupby('class').groups
-        for i in labels:
-            # i = np.array(classifications[i])
-            vecs = classifications[classifications['class']==i][self.columns_vector].values
-            try:
-                self.ndbbox.append(np.array([vecs.min(axis=0,keepdims=True)[0],vecs.max(axis=0,keepdims=True)[0]]))
-            except :
-                self.ndbbox.append(np.zeros((2,i.shape[1])))
-                self.verbose(2,warning='Class is empty! returning zero box.')
-        return self.ndbbox
-
-    def get_class_radius(self,classifications,centroids,distance_metric='euclidean'):
-        """        
-        Parameters
-        ----------
-        classifications: Pandas DataFrame
-            Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t').  provided by self.classifications
-        centroids : dict
-            Dict of centroids, provided by self.centroids.
-
-        Returns
-        -------
-        list
-            list of cluster/class radius.
-
-        """
-        self.radius = []
-        labels = classifications.groupby('class').groups
-        for i in labels:
-            vecs = classifications[classifications['class']==i][self.columns_vector].values
-            centroid = np.array(centroids[i])
-            try:
-                if distance_metric == 'euclidean':
-                    self.radius.append(max([np.linalg.norm(vector-centroid) for vector in vecs]))
-                if distance_metric == 'cosine':
-                    self.radius.append(max([spatial.distance.cosine(vector,centroid) for vector in vecs]))
-            except:
-                self.radius.append(0)
-        return self.radius
-    
-    def predict(self,data):
+    def predict(self,data,distance_metric:str=None):
         assert len(data.shape)==2, "Incorrect shapes. Expecting a 2D np.array."
+        if distance_metric==None:
+            distance_metric = self.distance_metric
         labels = list()
         for featureset in data:
-            if self.distance_metric=='cosine':
-                distances = [spatial.distance.cosine(featureset,self.centroids[centroid]) for centroid in self.centroids]
-            if self.distance_metric=='euclidean':
-                distances = [np.linalg.norm(featureset-self.centroids[centroid]) for centroid in self.centroids]
+            distances = [self.get_distance(featureset,self.centroids[centroid],distance_metric) for centroid in self.centroids]
             labels.append(distances.index(min(distances)))
         return labels
     
     def weight(self,a,t):
         """
-        Default weight function
-        
-        Parameters
-        ----------
-        t : int or array of int
-            Time delta.
-        a : float
-            Temproal value vanishing slope.
-
-        Returns
-        -------
-        float
-            Weight of the value(s) to use in weighted average.
+        Default weight function: W = 1/((a*time_delta)+1)
 
         """
         return 1/((a*t)+1)
@@ -396,13 +407,12 @@ class CK_Means:
         self.verbose(1,debug='Initiating cluster distances and boundaries...')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
         self.get_class_min_bounding_box(self.classifications)
-
-        self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
+        self.min_radius = self.get_min_radius()
         
-        
+        # self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
         self.verbose(1,debug='Updating self.classifications with new data.')
         # Update clusters with new data and empty classes
-        index_start = self.classifications.index[-1]+1
+
         self.add_to_clusters(additional_data,t)
         delta_t = abs(self.classifications['t']-self.classifications['t'].values.max())
         if weight==None:
@@ -435,11 +445,11 @@ class CK_Means:
                 radius = self.radius[classification]
                 
                 # is it inside class or within class threshold?
-                if distance <= radius+self.boundary_thresh:
+                if distance <= radius+radius*self.boundary_epsilon_coeff:
                     #yes: assign it
                     self.classifications['class'][i] = classification
                     # self.update_assigned_labels[vec].append(classification)
-                    self.update_assigned_labels = self.update_assigned_labels.append(list(row.values)+[classification])
+                    # self.update_assigned_labels = self.update_assigned_labels.append(list(row.values)+[classification])
                     # no: 
                 else:
                     # put it into a temprory new cluster and give it a name (K+1)
@@ -458,7 +468,7 @@ class CK_Means:
                 self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
 
             # update radiuses 
-            self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+            self.get_class_radius(self.classifications,self.centroids,self.distance_metric,min_radius=self.min_radius)
         
             # Compare centroid change to stop iteration
             if self.centroid_stable():
@@ -510,7 +520,7 @@ class CK_Means:
                 distances = [np.linalg.norm(orphan.values-self.centroids[centroid]) for centroid in self.centroids]
             #nominate closest class
             distance = min(distances)
-            if distance< radius+(self.boundary_thresh*self.boundary_thresh_growth):
+            if distance< radius+(self.boundary_epsilon_coeff*self.boundary_epsilon_growth):
                 classification = distances.index(distance) # BUG: Distance index won't be the same as class index.
                 #get the radius of the class
                 radius = self.radius[classification]
