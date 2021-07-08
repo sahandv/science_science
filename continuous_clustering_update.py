@@ -97,9 +97,9 @@ class CK_Means:
             - Coefficient of the boundary Epsilon, to calculate the exact epsilon 
             for each cluster. Used to assign a node to a cluster out of the 
             boundary of current nodes. 
-            - Epsilon=Radius*boundary_epsilon
+            - Epsilon=Radius*boundary_epsilon_coeff
             - If zero, will not have evolutions.
-            - The default is 5.
+            - The default is 0.1.
         boundary_epsilon_abs : float, optional
             **** DEPRECATED ****
             - Absolute value for boundary epsilon. 
@@ -136,7 +136,7 @@ class CK_Means:
             Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t'). 
         """
     def __init__(self, k:int=5, tol:float=0.00001, n_iter:int=300, patience=2, 
-                 boundary_epsilon_coeff:float=5, boundary_epsilon_abs:float=None, boundary_epsilon_growth:float=0,
+                 boundary_epsilon_coeff:float=0.1, boundary_epsilon_abs:float=None, boundary_epsilon_growth:float=0,
                  minimum_nodes:int=10, seed=None, a:float=1.0,
                  initializer:str='random_generated',distance_metric:str='euclidean',
                  verbose:int=1):
@@ -236,11 +236,11 @@ class CK_Means:
                 self.verbose(2,warning='Class is empty! returning zero box.')
         return self.ndbbox
 
-    def get_min_radius(self,min_radius:float=None):
-        if min_radius==None:
+    def get_epsilon_radius(self,epsilon_radius:float=None):
+        if epsilon_radius==None:
             return min(self.radius.values())*self.boundary_epsilon_coeff
         else:
-            return min_radius
+            return epsilon_radius
 
     def get_class_radius(self,classifications,centroids,distance_metric:str='euclidean',min_radius:float=None):
         """        
@@ -252,7 +252,7 @@ class CK_Means:
             Dict of centroids, provided by self.centroids.
         distance_metric : str, optional
         min_radius : flaot, optional
-            A constant value for minimum radius of new-born clusters.
+            A constant value for minimum radius of new-born clusters. (if applicable)
             If None, will automatically use the smallest radius epsilon from the available radius values.
             The default is None.
         Returns
@@ -269,7 +269,7 @@ class CK_Means:
                 centroid = np.array(centroids[i])
                 self.radius[i] = max([self.get_distance(vector,centroid,distance_metric) for vector in vecs])
             except:
-                self.radius[i] = self.get_min_radius(min_radius=None)
+                self.radius[i] = self.get_epsilon_radius(epsilon_radius=None)
                 self.verbose(2,warning='Exception handled. During radius calculation for class '+str(i)+' an error occuured, so minimum radius was assigned for it.')
         return self.radius
     
@@ -407,7 +407,7 @@ class CK_Means:
         self.verbose(1,debug='Initiating cluster distances and boundaries...')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
         self.get_class_min_bounding_box(self.classifications)
-        self.min_radius = self.get_min_radius()
+        self.epsilon_radius = self.get_epsilon_radius()
         
         # self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
         self.verbose(1,debug='Updating self.classifications with new data.')
@@ -421,7 +421,7 @@ class CK_Means:
             try:
                 weights = weight(1,delta_t)
             except:
-                self.verbose(0,warning='Exception occuured while trying to get the weights. Please make sure to provide a valid weight generating function or use default by not providing anything. The function should accept two slope and delta_t inputs. Now will use the default one.')
+                self.verbose(0,warning='Exception occuured while trying to get the weights. Please make sure to provide a valid weight function or use default by not providing anything. The function should accept two slope and delta_t inputs. Now will use the default one.')
                 weights = self.weight(1,delta_t)
         base_k = self.k
         patience_counter = 0
@@ -451,11 +451,11 @@ class CK_Means:
                     # self.update_assigned_labels[vec].append(classification)
                     # self.update_assigned_labels = self.update_assigned_labels.append(list(row.values)+[classification])
                     # no: 
-                else:
+                # else:
                     # put it into a temprory new cluster and give it a name (K+1)
-                    base_k+=1
-                    self.update_classes.append(base_k)
-                    self.classifications['class'][i] = base_k
+                    # base_k+=1
+                    # self.update_classes.append(base_k)
+                    # self.classifications['class'][i] = base_k
             
             self.verbose(2,debug='Initial assignment completed for T'+str(t)+' in iteration '+str(iteration))
             
@@ -468,7 +468,7 @@ class CK_Means:
                 self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
 
             # update radiuses 
-            self.get_class_radius(self.classifications,self.centroids,self.distance_metric,min_radius=self.min_radius)
+            self.get_class_radius(self.classifications,self.centroids,self.distance_metric,min_radius=self.epsilon_radius)
         
             # Compare centroid change to stop iteration
             if self.centroid_stable():
@@ -486,33 +486,37 @@ class CK_Means:
         self.verbose(1,debug='Initial assignment completed.')
         
         # Clean the new classes up
-        self.verbose(1,debug='Cleaning up now by removing low population classes...')
-        #after the end of the loop, is cluster population<minimum_nodes?
-        for ucl in self.update_classes:
-            #yes: destroy cluster and assign nodes to nearby clusters.
-            if len(self.classifications[ucl])<self.minimum_nodes:
-                try:
-                    self.verbose(2,debug='Popping and centroid class due to low population '+str(ucl))
-                    self.classifications[ucl].pop(ucl)
-                    self.centroids[ucl].pop(ucl)
-                    self.update_classes.remove(ucl)
-                except KeyError:
-                    print('A KeyError detected. Unable to remove the class with class population under the threshold from self.classifications or self.centroids.')
-                    sys.exit(1)
+        # self.verbose(1,debug='Cleaning up now by removing low population classes...')
+        # #after the end of the loop, is cluster population<minimum_nodes?
+        # for ucl in self.update_classes:
+        #     #yes: destroy cluster and assign nodes to nearby clusters.
+        #     if len(self.classifications[ucl])<self.minimum_nodes:
+        #         try:
+        #             self.verbose(2,debug='Popping and centroid class due to low population '+str(ucl))
+        #             self.classifications[ucl].pop(ucl)
+        #             self.centroids[ucl].pop(ucl)
+        #             self.update_classes.remove(ucl)
+        #         except KeyError:
+        #             print('A KeyError detected. Unable to remove the class with class population under the threshold from self.classifications or self.centroids.')
+        #             sys.exit(1)
                     
-                self.verbose(2,debug='Unassigning nodes from removed class '+str(ucl))
-                self.update_assigned_labels[self.update_assigned_labels['label']==ucl]['label'] = None
+        #         self.verbose(2,debug='Unassigning nodes from removed class '+str(ucl))
+        #         self.update_assigned_labels[self.update_assigned_labels['label']==ucl]['label'] = None
         
-        self.verbose(2,debug='Recording nodes with None labels, AKA orphaned nodes.')
-        self.orphan_idx = self.update_assigned_labels[self.update_assigned_labels['label']==None].index
-        self.orphan_vecs = self.update_assigned_labels[self.update_assigned_labels['label']==None].drop('label',axis=1)
+        # self.verbose(2,debug='Recording nodes with None labels, AKA orphaned nodes.')
+        # self.orphan_idx = self.update_assigned_labels[self.update_assigned_labels['label']==None].index
+        # self.orphan_vecs = self.update_assigned_labels[self.update_assigned_labels['label']==None].drop('label',axis=1)
             
-        self.verbose(1,debug='Recalculating radius and boundaries for all remaining classes.')
-        self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
-        self.model.get_class_min_bounding_box(self.classifications)
+        # self.verbose(1,debug='Recalculating radius and boundaries for all remaining classes.')
+        # self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
+        # self.model.get_class_min_bounding_box(self.classifications)
         
         
-        self.verbose(1,debug='Reassigning orphaned nodes...')
+        self.verbose(1,debug='Reassigning orphan nodes...')
+        self.verbose(1,debug='Calculating kernel bandwith...')
+        self.kernel_size = min(self.radius.values())
+        
+        
         for orphan in self.orphan_vecs.iterrows():            
             if self.distance_metric=='cosine':
                 distances = [spatial.distance.cosine(orphan.values,self.centroids[centroid]) for centroid in self.centroids]
@@ -537,8 +541,8 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 # data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
