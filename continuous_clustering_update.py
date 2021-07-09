@@ -9,6 +9,7 @@ import sys
 import time
 import gc
 import os
+import copy
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -290,6 +291,7 @@ class CK_Means:
         classifications.columns = self.columns
         classifications['t'] = t
         self.classifications = self.classifications.append(classifications)
+        self.classifications.reset_index(drop=True,inplace=True)
     
     def assign_cluster(self,vector):
         distances = [self.get_distance(vector,self.centroids[centroid],self.distance_metric) for centroid in self.centroids]
@@ -400,9 +402,11 @@ class CK_Means:
             else:
                 patience_counter=0
 
-    def fit_update(self,additional_data,t,n_iter=None,weight=None):
+    def fit_update(self,additional_data,t,n_iter=None,weight=None,a:float=None,boundary:str='bbox'):
         if n_iter==None:
-            n_iter=self.n_iter
+            n_iter = self.n_iter
+        if a==None:
+            a = self.a
         # Calculate cluster boundaries by finding min/max boundaries by np.matrix.min/max. (the simple way)
         self.verbose(1,debug='Initiating cluster distances and boundaries...')
         self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
@@ -416,10 +420,10 @@ class CK_Means:
         self.add_to_clusters(additional_data,t)
         delta_t = abs(self.classifications['t']-self.classifications['t'].values.max())
         if weight==None:
-            weights = self.weight(1,delta_t)
+            weights = self.weight(a,delta_t)
         else:
             try:
-                weights = weight(1,delta_t)
+                weights = weight(a,delta_t)
             except:
                 self.verbose(0,warning='Exception occuured while trying to get the weights. Please make sure to provide a valid weight function or use default by not providing anything. The function should accept two slope and delta_t inputs. Now will use the default one.')
                 weights = self.weight(1,delta_t)
@@ -442,21 +446,26 @@ class CK_Means:
                 distance = min(distances)
                 classification = distances.index(distance)
                 #get the radius of the class
-                radius = self.radius[classification]
-                
-                # is it inside class or within class threshold?
-                if distance <= radius+radius*self.boundary_epsilon_coeff:
-                    #yes: assign it
-                    self.classifications['class'][i] = classification
-                    # self.update_assigned_labels[vec].append(classification)
-                    # self.update_assigned_labels = self.update_assigned_labels.append(list(row.values)+[classification])
-                    # no: 
-                # else:
-                    # put it into a temprory new cluster and give it a name (K+1)
-                    # base_k+=1
-                    # self.update_classes.append(base_k)
-                    # self.classifications['class'][i] = base_k
             
+                # is it inside class or within class threshold?
+                if boundary=='radius':
+                    radius = self.radius[classification]
+                    if distance <= radius+radius*self.boundary_epsilon_coeff:
+                        #yes: assign it
+                        self.classifications['class'][i] = classification
+                        # self.update_assigned_labels[vec].append(classification)
+                        # self.update_assigned_labels = self.update_assigned_labels.append(list(row.values)+[classification])
+                        # no: 
+                    # else:
+                        # put it into a temprory new cluster and give it a name (K+1)
+                        # base_k+=1
+                        # self.update_classes.append(base_k)
+                        # self.classifications['class'][i] = base_k
+                else:
+                    if (row.values<=self.ndbbox[classification][1]+self.ndbbox[classification][1]*self.boundary_epsilon_coeff and 
+                    row.values>=self.ndbbox[classification][0]+self.ndbbox[classification][0]*self.boundary_epsilon_coeff):
+                        self.classifications['class'][i] = classification
+                        
             self.verbose(2,debug='Initial assignment completed for T'+str(t)+' in iteration '+str(iteration))
             
             # update centroids using time-aware weighting scheme
@@ -464,7 +473,7 @@ class CK_Means:
             self.centroids_history.append(prev_centroids)
             for i in self.classifications.groupby('class').groups:
                 vecs = self.classifications[self.classifications['class']==i][self.columns_vector].values
-                vecs = vecs*weights[self.classifications['class']==i]
+                vecs = (vecs.T*weights[self.classifications['class']==i].values.T).T
                 self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
 
             # update radiuses 
@@ -517,11 +526,8 @@ class CK_Means:
         self.kernel_size = min(self.radius.values())
         
         
-        for orphan in self.orphan_vecs.iterrows():            
-            if self.distance_metric=='cosine':
-                distances = [spatial.distance.cosine(orphan.values,self.centroids[centroid]) for centroid in self.centroids]
-            if self.distance_metric=='euclidean':
-                distances = [np.linalg.norm(orphan.values-self.centroids[centroid]) for centroid in self.centroids]
+        for i,row in self.classifications[self.columns_vector][self.classifications['t']==t][self.classiftions['class']==None].iterrows():            
+            
             #nominate closest class
             distance = min(distances)
             if distance< radius+(self.boundary_epsilon_coeff*self.boundary_epsilon_growth):
@@ -541,8 +547,8 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
-# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+# datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
+datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 # data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
@@ -582,7 +588,7 @@ Y_0 = Y[:-5000]
 Y_0.shape
 for fold in range(1):
     np.random.seed(randint(0,10**5))
-    model = CK_Means(verbose=0,k=n_clusters,distance_metric='cosine')
+    model = CK_Means(verbose=1,k=n_clusters,distance_metric='cosine')
     model.fit(X_0)
     predicted_labels = model.predict(X_0)
     
@@ -601,12 +607,20 @@ for fold in range(1):
 X_1 = X[-5000:]
 Y_1 = Y[-5000:]
 classifications = model.classifications
-model.v = 2
-model.fit_update(X_1,t=1)
 
-model.classifications[model.classifications['class']==0]
+model2 = copy.deepcopy(model)
+model2.boundary_epsilon_coeff = 0
+model2.v = 2
+model2.fit_update(X_1,t=1,a=1)
 
-classifications2 = model.classifications
+# predicted_labels = model.predict(X_1)
+# tmp_results = ['Ck-means T1','cosine']+evaluate(X_1,Y_1,predicted_labels)
+# tmp_results = pd.Series(tmp_results, index = results.columns)
+# results = results.append(tmp_results, ignore_index=True)
+classifications2 = model2.classifications
+
+not_classified = classifications2[classifications2['class']==None]
+
 
 
 
