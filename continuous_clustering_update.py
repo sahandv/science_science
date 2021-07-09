@@ -462,8 +462,8 @@ class CK_Means:
                         # self.update_classes.append(base_k)
                         # self.classifications['class'][i] = base_k
                 else:
-                    if (row.values<=self.ndbbox[classification][1]+self.ndbbox[classification][1]*self.boundary_epsilon_coeff and 
-                    row.values>=self.ndbbox[classification][0]+self.ndbbox[classification][0]*self.boundary_epsilon_coeff):
+                    if ((row.values<=self.ndbbox[classification][1]+self.ndbbox[classification][1]*self.boundary_epsilon_coeff).all() and 
+                    (row.values>=self.ndbbox[classification][0]+self.ndbbox[classification][0]*self.boundary_epsilon_coeff).all()):
                         self.classifications['class'][i] = classification
                         
             self.verbose(2,debug='Initial assignment completed for T'+str(t)+' in iteration '+str(iteration))
