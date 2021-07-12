@@ -10,6 +10,7 @@ import time
 import gc
 import os
 import copy
+from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -29,6 +30,7 @@ from sklearn.manifold import TSNE
 from sklearn.feature_extraction.text import TfidfTransformer , TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
+from sklearn.neighbors import KernelDensity
 
 from sciosci.assets import text_assets as ta
 # from DEC.DEC_keras import DEC_simple_run
@@ -108,13 +110,20 @@ class CK_Means:
             - The default is None.
         minimum_nodes : int, optional
             - Minimum number of nodes to make a new cluster. The default is 10.
-        a : float, optional, The default is 1.
+        a : float, optional, 
             - Weight or slope of temporal distance, while a>=0. 
             - The effectiveness of node in centroid calculation will be calculated 
             as in a weight function such as the default function ( V*[1/((a*t)+1)]), 
             where t is time delta, and V is vector value.
+            - The default is 1.
+        kernel_coeff : float, optional,
+            - Density kernel is computed as the minimum radius value of the clusters. 
+            The coefficient is multiplied with the computed value to yield the final 
+            kernel bandwith as: bandwith=min(radius)*kernel_coeff
+            - The default is 2.
         seed : int, optional
-            - If seed is set, a seed will be used to make the results reproducable. The default is None.
+            - If seed is set, a seed will be used to make the results reproducable. 
+            - The default is None.
         initializer : str, optional
             - Centroid initialization. The options are:
                 'random_generated' randomly generated centroid based on upper and lower bounds of data.  
@@ -137,8 +146,9 @@ class CK_Means:
             Comprises the vector data ('0','1',...,'n'), classification ('class'), and time slice ('t'). 
         """
     def __init__(self, k:int=5, tol:float=0.00001, n_iter:int=300, patience=2, 
-                 boundary_epsilon_coeff:float=0.1, boundary_epsilon_abs:float=None, boundary_epsilon_growth:float=0,
-                 minimum_nodes:int=10, seed=None, a:float=1.0,
+                 boundary_epsilon_coeff:float=0.1, boundary_epsilon_abs:float=None, 
+                 boundary_epsilon_growth:float=0, minimum_nodes:int=10, seed=None, 
+                 a:float=1.0, kernel_coeff:float=2,
                  initializer:str='random_generated',distance_metric:str='euclidean',
                  verbose:int=1):
         
@@ -155,6 +165,7 @@ class CK_Means:
         self.patience = patience
         self.v = verbose
         self.boundary_epsilon_coeff_growth = boundary_epsilon_growth
+        self.kernel_coeff = kernel_coeff
         if seed != None:
             np.random.seed(seed)
         
@@ -476,9 +487,10 @@ class CK_Means:
                 vecs = (vecs.T*weights[self.classifications['class']==i].values.T).T
                 self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
 
-            # update radiuses 
+            # update radiuses and min bbox
             self.get_class_radius(self.classifications,self.centroids,self.distance_metric,min_radius=self.epsilon_radius)
-        
+            self.get_class_min_bounding_box(self.classifications)
+            
             # Compare centroid change to stop iteration
             if self.centroid_stable():
                 patience_counter+=1
@@ -523,8 +535,7 @@ class CK_Means:
         
         self.verbose(1,debug='Reassigning orphan nodes...')
         self.verbose(1,debug='Calculating kernel bandwith...')
-        self.kernel_size = min(self.radius.values())
-        
+        self.kernel_size = self.kernel_coeff*min(self.radius.values())
         
         for i,row in self.classifications[self.columns_vector][self.classifications['t']==t][self.classiftions['class']==None].iterrows():            
             
@@ -547,8 +558,8 @@ class CK_Means:
 # =============================================================================
 # Load data and init
 # =============================================================================
-# datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
 # data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
@@ -567,10 +578,26 @@ try:
 except:
     print('\nVector shapes seem to be good:',vectors.shape)
 
-
 labels_f = pd.factorize(labels.label)
-X = vectors.values
-Y = labels_f[0]
+vectors['labels'] = labels_f[0]
+vectors_t0 = vectors[:5120]
+vectors_t0 = vectors_t0.append(vectors[5219:9620])
+vectors_t0 = vectors_t0.append(vectors[9720:14120])
+vectors_t0 = vectors_t0.append(vectors[14220:15920])
+vectors_t0 = vectors_t0.append(vectors[16920:17120])
+vectors_t1 = vectors.drop(vectors_t0.index,axis=0)
+vectors_t0 = vectors_t0.sample(frac=1).reset_index(drop=True)
+vectors_t1 = vectors_t1.sample(frac=1).reset_index(drop=True)
+print(vectors_t0.info())
+print(vectors_t1.info())
+
+Y = vectors['labels'].values
+X = vectors.drop(['labels'],axis=1).values
+Y_0 = vectors_t0['labels'].values
+X_0 = vectors_t0.drop(['labels'],axis=1).values
+Y_1 = vectors_t1['labels'].values
+X_1 = vectors_t1.drop(['labels'],axis=1).values
+
 n_clusters = len(list(labels.groupby('label').groups.keys())) 
 
 results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneity','Completeness','NMI','AMI','ARI'])
@@ -580,12 +607,10 @@ results = pd.DataFrame([],columns=['Method','parameter','Silhouette','Homogeneit
 # Cluster 
 # =============================================================================
 print('\n- Custom clustering --------------------')
+n_clusters = 4
 print('k=',n_clusters)
 
-X_0 = X[:-5000]
-X_0.shape
-Y_0 = Y[:-5000]
-Y_0.shape
+
 for fold in range(1):
     np.random.seed(randint(0,10**5))
     model = CK_Means(verbose=1,k=n_clusters,distance_metric='cosine')
@@ -604,12 +629,52 @@ for fold in range(1):
     tmp_results = pd.Series(tmp_results, index = results.columns)
     results = results.append(tmp_results, ignore_index=True)
 
-X_1 = X[-5000:]
-Y_1 = Y[-5000:]
 classifications = model.classifications
+model.kernel_coeff=2
 
+n_samples = 1000
 model2 = copy.deepcopy(model)
-model2.boundary_epsilon_coeff = 0
+# model2.add_to_clusters(X_1,1)
+classifications2 = model2.classifications
+# classifications2[classifications2['class']==None]
+samples = list(classifications2[classifications2['t']==0].sample(n_samples).index)
+
+x_0_samples = X_0[samples]
+kde = KernelDensity(kernel='gaussian', bandwidth=2).fit(X_0)
+scores_gaussian = kde.score_samples(x_0_samples)
+scores_gaussian_f = np.exp(scores_gaussian)
+# kde = KernelDensity(kernel='exponential', bandwidth=1.8).fit(X_0)
+# scores_exponential = kde.score_samples(x_0_samples)
+
+k_bandwith = 100 # number of nearest neighbours
+neighbors = {}
+distances = []
+for sample_i in tqdm(samples):
+    tmp = {}
+    for sample_j in samples:
+        distance = model.get_distance(X_0[sample_i],X_0[sample_j],'cosine')
+        tmp[sample_j] = distance
+        distances.append(distance)
+    neighbors[sample_i] = pd.Series(tmp).nsmallest(k_bandwith)
+percentile_value = np.percentile(np.array(distances),25)
+
+# neighbors_b = neighbors.copy()
+# for neighbor in tqdm(neighbors_b):
+#     neighbors[neighbor] = neighbors[neighbor][neighbors[neighbor].values<percentile_value]
+#     if len(neighbors[neighbor][neighbors[neighbor].values<percentile_value])<2:
+#         del neighbors[neighbor]
+
+diffs = {}
+clusters_max = []
+clusters_min = []
+for neighbor in tqdm(neighbors):
+    diffs[neighbor] = np.array([scores_gaussian[samples.index(neighbor)]-scores_gaussian[samples.index(j)] for j in list(neighbors[neighbor].index)])
+    if (diffs[neighbor]>=-0.00001).all():
+        clusters_max.append(neighbor)
+    # if (diffs[neighbor]<=0.00001).all():
+    #     clusters_min.append(neighbor)
+
+model2.boundary_epsilon_coeff = 0.05
 model2.v = 2
 model2.fit_update(X_1,t=1,a=1)
 
@@ -618,8 +683,8 @@ model2.fit_update(X_1,t=1,a=1)
 # tmp_results = pd.Series(tmp_results, index = results.columns)
 # results = results.append(tmp_results, ignore_index=True)
 classifications2 = model2.classifications
-
-not_classified = classifications2[classifications2['class']==None]
+classifications2[pd.isna(classifications2['class'])]
+not_classified = classifications2[pd.isna(classifications2['class'])]
 
 
 
@@ -631,7 +696,7 @@ X_1 = X[-5000:-2500]
 Y_1 = Y[-5000:-2500]
 
 model.get_class_radius(model.classifications,model.centroids,'cosine')
-            
+
 
 # =============================================================================
 # Cluster benchmark
@@ -650,7 +715,7 @@ print(mean)
 print(maxx)
 
 print('\n- meanshift random -----------------------')
-for fold in tqdm(range(1,3)):
+for fold in tqdm([0.22,0.45,0.9,1.2]):
     seed = randint(0,10**5)
     np.random.seed(seed)
     from sklearn.cluster import MeanShift
