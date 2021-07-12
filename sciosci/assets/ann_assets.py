@@ -8,7 +8,7 @@ Created on Sun May 16 12:31:43 2021
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-def plot_graphs(history, string="accuracy"):
+def plot_graphs(history, string="accuracy", save:str=None):
     """
     Draw from history
     
@@ -29,6 +29,8 @@ def plot_graphs(history, string="accuracy"):
     plt.xlabel("Epochs")
     plt.ylabel(string)
     plt.legend([string, 'val_'+string])
+    if save != None:
+        plt.savefig(save)
     plt.show()
 
 
