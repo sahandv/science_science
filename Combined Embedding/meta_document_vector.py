@@ -22,6 +22,8 @@ from sklearn.model_selection import train_test_split
 # !wget 'https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt'
 from tensorflow.keras import mixed_precision
 
+experiment_id = '017-no_doc_embedding_token'
+
 tokenizer = 'word'
 embedding_dim = 128
 num_epochs = 500
@@ -52,8 +54,11 @@ config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 # https://www.tensorflow.org/tutorials/text/text_generation
 # =============================================================================
 # dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
-dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
-
+dir_root = '/home/sahand/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
+try:
+    os.mkdir(dir_root+'combined-embedding-results/train/'+experiment_id)
+except:
+    print('Failed to make dir:',dir_root+'combined-embedding-results/train/'+experiment_id)
     # =============================================================================
     # Load and prepare features
     # =============================================================================
@@ -67,8 +72,12 @@ data = data[data['id'].isin(corpus_idx)]
     # =============================================================================
     # Load and tokenize text
     # =============================================================================
+# corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title all-lem',names=['abstract'])
 corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure',names=['abstract'])
-corpus['abstract'] = "[documentembeddingtoken] "+corpus['abstract'] 
+
+corpus['abstract'] = corpus['abstract'] 
+# corpus['abstract'] = "[documentembeddingtoken] "+corpus['abstract'] 
+
 # corpus.to_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure with [DOC]',header=False,index=False)
 corpus = corpus['abstract'].values.tolist()
 
@@ -96,7 +105,7 @@ if tokenizer=='word':
     word_index = tokenizer.word_index
     print(total_words)
     # print(tokenizer.word_index)
-    print(tokenizer.word_index['documentembeddingtoken'])
+    # print(tokenizer.word_index['documentembeddingtoken'])
     
     
     ##################
@@ -485,9 +494,16 @@ if n_inputs==2:
 if n_inputs==3:
     inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
     x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
-    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
-    x_11 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,name='token_LSTM_2'),name='token_bidirectional_2')(x_11)
-    x_11 = tf.keras.layers.Dense(200,activation='relu',name='token_dense')(x_11)
+    
+    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
+    x_11bl = tf.keras.layers.Dense(200,activation='relu',name='token_bl_dense_1')(x_11bl)
+
+    x_11c = tf.keras.layers.Conv1D(128,5,activation='relu',name='conv_1')(x_11) # 128 neurons with kernel size of 5 words
+    x_11c = tf.keras.layers.GlobalMaxPooling1D()(x_11c)
+    x_11c = tf.keras.layers.Dense(200,activation='relu',name='token_cnn_dense_1')(x_11c)
+
+    x_11 = tf.keras.layers.concatenate([x_11bl, x_11c], name='token_concatenate')
+    # x_11 = tf.keras.layers.Dense(100,activation='relu',name='token_dense')(x_11)
     x_11 = tf.keras.Model(inputs=inputs_seq, outputs=x_11)
     
     inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
@@ -512,10 +528,10 @@ if n_inputs==3:
     adam = tf.keras.optimizers.Adam(lr=0.01)
     model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
     model.summary()
-    tf.keras.utils.plot_model(model, to_file='combined_embedding.png', show_shapes=True, show_layer_names=True)
+    tf.keras.utils.plot_model(model, to_file=dir_root+'combined-embedding-results/train/'+experiment_id+'/combined_embedding.png', show_shapes=True, show_layer_names=True)
     
     callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=15)
-    checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred.h5', monitor='accuracy', mode='min', save_best_only=True)
+    checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred-conv_blstm.h5', monitor='accuracy', mode='min', save_best_only=True)
     tensorboard = tf.keras.callbacks.TensorBoard(
                               log_dir='.\logs',
                               histogram_freq=1,
@@ -531,7 +547,7 @@ history = model.fit(train_dataset,
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
 
-anna.plot_graphs(history,'accuracy')
+anna.plot_graphs(history,'accuracy',save=dir_root+'combined-embedding-results/train/'+experiment_id+'/Figure 2021-07.png')
 
 #%%
 
