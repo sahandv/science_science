@@ -12,9 +12,9 @@ from tqdm import tqdm
 import dimcli
 import pandas as pd
 import numpy as np
-# dimcli.login(key="my-secret-key",endpoint="https://app.dimensions.ai")
+dimcli.login(key="CC1FEFF8637149DBBA873831FCA4471F",endpoint="https://app.dimensions.ai")
 # dimcli --init
-dimcli.login()
+# dimcli.login()
 dsl = dimcli.Dsl()
 
 # =============================================================================
@@ -32,16 +32,16 @@ for year in tqdm(years):
     #                            [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + 
     #                             times_cited + altmetric + reference_ids +  year + category_for + journal + 
     #                            proceedings_title + publisher + research_orgs]""")
-    data = dsl.query_iterative(r"""search publications in full_data for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\")"  where year="""+str(year)+
-                               """ and (type="article" or type="proceeding") and times_cited > 4 and 
+    data = dsl.query_iterative(r"""search publications in full_data for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\" OR \"neural networks\" OR \"pattern recognition\")" where year="""+str(year)+
+                               """ and (type="article" or type="proceeding") and 
                                (category_for.name="01 Mathematical Sciences" or category_for.name="09 Engineering" or category_for.name="11 Medical and Health Sciences" or 
                                 category_for.name="17 Psychology and Cognitive Sciences" or category_for.name="06 Biological Sciences" or 
                                 category_for.name="15 Commerce, Management, Tourism and Services" or category_for.name="10 Technology")
                                and abstract is not empty and reference_ids is not empty and title is not empty and category_for is not empty
                                return publications 
-                               [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + 
+                               [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + concepts + concepts_scores + 
                                 times_cited + altmetric + reference_ids +  year + category_for + journal + 
-                               proceedings_title + publisher + research_orgs] sort by altmetric desc""")
+                               proceedings_title + publisher + research_orgs] sort by altmetric desc""") #for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\")"
 
     # =============================================================================
     # Process & Save
@@ -54,7 +54,7 @@ for year in tqdm(years):
     print(data.errors_string)
     
     csv = pd.DataFrame(data.publications)
-    csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/'+str(year)+' dimensions AI articles-proceedings cited>0.csv')
+    csv.to_csv('/home/sahand/Dimensions/'+str(year)+' dimensions AI articles-proceedings cited>0.csv')
     
     del csv
     del data
@@ -70,7 +70,7 @@ categories = ["01 Mathematical Sciences","09 Engineering","11 Medical and Health
               
 
 data = dsl.query_iterative(r"""search publications in full_data for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\")"  where year>1969
-                               and (type="article" or type="proceeding") and times_cited > 4 and 
+                               and (type="article" or type="proceeding") and 
                                (category_for.name="01 Mathematical Sciences" or category_for.name="09 Engineering" or category_for.name="11 Medical and Health Sciences" or 
                                 category_for.name="17 Psychology and Cognitive Sciences" or category_for.name="06 Biological Sciences" or 
                                 category_for.name="15 Commerce, Management, Tourism and Services" or category_for.name="10 Technology")
@@ -78,7 +78,7 @@ data = dsl.query_iterative(r"""search publications in full_data for "(\"machine 
                                return publications 
                                [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + 
                                 times_cited + altmetric + reference_ids +  year + category_for + journal + 
-                               proceedings_title + publisher + research_orgs] sort by altmetric desc""") # for "\"machine learning\"" 
+                               proceedings_title + publisher + research_orgs] sort by altmetric desc""") # for "\"machine learning\""  and times_cited > 0 
                                
 data.json.keys()
 len(data.publications)
@@ -87,7 +87,7 @@ print("We got", data.count_batch, "results out of", data.count_total)
 print(data.errors_string)
 
 csv = pd.DataFrame(data.publications)
-csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-proceedings cited>4.csv')
+csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-proceedings.csv')
 
 # =============================================================================
 # Drop randomly to reduce dataset size

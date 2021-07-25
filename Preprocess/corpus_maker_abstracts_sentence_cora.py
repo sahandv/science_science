@@ -37,8 +37,9 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'
+dir_root = '/home/sahand/GoogleDrive/Data/Corpus/cora-classify/cora/'
 
+data_path_rel = dir_root+'extractions_with_unique_id.csv'
 data_path_rel = dir_root+'extractions_with_unique_id_labeled_single_component.csv'
 citations_path = dir_root+'citations_filtered_single_component.csv'
 filter_path = dir_root+'clean/single_component_small_18k/corpus_idx_original'

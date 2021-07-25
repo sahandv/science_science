@@ -15,7 +15,7 @@ from sciosci.assets import generic_assets as ga
 sh.scopus_initialize()
 ga.general_initialize()
 
-from sciosci.assets import keyword_assets as kw
+from sciosci.assets import text_assets as ta
 from sciosci.assets import advanced_assets as aa
 import pandas as pd
 import numpy as np
@@ -25,7 +25,7 @@ from tqdm import tqdm
 # https://www.springer.com/gp/product-search/discipline?disciplineId=ai&dnc=true&facet-lan=lan__en&facet-subj=subj__I21000&facet-type=type__journal&page=4&returnUrl=gp%2Fcomputer-science%2Fai&topic=I21000%2CI21010%2CI21020%2CI21030%2CI21040%2CI21050%2CI21060
 # =============================================================================
 source_list = pd.read_csv("data/source_list.csv",delimiter='__',names=['source'])
-for source in tqdm(source_list['source'].values.tolist()[21:30]):
+for source in tqdm(source_list['source'].values.tolist()[-1:]):
     print('Getting data for: ',source)
     try:
         sh.search_scopus('SRCTITLE("'+source+'")',download=True)

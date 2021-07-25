@@ -8,7 +8,7 @@ Created on Tue Jan 12 12:30:30 2021
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
+dir_root = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
 # dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/' # c1314
 
 # =============================================================================

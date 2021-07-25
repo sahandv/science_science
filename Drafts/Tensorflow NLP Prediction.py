@@ -6,6 +6,7 @@ Created on Mon May  3 15:46:31 2021
 @author: github.com/sahandv
 """
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras 
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -32,14 +33,18 @@ def plot_graphs(history, string):
     # =============================================================================
     # prepare 
     # =============================================================================
-corpus = [
-    '1 red brown fox',
-    'red brown cat!',
-    'red cat loves chicken wings.',
-    'black cat loves chicken wings as well',
-    'brown fox hates cats'
-    ]
-embedding_dim = 64
+dir_root = '/home/sahand/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
+corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure',names=['abstract'])[:2000]['abstract'].values.tolist()
+
+
+# corpus = [
+#     '1 red brown fox',
+#     'red brown cat!',
+#     'red cat loves chicken wings.',
+#     'black cat loves chicken wings as well',
+#     'brown fox hates cats'
+#     ]
+embedding_dim = 128
 num_epochs = 500
 
 # oov is out of vocabulary token replacement. you can num_words='int
@@ -49,7 +54,7 @@ total_words = len(tokenizer.word_index)+1
 
 print(total_words)
 print(tokenizer.word_index)
-print(tokenizer.word_index['red'])
+print(tokenizer.word_index['base'])
 
 # extract n-gram sequences from n=2 to n=number_of_grams_in_sentences 
 input_sequences = []
@@ -62,7 +67,7 @@ for sent in tqdm(corpus):
 
 # you can add maxlen=int. you can add padding='post', default is 'pre'. you can truncate='post' to remove from the end, default is 'pre' again
 max_seq_len = max([len(x) for x in input_sequences])
-input_sequences = pad_sequences(input_sequences)#,maxlen=max_seq_len,padding='pre') 
+input_sequences = pad_sequences(input_sequences,maxlen=max_seq_len,padding='pre') 
 input_sequences = np.array(input_sequences)
 
 
@@ -96,9 +101,12 @@ tensorboard = tf.keras.callbacks.TensorBoard(
 
 history = model.fit(xs, ys,
                     epochs=num_epochs, 
+                    batch_size=256,
                     # validation_data=(padded_seq_test, testing_labels_final),
                     verbose=1,
                     callbacks=[callback, checkpoint,tensorboard])
+
+
 
     # =============================================================================
     # Result vis

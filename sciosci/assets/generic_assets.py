@@ -81,14 +81,4 @@ def general_initialize(ignore_py_version = False,
     except ImportError:
         sys.exit("\n * Please install 'gensim' and download pretrained models from http://nlp.stanford.edu/data/ .")
 
-    try:
-        import pyLDAvis
-    except ImportError:
-        sys.exit("\n * Please install pyLDAvis.")
-
-    try:
-        import skimage
-    except ImportError:
-        sys.exit("\n * Please install scikit-image.")
-
 

@@ -22,8 +22,8 @@ This is a preprocessing script for Cora dataset [McCallumIRJ]
 # =============================================================================
 # Init
 # =============================================================================
-# dir_path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/cora-classify/cora/clean/single_component_small/'      # ryzen
-dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'      # c1314
+dir_path = '/home/sahand/GoogleDrive/Data/Corpus/cora-classify/cora/clean/single_component_small/'      # ryzen
+# dir_path = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/'      # c1314
 
 
 import json   

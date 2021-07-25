@@ -49,11 +49,11 @@ def scopus_initialize(ignore_py_version = False,
             import pybliometrics
         except ImportError:
             sys.exit("\n * Please install scopus package before using this code. Try usng 'pip install pybliometrics'.")
-        my_file = Path(str(Path.home())+'/.scopus/config.ini')
+        my_file = Path(str(Path.home())+'/.pybliometrics/config.ini')
         if my_file.is_file():
-            print("\n * Configuration file already exists at "+str(Path.home())+'/.scopus/config.ini'+". You may the file and edit the entries manually.")
+            print("\n * Configuration file already exists at "+str(Path.home())+'/.pybliometrics/config.ini'+". You may the file and edit the entries manually.")
         else:
-            pybliometrics.utils.create_config()
+            pybliometrics.scopus.utils.create_config()
     
 
 
