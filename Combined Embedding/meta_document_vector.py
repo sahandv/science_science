@@ -22,14 +22,14 @@ from sklearn.model_selection import train_test_split
 # !wget 'https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt'
 from tensorflow.keras import mixed_precision
 
-experiment_id = '017-no_doc_embedding_token'
+experiment_id = '018'
 
 tokenizer = 'word'
 embedding_dim = 128
 num_epochs = 500
 vocab_limit = 50000
 min_paragraph_len = 35  #percentage of each paragraph
-n_inputs = 3 #network type selection
+n_inputs = 4 #network type selection
 batch_size = 512
 
 # =============================================================================
@@ -104,6 +104,7 @@ if tokenizer=='word':
     total_words = len(tokenizer.word_index)+1
     word_index = tokenizer.word_index
     print(total_words)
+    vocab_limit = min(vocab_limit,total_words)
     # print(tokenizer.word_index)
     # print(tokenizer.word_index['documentembeddingtoken'])
     
@@ -313,6 +314,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             return [inputs_1,inputs_3], y
         if self.n_inputs==3:
             return [inputs_1,inputs_2,inputs_3], y
+        if self.n_inputs==4:
+            return inputs_1, y
 
     
     def _generate_y(self, ID_list):
@@ -538,6 +541,37 @@ if n_inputs==3:
                               write_images=True
                             )
  
+if n_inputs==4:
+    inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
+    x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
+    
+    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
+    x_11bl = tf.keras.layers.Dense(200,activation='relu',name='token_bl_dense_1')(x_11bl)
+
+    x_11c = tf.keras.layers.Conv1D(128,5,activation='relu',name='conv_1')(x_11) # 128 neurons with kernel size of 5 words
+    x_11c = tf.keras.layers.GlobalMaxPooling1D()(x_11c)
+    x_11c = tf.keras.layers.Dense(200,activation='relu',name='token_cnn_dense_1')(x_11c)
+
+    x_11 = tf.keras.layers.concatenate([x_11bl, x_11c], name='token_concatenate')
+    # x_11 = tf.keras.layers.Dense(100,activation='relu',name='token_dense')(x_11)
+    
+    x = tf.keras.layers.Dense(150,activation='relu',name='main_dense_1')(x_11)
+    x = tf.keras.layers.Dense(100,activation='relu',name='main_dense_2')(x)
+    outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
+    
+    model = keras.Model(inputs=inputs_seq, outputs=outputs)
+    adam = tf.keras.optimizers.Adam(lr=0.01)
+    model.compile(loss='categorical_crossentropy',optimizer=adam,metrics=['accuracy'])
+    model.summary()
+    tf.keras.utils.plot_model(model, to_file=dir_root+'combined-embedding-results/train/'+experiment_id+'/combined_embedding.png', show_shapes=True, show_layer_names=True)
+    
+    callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy',patience=15)
+    checkpoint = tf.keras.callbacks.ModelCheckpoint('./models/pretrain_next_word_pred-conv_blstm.h5', monitor='accuracy', mode='min', save_best_only=True)
+    tensorboard = tf.keras.callbacks.TensorBoard(
+                              log_dir='.\logs',
+                              histogram_freq=1,
+                              write_images=True
+                            )
     # =============================================================================
     # Train
     # =============================================================================

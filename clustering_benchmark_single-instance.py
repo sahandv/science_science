@@ -32,18 +32,18 @@ from DEC.DEC_keras import DEC_simple_run
 # =============================================================================
 # Load data and init
 # =============================================================================
-# datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
-datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+datapath = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
 
-data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
-label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
+# data_address =  datapath+"Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05"#node2vec super-d2v-node 128-70-20 p1q025"
+# label_address = datapath+"Corpus/cora-classify/cora/clean/single_component_small_18k/labels"
 
-# data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
-# label_address =  datapath+"Corpus/KPRIS/labels"
+data_address =  datapath+"Corpus/KPRIS/embeddings/deflemm/Doc2Vec patent_wos corpus"
+label_address =  datapath+"Corpus/KPRIS/labels"
 
 vectors = pd.read_csv(data_address)#,header=None)
-labels = pd.read_csv(label_address)
+labels = pd.read_csv(label_address,names=['label'])
 labels.columns = ['label']
 
 try:
@@ -161,7 +161,7 @@ archs = [[500, 500, 2000, 10],[500, 1000, 2000, 10],[500, 1000, 1000, 10],
          # [1000, 1000, 2000, 10],[1000, 1500, 2000, 10],[1000, 1500, 1000, 10],
          # [1000, 1000, 2000,500, 10],[1000, 1500, 2000,500, 10],[1000, 1500, 1000, 500, 10],
          [500, 500, 2000, 500, 10],[500, 1000, 2000, 500, 10],[500, 1000, 1000, 500, 10]]
-
+archs = [[200,500,10],[200,500,10],[200,500,10],[200,500,10],[200,500,10]]
 print('\n- DEC -----------------------')
 for fold in tqdm(archs):
     seed = randint(0,10**4)
@@ -215,13 +215,16 @@ results_df.to_csv(data_address+' Kmeans labels',index=False)
 
 results_df.groupby('label').groups.keys()
 
-archs = [[500, 1000, 1000, 500, 10]]
+archs = [[200,500,10],[200,500,10]]
 
 print('\n- DEC -----------------------')
 for i,fold in tqdm(enumerate(archs)):
     seed = randint(0,10**5)
-    np.random.seed(9131)
+    np.random.seed(seed)
     predicted_labels = DEC_simple_run(X,minmax_scale_custom_data=False,n_clusters=10,architecture=fold,pretrain_epochs=1000)
+    tmp_results = ['DEC',str(seed)+' '+str(fold)]+evaluate(X,Y,predicted_labels)
+    tmp_results = pd.Series(tmp_results, index = results.columns)
+    results = results.append(tmp_results, ignore_index=True)
     
     results_df = pd.DataFrame(predicted_labels,columns=['label'])
     results_df.to_csv(data_address+' DEC 500, 1000, 1000, 500, 10 k10 labels - '+str(i),index=False)
@@ -232,7 +235,7 @@ results_df.groupby('label').groups.keys()
 # Save to disk
 # =============================================================================
 results_df = pd.DataFrame(results)
-results_df.to_csv(data_address+' clustering results',index=False)
+results_df.to_csv(data_address+' clustering results - 06 2021',index=False)
 
 # =============================================================================
 # find centroid of each cluster for a model
