@@ -276,7 +276,78 @@ def find_first_big_csv(filename,chunksize,names,column,needle):
         if result.shape[0]>0:
             return result
     return False
-        
+# =============================================================================
+# 
+# =============================================================================
+
+def get_refs_from_file(reflist,directory='',v = 2):
+    """
+    Parse eids from referencse files, using a list of files
+
+    Parameters
+    ----------
+    reflist : np.array or list
+        iterable of file names
+    directory : str, optional
+        Root dir for reference files. The default is '/home/sahand/Downloads/scopus data 2019/refs/0-310/raw refs/'.
+    v : Verbosity, optional
+        The default is 2.
+
+    Returns
+    -------
+    eidx : list
+        list of .
+
+    """
+    import json
+    errors = []
+    eidx = []
+    
+    for name in tqdm(reflist):
+        file = directory+str(name)
+    
+        try:
+            f = open(file,)
+            try:
+                ref_json = json.load(f)
+            except:
+                if v>1:
+                    print('json error')
+                error = 'canont parse json'
+                errors.append([name,error,''])
+                eids = []
+        except:
+            if v>1:
+                print('FileNotFoundError')
+            error = 'file not found'
+            errors.append([name,error,''])
+        try:
+                refs = ref_json['abstracts-retrieval-response']['references']
+        except:
+            if v>1:
+                print("key error at ['abstracts-retrieval-response']['references']")
+            error = "key error at ['abstracts-retrieval-response']['references']"
+            errors.append([name,error,ref_json])
+            eids = []
+        try:
+            ref_list = refs['reference']
+            ref_count = refs['@total-references']
+            if ref_count == 1:
+                ref_list_backup = ref_list
+            eids = [x['scopus-eid'] for x in ref_list]
+        except:
+            if v>1:
+                print("key error at ['@total-references']")
+            error = "key error at ['@total-references']"
+            errors.append([name,error,ref_json])
+            eids = []
+            # break
+            # author_field = author_field[1:-1]
+            # read_author(author_field,retry_no)
+        eidx.append(eids)
+    return eidx
+
+
 # =============================================================================
 # Wos to Scopus format
 # =============================================================================
@@ -371,6 +442,8 @@ def wos_data_reshape_to_scopus_row(index,row,scopus_columns):
     data_reshaped_wos_scopus['authkeywords'] = data_reshaped_wos_scopus['authkeywords'].astype(str).str.replace(',','|')
     
     return data_reshaped_wos_scopus
+
+
 
 
 def wos_data_reshape_to_scopus_mp(wos_data,scopus_columns,process=2):
