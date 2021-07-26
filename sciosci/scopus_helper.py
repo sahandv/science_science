@@ -305,7 +305,7 @@ def get_refs_from_file(reflist,directory='',v = 2):
     
     for name in tqdm(reflist):
         file = directory+str(name)
-    
+
         try:
             f = open(file,)
             try:
@@ -321,6 +321,7 @@ def get_refs_from_file(reflist,directory='',v = 2):
                 print('FileNotFoundError')
             error = 'file not found'
             errors.append([name,error,''])
+            eid = []
         try:
                 refs = ref_json['abstracts-retrieval-response']['references']
         except:
@@ -332,20 +333,27 @@ def get_refs_from_file(reflist,directory='',v = 2):
         try:
             ref_list = refs['reference']
             ref_count = refs['@total-references']
-            if ref_count == 1:
-                ref_list_backup = ref_list
-            eids = [x['scopus-eid'] for x in ref_list]
+            if str(ref_count) == '1':
+                try:
+                    eids = [ref_list['scopus-eid']]
+                except:
+                    eids = []
+                    error = "key error at ['scopus-eid']"
+                    errors.append([name,error,ref_json])
+            else:
+                eids = [x['scopus-eid'] for x in ref_list]
+            
         except:
             if v>1:
-                print("key error at ['@total-references']")
-            error = "key error at ['@total-references']"
+                print("key error at ['reference']")
+            error = "key error at ['reference']"
             errors.append([name,error,ref_json])
             eids = []
             # break
             # author_field = author_field[1:-1]
             # read_author(author_field,retry_no)
         eidx.append(eids)
-    return eidx
+    return eidx,errors
 
 
 # =============================================================================
