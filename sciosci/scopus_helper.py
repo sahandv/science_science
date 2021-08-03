@@ -142,7 +142,7 @@ def get_refs_by_eid(eid, retry = 1, force = False):
 # =============================================================================
 # Fetch references for a series of eIDs
 # =============================================================================
-def get_refs_from_publications_df(dataframe_eid,verbose = True,retry = 0, force = False):
+def get_refs_from_publications_df(dataframe_eid,verbose = True,retry = 0, force = False, thresh = 5):
     import pandas as pd
     import psutil
     memory = psutil.virtual_memory()
@@ -151,6 +151,7 @@ def get_refs_from_publications_df(dataframe_eid,verbose = True,retry = 0, force 
         
     all_refs = []
     valid_eids = []
+    errors = 0
     for eid in dataframe_eid:
         if verbose is True:
             print('Fetching references for ',eid)
@@ -158,6 +159,13 @@ def get_refs_from_publications_df(dataframe_eid,verbose = True,retry = 0, force 
         if refs_eid is not None:
             all_refs.append(refs_eid)
             valid_eids.append(eid)
+            errors=+1
+        else:
+            errors = 0
+        
+        if errors>thresh:
+            break
+            print("Stopping for too many unsuccessful attempts in a row. errors>thresh:",errors,">",thresh)
             
     
     return valid_eids,all_refs
