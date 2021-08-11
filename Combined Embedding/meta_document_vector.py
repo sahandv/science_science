@@ -189,7 +189,7 @@ input_df_sample = input_df.sample(10)
 x2 = net_vecs.values
 
 # shuffle dataset
-input_df = input_df.sample(frac=1).reset_index(inplace=True)
+input_df = input_df.sample(frac=1).reset_index(drop=True)
 
 # split train test
 msk = np.random.rand(len(input_df)) < 0.8
