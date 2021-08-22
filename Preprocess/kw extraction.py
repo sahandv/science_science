@@ -63,18 +63,34 @@ r.get_ranked_phrases()
 
 #%%# ==========================================================================
 # From taxonomy
+# 
+# The issue is that, too many possible words are out there in kw list. Like, "mind" or "eye". These are correct. But out of context. 
+# We have to bee too specific if we wamt to rely om author kerywords, like the kw from 4 AI journals.
 # =============================================================================
 import numpy as np
 import pandas as pd
 from sciosci.assets import text_assets as kw
 from sciosci.assets import keyword_dictionaries as kd
 from gensim.parsing.preprocessing import strip_multiple_whitespaces
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this','...']
+stop_words = list(set(stopwords.words("english")))+stops
 
 path = '/home/sahand/GoogleDrive/Data/'
 
-taxonomy = list(set(pd.read_csv(path+'Corpus/Taxonomy/AI kw merged',names=['keyword'])['keyword'].values.tolist()))
-abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title pure US',names=['abstract'])
-abstract = abstracts['abstract'][40]
-keywords = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(keyword),kd.gb2us)),kd.gb2us) for keyword in taxonomy]
+keywords = list(set(pd.read_csv(path+'Corpus/Taxonomy/AI kw merged US',names=['keyword'])['keyword'].values.tolist()))
+keywords = [x for x in keywords if len(x)>2]
 keywords = np.array(keywords)
-keywords[[keyword in abstract for keyword in keywords]]
+
+abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title pure US',names=['abstract'])
+abstract = abstracts['abstract'][400]
+# keywords = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(keyword),kd.gb2us)),kd.gb2us) for keyword in taxonomy]
+# keywords = np.array(keywords)
+# pd.DataFrame(keywords).to_csv(path+'Corpus/Taxonomy/AI kw merged US',index=False,header=False)
+abstract = word_tokenize(abstract)
+abstract = [word for word in abstract if not word in stop_words] 
+
+extraction = [word for word in abstract if word in keywords] 
+matches = [keyword in abstract for keyword in keywords] 
+selection = keywords[matches]
