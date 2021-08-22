@@ -39,12 +39,24 @@ stop_words = list(set(stopwords.words("english")))+stops
 
 data_path_rel = '/home/sahand/GoogleDrive/Data/embedding_benchmark/kpris_data.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
-# data_path_rel = '/home/sahand/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+# data_path_rel = '/home/sahand/Downloads/AI ALL 1900-2019'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel)
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
-sample = data_full_relevant.sample(4)
+sample = data_full_relevant.sample(400)
+
+# Keyword extraction from scopus
+from itertools import chain
+kwords = data_full_relevant[pd.notnull(data_full_relevant['authkeywords'])]['authkeywords'].str.lower().values.tolist()
+kwords = [x.split(" | ") for x in kwords]
+kwords_flatten = pd.DataFrame(list(chain.from_iterable(kwords)),columns=['DE'])
+kwords_flatten = kwords_flatten[pd.notnull(kwords_flatten['DE'])]
+kwords_flatten = kwords_flatten[kwords_flatten['DE']!='']
+kwords_flatten['DE'] = kwords_flatten['DE'].str.strip('"`-+!?_ ')
+kwords_unique = set(kwords_flatten['DE'].values.tolist())
+pd.DataFrame(kwords_unique).to_csv('/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/AI ALL Scopus 2019',index=False)
+
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/AI 4k/'
 subdir = 'copyr_deflem_stopword_removed_thesaurus May 28/by period/' # no_lemmatization_no_stopwords
