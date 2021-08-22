@@ -16,7 +16,8 @@ from nltk.corpus import stopwords
 nltk.download('stopwords')
 st = set(stopwords.words('english'))
 
-path = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
+path = '/home/sahand/GoogleDrive/Data/'
+# data_address =  path+"Corpus/AI 4k/copyr_deflem_stopword_removed_thesaurus May 28/1990-2019/1990-2019 abstract_title"
 data_address =  path+"Corpus/AI 4k/copyr_deflem_stopword_removed_thesaurus May 28/1990-2019/1990-2019 abstract_title"
 df1 = pd.read_csv(data_address,names=['abstract'])
 labels = pd.read_csv(path+'Corpus/AI 4k/embeddings/clustering/k10/Doc2Vec patent_wos_ai corpus DEC 200,500,10 k10 labels')
@@ -60,7 +61,20 @@ r = Rake()
 r.extract_keywords_from_text(corpus[0])
 r.get_ranked_phrases()
 
+#%%# ==========================================================================
+# From taxonomy
 # =============================================================================
-# Embedding
-# =============================================================================
+import numpy as np
+import pandas as pd
+from sciosci.assets import text_assets as kw
+from sciosci.assets import keyword_dictionaries as kd
+from gensim.parsing.preprocessing import strip_multiple_whitespaces
 
+path = '/home/sahand/GoogleDrive/Data/'
+
+taxonomy = list(set(pd.read_csv(path+'Corpus/Taxonomy/AI kw merged',names=['keyword'])['keyword'].values.tolist()))
+abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title pure US',names=['abstract'])
+abstract = abstracts['abstract'][40]
+keywords = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(keyword),kd.gb2us)),kd.gb2us) for keyword in taxonomy]
+keywords = np.array(keywords)
+keywords[[keyword in abstract for keyword in keywords]]
