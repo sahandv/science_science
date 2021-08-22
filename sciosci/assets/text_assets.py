@@ -21,6 +21,61 @@ def union_lists(lst1, lst2):
     final_list = list(set(lst1) | set(lst2)) 
     return final_list 
 
+def remove_substring_content(txt,a='[',b=']',replace='""'):
+    """
+    Remove content between outer brackets or any other symbols.
+    Can handle nested structures.
+    
+    For example:
+        This os a [sample] text [of some [example]]. --> This os a "" text "".    
+
+    Parameters
+    ----------
+    txt : string
+        Input text.
+    a : string, optional
+        start delimeter. The default is '['.
+    b : string, optional
+        end delimeter. The default is ']'.
+    replace : string, optional
+        Replace the removed substring with this string. The default is '""'.
+
+    Returns
+    -------
+    string.
+
+    """
+    ranges = []
+    flag=False
+    inner = 0
+    range_tmp=[]
+    for i,c in enumerate(txt):
+        if c==a and flag==True:
+            # print('condition 1',i)
+            inner+=1
+        if c==a and flag==False:
+            range_tmp.append(i)
+            # print('condition 2',i)
+            flag=True
+        if c==b and flag==True:
+            if inner>0:
+                # print('condition 3',i)
+                inner-=1
+            else:
+                # print('condition 4',i)
+                range_tmp.append(i)
+                flag=False
+                ranges.append(range_tmp)
+                range_tmp = []
+        
+    offset = 0
+    for range_tmp in ranges:
+        txt = txt[:range_tmp[0]-offset]+replace+txt[range_tmp[1]+1-offset:]
+        # print(txt)
+        offset = offset+(range_tmp[1]-range_tmp[0])-(len(replace)-1)
+
+    return txt
+
 def tokenize_series(data):
     import pandas as pd
     from tqdm import tqdm
