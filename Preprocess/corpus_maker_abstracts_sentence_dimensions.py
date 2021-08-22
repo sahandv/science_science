@@ -7,6 +7,7 @@ Created on Wed Dec 23 14:56:06 2020
 """
 import sys
 import gc
+import json
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
@@ -17,6 +18,7 @@ from sciosci.assets import keyword_dictionaries as kd
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from gensim.parsing.preprocessing import strip_multiple_whitespaces
 tqdm.pandas()
 nltk.download('wordnet')
 nltk.download('punkt')
@@ -77,6 +79,18 @@ data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
 data_with_keywords = data_filtered[pd.notnull(data_filtered['DE'])]
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
+# =============================================================================
+# remove repeating ids
+# =============================================================================
+data_with_abstract = data_with_abstract.drop_duplicates(subset=['id']).reset_index(drop=True)
+
+del data_full_relevant
+del data_filtered
+del data_with_keywords
+
+# =============================================================================
+# Further cleaning - optional
+# =============================================================================
 # Remove special chars and strings from abstracts
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
@@ -96,12 +110,46 @@ for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
     abstracts.append(abstract)
 data_with_abstract['AB'] = abstracts.copy()
 del  abstracts
-del data_full_relevant
 gc.collect()
 
+# =============================================================================
+# Author preparation
+# =============================================================================
+authors_j = []
+errors = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    row_j = []
+    if pd.notna(data_with_abstract['authors'][i]):
+    # for line in data_with_abstract['authors'][i].replace('"','').replace('"','').replace('[','["').replace(']','"]').replace("'",'"').replace('"[','[').replace(']"',']').replace('None','""').replace('[""','["').replace('""]','"]').replace('["{','[{').replace('}"]','}]')[2:-2].split('}, {'):
+        try:
+            row = kw.remove_substring_content(data_with_abstract['authors'][i].replace("{'",'{"').replace("'}",'"}').replace("['",'["').replace("']",'"]').replace("':",'":').replace("' :",'" :').replace(":'",':"').replace(": '",': "').replace(",'",',"').replace(", '",', "').replace("',",'",').replace("' ,",'" ,').replace('None','""').replace('True','"True"').replace('False','"False"').replace('"[','[').replace(']"',']')[2:-2],a='[',b=']',replace='""')
+            for line in row.split('}, {'):
+                row_j.append(json.loads('{'+line+'}'))
+            authors_j.append(row_j)
+        except:
+            authors_j.append(np.nan)
+            errors.append(i)
+    else:
+        authors_j.append(np.nan)
+
+data_for_authors = []
+for i,pub in tqdm(enumerate(authors_j),total=len(authors_j)):
+    pub_id = data_with_abstract['id'][i]
+    try:
+        for auth in authors_j[i]:
+            data_for_authors.append([pub_id,auth['first_name'],auth['last_name'],auth['orcid'],auth['current_organization_id'],auth['researcher_id']])
+    except:
+        pass
+
+data_for_authors = pd.DataFrame(data_for_authors,columns=['pub_id','first_name','last_name','orcid','current_organization_id','researcher_id']) 
+data_for_authors.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' authors',index=False) # Save year indices to disk for further use
+
+
+# =============================================================================
+# Save to disk
+# =============================================================================
 references = pd.DataFrame(data_with_abstract['reference_ids'].values.tolist(),columns=['reference_ids'])
 references.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus references',index=False) # Save year indices to disk for further use
-
 
 source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
 source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
@@ -121,6 +169,8 @@ gc.collect()
 
 year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
 year_list.shape
+
+sample = data_with_abstract.sample(5)
 # =============================================================================
 # Sentence maker
 # =============================================================================
@@ -375,8 +425,8 @@ abstracts_pure = []
 for index,paper in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
     keywords_str = paper['DE']
     keywords_index_str = paper['ID']
-    abstract_str = paper['AB']
-    title_str = paper['TI']
+    abstract_str = kw.replace_british_american(strip_multiple_whitespaces(paper['AB']),kd.gb2us)
+    title_str = kw.replace_british_american(strip_multiple_whitespaces(paper['TI']),kd.gb2us)
     abstract_dic = word_tokenize(title_str+' '+abstract_str)
     abstract_dic_pure = abstract_dic.copy()
     if pd.notnull(paper['DE']):
@@ -418,14 +468,14 @@ keywords_index = [list(map(str.lower, x)) for x in keywords_index]
 tmp_data = []
 print("\nString pre processing for ababstracts_purestracts")
 for string_list in tqdm(abstracts, total=len(abstracts)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization='ALL',stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts = tmp_data.copy()
 del tmp_data
 
 tmp_data = []
 for string_list in tqdm(abstracts_pure, total=len(abstracts_pure)):
-    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
+    tmp_list = [kw.string_pre_processing(x,stemming_method='None',lemmatization=False,stop_word_removal=False,stop_words_extra=stops,verbose=False,download_nltk=False) for x in string_list]
     tmp_data.append(tmp_list)
 abstracts_pure = tmp_data.copy()
 del tmp_data
@@ -603,6 +653,11 @@ for paragraph in tqdm(corpus_abstract_pure, total=len(corpus_abstract_pure)):
 corpus_abstract_pure = tmp_data.copy()
 del tmp_data
 
+corpus_abstract_pure = [x.replace(' .','.') for x in corpus_abstract_pure]
+corpus_abstract_pure = [x.replace(' ,',',') for x in corpus_abstract_pure]
+corpus_abstract_pure = [x.replace(' ;',';') for x in corpus_abstract_pure]
+
+
 tmp_data = []
 for paragraph in tqdm(corpus_abstract_pure_tr, total=len(corpus_abstract_pure_tr)):
     paragraph = ' '.join(paragraph.split())
@@ -642,16 +697,37 @@ corpus_keywords_index_tr = tmp_data.copy()
 del tmp_data
 
 # =============================================================================
+# to US english
+# =============================================================================
+tmp = []
+errors = []
+for i,abstract in tqdm(enumerate(corpus_abstract_pure),total=len(corpus_abstract_pure)):
+    try:
+        tmp.append(kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(abstract),kd.gb2us)),kd.gb2us))
+    except:
+        tmp.append('')
+        errors.append(i)
+corpus_abstract_pure = tmp
+
+tmp = []
+for abstract in tqdm(corpus_abstract):
+    try:
+        tmp.append(kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(abstract),kd.gb2us)),kd.gb2us))
+    except:
+        tmp.append('')
+corpus_abstract = tmp
+    
+# =============================================================================
 # Write to disk
 # =============================================================================
 corpus_abstract = pd.DataFrame(corpus_abstract,columns=['words'])
-corpus_abstract_tr = pd.DataFrame(corpus_abstract_tr,columns=['words'])
+# corpus_abstract_tr = pd.DataFrame(corpus_abstract_tr,columns=['words'])
 corpus_abstract_pure = pd.DataFrame(corpus_abstract_pure,columns=['words'])
-corpus_abstract_pure_tr = pd.DataFrame(corpus_abstract_pure_tr,columns=['words'])
-corpus_keywords = pd.DataFrame(corpus_keywords,columns=['words'])
-corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
-corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
-corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
+# corpus_abstract_pure_tr = pd.DataFrame(corpus_abstract_pure_tr,columns=['words'])
+# corpus_keywords = pd.DataFrame(corpus_keywords,columns=['words'])
+# corpus_keywords_tr = pd.DataFrame(corpus_keywords_tr,columns=['words'])
+# corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
+# corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
 corpus_abstract.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' abstract_title deflemm',index=False,header=False)
 # corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
