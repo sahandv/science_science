@@ -8,32 +8,33 @@ Created on Tue Jan 12 12:30:30 2021
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-dir_root = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions/' # ryzen
+dir_root = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/clean/' # ryzen
 # dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/Dimensions/' # c1314
 
 # =============================================================================
 # Label prep - cleanup of data without label
 # =============================================================================
-categories = pd.read_csv(dir_root+'corpus category_for')
-data = pd.read_csv(dir_root+'publication idx')
-data['cat'] = categories['category_for']
+categories = pd.read_csv(dir_root+'corpus category_for',names=['cat'])
+data = pd.read_csv(dir_root+'publication idx',names=['id'])
+data['cat'] = categories['cat']
 # data['cat'] = data.cat.str.replace('[','').str.replace(']','').str[1:-1].str.split('}, {')
 # data['cat1'] = data['cat'][0]
 pub_ids = pd.DataFrame(data['id'])
 data = data[pd.notnull(data['cat'])]
-categories = categories[pd.notnull(categories['category_for'])]
+categories = categories[pd.notnull(categories['cat'])]
 categories.to_csv(dir_root+'corpus category_for',index=False,header=False)
 pub_ids_mask = pd.DataFrame(data['id'])
 pub_ids_mask.to_csv(dir_root+'publication idx',index=False,header=False)
 pub_ids_mask = data['id'].values.tolist()
 
 # filtering operation:
-f_name = 'abstract_title deflemm'
+f_name = 'abstract_title pure US'
 corpus = pd.read_csv(dir_root+''+f_name,names=['data'])
 corpus['id'] = pub_ids['id']
 corpus = corpus[corpus['id'].isin(pub_ids_mask)]
 corpus = corpus.drop('id',axis=1)
-corpus.to_csv(dir_root+'with label/'+f_name,index=False,header=False)
+corpus = corpus[pd.notna(corpus['data'])]
+corpus.to_csv(dir_root+''+f_name+' with id',index=False,header=False)
 
 # =============================================================================
 # Label prep - separate labels and clean
@@ -57,7 +58,6 @@ def clean_cats(cat_string):
     return result
 
 # get the first cat only 
-
 cat_1 = [clean_cats(x[0]) for x in data['cat'].values.tolist()]
 cat_1 = pd.DataFrame(cat_1)
 cat_1.columns = ['cat_id','cat_name','for_id','for_name']
@@ -91,7 +91,7 @@ for i in range(int(len(cats_all_df.columns)/len(name_template))):
     column_names.extend([x+'-'+str(i) for x in name_template])
 
 cats_all_df.columns = column_names
-# cats_all_df.to_csv(dir_root+'categories_procesed_further')
+cats_all_df.to_csv(dir_root+'corpus classes_N all')
 
 cat_0_groups = cats_all_df.groupby('for_id_root-0').size().reset_index()#.agg(['count'])
 print(cat_0_groups)
@@ -103,7 +103,7 @@ print(cat_2_groups)
 
 def category_selector(cat_row,level:int=0,max_level:int=7):
     """
-    It is an recursive function to select the categories.
+    It is a recursive function to select the categories.
     
     Parameters
     ----------
