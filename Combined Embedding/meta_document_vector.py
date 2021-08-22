@@ -7,6 +7,7 @@ Created on Mon May  3 15:46:31 2021
 """
 import os
 import gc
+import random
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -22,16 +23,17 @@ from sklearn.model_selection import train_test_split
 # !wget 'https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt'
 from tensorflow.keras import mixed_precision
 
-experiment_id = '019-6-lr=adam'
+experiment_id = 'dim-019-12-lr=adam-300D'
 
 tokenizer = 'word'
-embedding_dim = 128
-num_epochs = 500
+embedding_dim = 300
+num_epochs = 50
 vocab_limit = 40000
-min_paragraph_len = 20  #percentage of each paragraph
+min_paragraph_len = 40  #percentage of each paragraph
+sampling_steps = [2,4,6]
 n_inputs = 4 #network type selection
-batch_size = 512
-percentile = 90 # corpus length percentile of word length to cover
+batch_size = 400
+percentile = 85 # corpus length percentile of word length to cover
 # =============================================================================
 # Prepare GPU
 # =============================================================================
@@ -52,7 +54,8 @@ config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 # https://www.tensorflow.org/tutorials/text/text_generation
 # =============================================================================
 # dir_root = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/cora-classify/cora/' # C1314
-dir_root = '/home/sahand/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
+# dir_root = '/home/sahand/GoogleDrive/Data/Corpus/cora-classify/cora/' # Ryzen
+dir_root = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/' # Ryzen
 try:
     os.mkdir(dir_root+'combined-embedding-results/train/'+experiment_id)
 except:
@@ -60,24 +63,24 @@ except:
     # =============================================================================
     # Load and prepare features
     # =============================================================================
-corpus_idx = pd.read_csv(dir_root+'clean/single_component_small_18k/corpus_idx_original')['id'].values.tolist()
-net_vecs = pd.read_csv(dir_root+'embeddings/single_component_small_18k/n2v 300-70-20 p1q05').drop('Unnamed: 0',axis=1)
-net_vecs.columns = ['net_cid_'+str(x) for x in range(len(net_vecs.columns))]
+corpus_idx = pd.read_csv(dir_root+'clean/publication idx',names=['id'])['id'].values.tolist()
+net_vecs = pd.DataFrame([])#pd.read_csv(dir_root+'embeddings/n2v 300-70-20 p1q05').drop('Unnamed: 0',axis=1)
+# net_vecs.columns = ['net_cid_'+str(x) for x in range(len(net_vecs.columns))]
 
-data_path_rel = dir_root+'extractions_with_unique_id_labeled_single_component.csv'
-data = pd.read_csv(data_path_rel)
+data_path_rel = dir_root+'clean/abstract_title pure US with id'
+data = pd.read_csv(data_path_rel,names=['abstract','id'])
 data = data[data['id'].isin(corpus_idx)]
     # =============================================================================
     # Load and tokenize text
     # =============================================================================
 # corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title all-lem',names=['abstract'])
-corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure',names=['abstract'])
+# corpus = pd.read_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure',names=['abstract'])
 
-corpus['abstract'] = corpus['abstract'] 
+corpus = data['abstract'] 
 # corpus['abstract'] = "[documentembeddingtoken] "+corpus['abstract'] 
 
 # corpus.to_csv(dir_root+'clean/single_component_small_18k/abstract_title super duper pure with [DOC]',header=False,index=False)
-corpus = corpus['abstract'].values.tolist()
+corpus = corpus.values.tolist()
 
 text_lens = np.array([len(p.split()) for p in corpus])
 max_paragraph_len = int(np.percentile(text_lens, percentile)) # take Nth percentile as the sentence length threshold
@@ -90,7 +93,7 @@ max_paragraph_len = int(np.percentile(text_lens, percentile)) # take Nth percent
 #     'brown fox hates cats'
 #     ]
 
-n_docs = len(corpus_idx)+1
+n_docs = len(corpus)+1
 
 if tokenizer=='word':
 ##################
@@ -110,24 +113,24 @@ if tokenizer=='word':
     ##################
     # unlimited length
     ##################
-    # extract n-gram sequences from n=2 to n=number_of_grams_in_sentences 
-    input_sequences = []
-    input_sequences_doc_id = []
-    for cid,sent in tqdm(enumerate(corpus),total=len(corpus)):
-        token_list = tokenizer.texts_to_sequences([sent])[0]
-        for i in range(int(len(token_list)*min_paragraph_len/100)-1,len(token_list)):
-            n_gram_sentence = token_list[:i+1]
-            input_sequences.append(n_gram_sentence)   
-            input_sequences_doc_id.append(cid)
-    ##################
+    # # extract n-gram sequences from n=2 to n=number_of_grams_in_sentences 
+    # input_sequences = []
+    # input_sequences_doc_id = []
+    # for cid,sent in tqdm(enumerate(corpus),total=int(len(corpus))):
+    #     token_list = tokenizer.texts_to_sequences([sent])[0]
+    #     for i in range(int(len(token_list)*min_paragraph_len/100)-1,len(token_list),random.choice(sampling_steps)):
+    #         n_gram_sentence = token_list[:i+1]
+    #         input_sequences.append(n_gram_sentence)   
+    #         input_sequences_doc_id.append(cid)
+    # ##################
     # limited length
     ##################
     # OR extract n-gram sequences from n=2 to n=min(number_of_grams_in_sentences,max_paragraph_len )
     input_sequences = []
     input_sequences_doc_id = []
-    for cid,sent in tqdm(enumerate(corpus),total=len(corpus)):
+    for cid,sent in tqdm(enumerate(corpus),total=int(len(corpus))):
         token_list = tokenizer.texts_to_sequences([sent])[0]
-        for i in range(int(len(token_list)*min_paragraph_len/100)-1,min(len(token_list),max_paragraph_len)):
+        for i in range(int(len(token_list)*min_paragraph_len/100)-1,min(len(token_list),max_paragraph_len),random.choice(sampling_steps)):
             n_gram_sentence = token_list[:i+1]
             input_sequences.append(n_gram_sentence)
             input_sequences_doc_id.append(cid)
@@ -167,54 +170,62 @@ if tokenizer=='bert':
     # =============================================================================
     # Prepare sequences
     # =============================================================================
-print("\nPreparing sequences")
-revers_word_index = ta.reverse_word_index(word_index)
+# print("\nPreparing sequences")
+# revers_word_index = ta.reverse_word_index(word_index)
 
 # you can add maxlen=int. you can add padding='post', default is 'pre'. you can truncate='post' to remove from the end, default is 'pre' again
 max_seq_len = max([len(x) for x in input_sequences])
 # max_seq_len = int(max_paragraph_len)
+print('Padding sequences')
 input_sequences = pad_sequences(input_sequences,maxlen=max_seq_len,padding='pre')
 input_sequences = np.array(input_sequences)
-input_sequences_tmp = input_sequences[:3000,:]
-
+# input_sequences_tmp = input_sequences[:3000,:]
+gc.collect()
     # =============================================================================
-    # Prepare model inputs and outputs
+    # Prepare model inputs and outputs - pandas way, memory inefficient
     # =============================================================================
+print('Preparing model inputs and outputs')
 # create X and Y
 X,labels = input_sequences[:,:-1],input_sequences[:,-1]
 input_df = pd.DataFrame(X)
 input_df['Y'] = labels
 input_df['corpus_index'] = input_sequences_doc_id
 input_df_sample = input_df.sample(10)
-x2 = net_vecs.values
+# x2 = net_vecs.values
+gc.collect()
+
+np.random.seed(10)
+# index = list(input_df.index)
+# random.shuffle(index)
+# input_df = input_df.values
 
 # shuffle dataset
-input_df = input_df.sample(frac=1).reset_index(drop=True)
+print('shuffling dataset')
+input_df = input_df.sample(frac=1).reset_index(drop=True) # fast,  but twice memory is used
 
 # split train test
+print('splitting data')
 msk = np.random.rand(len(input_df)) < 0.8
 train = input_df[msk]
 test = input_df[~msk]
 
-
+print('preparing test and train X and Y')
 train_corpus_idx = train['corpus_index'].values
 train_y = train['Y'].values
 # train_y_cat = tf.keras.utils.to_categorical(train_y, num_classes=n_classes)
 train_x1 = train[list(range(max_seq_len-1))].values
-train_x2 = pd.DataFrame(train['corpus_index']).reset_index()
-train_x2.columns = ['train_index','index']
-train_x2 = train_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1)
-train_x2 = train_x2.drop('train_index',axis=1).values
+train_x2 = pd.DataFrame(train['corpus_index']).reset_index(drop=True)
+train_x2.columns = ['index']
+train_x2 = train_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
 
 test_corpus_idx = test['corpus_index'].values
 test_y = test['Y'].values
 # test_y_cat = tf.keras.utils.to_categorical(test_y, num_classes=n_classes)
 test_x1 = test[list(range(max_seq_len-1))].values
 # test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
-test_x2 = pd.DataFrame(test['corpus_index']).reset_index()
-test_x2.columns = ['test_index','index']
-test_x2 = test_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1)
-test_x2 = test_x2.drop('test_index',axis=1).values
+test_x2 = pd.DataFrame(test['corpus_index']).reset_index(drop=True)
+test_x2.columns = ['index']
+test_x2 = test_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
 
 # corpus_idx = train_corpus_idx
 # y = train_y
@@ -223,14 +234,42 @@ test_x2 = test_x2.drop('test_index',axis=1).values
 # ys = tf.keras.utils.to_categorical(labels,num_classes=total_words) # Not suitable for large data
 
 # del train, test, msk, input_df, X, x2
-gc.collect()
+# =============================================================================
+# Prepare model inputs and outputs - pandas way, memory inefficient
+# =============================================================================
+print('Preparing model inputs and outputs')
+# create X and Y
+X,labels = input_sequences[:,:-1],input_sequences[:,-1]
+input_sequences_doc_id = np.array(input_sequences_doc_id)
+
+print('shuffling dataset')
+rng_state = np.random.get_state()
+np.random.shuffle(X)
+np.random.set_state(rng_state)
+np.random.shuffle(labels)
+np.random.set_state(rng_state)
+np.random.shuffle(input_sequences_doc_id)
 
 
+# split train test
+print('splitting data')
+msk = np.random.rand(X.shape[0]) < 0.8
+
+train_corpus_idx = input_sequences_doc_id[msk]
+train_y = labels[msk]
+train_x1 = X[msk]
+train_x2 = pd.DataFrame(train_corpus_idx,columns=['index']).merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
+
+test_corpus_idx = input_sequences_doc_id[~msk]
+test_y = labels[~msk]
+test_x1 = X[~msk]
+test_x2 = pd.DataFrame(test_corpus_idx,columns=['index']).merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
 
 
 ##################
 # Generator object - updated - reference https://medium.com/analytics-vidhya/write-your-own-custom-data-generator-for-tensorflow-keras-1252b64e41c3
 ##################
+gc.collect()
 class DataGenerator(tf.keras.utils.Sequence):
     """
     Generates data for Keras
@@ -272,19 +311,21 @@ class DataGenerator(tf.keras.utils.Sequence):
         ID_list = self.ids[index * self.batch_size:(index + 1) * self.batch_size]
         self.Imemory = index
         
-        inputs_1,inputs_2,inputs_3 = self._generate_input_123(ID_list)
-
         y = self._generate_y(ID_list)
         if self.n_inputs==0:
-            return inputs_3, y
+            return self._generate_input_3(ID_list), y
         if self.n_inputs==1:
+            inputs_1,inputs_2,inputs_3 = self._generate_input_123(ID_list)
             return [inputs_2,inputs_3], y
         if self.n_inputs==2:
+            inputs_1,inputs_2,inputs_3 = self._generate_input_123(ID_list)
             return [inputs_1,inputs_3], y
         if self.n_inputs==3:
+            inputs_1,inputs_2,inputs_3 = self._generate_input_123(ID_list)
             return [inputs_1,inputs_2,inputs_3], y
+        
         if self.n_inputs==4:
-            return inputs_1, y
+            return self._generate_input_1(ID_list), y
         
     #     if self.to_fit:
     #         y = self._generate_y(ID_list)
@@ -301,7 +342,6 @@ class DataGenerator(tf.keras.utils.Sequence):
     def _generate_input_1(self, ID_list): 
         #inputs_seq
         # self.IDmemory = ID_list
-        
         x_batch = np.empty((self.batch_size,self.x1.shape[1]), dtype=int)
         for n,i in enumerate(ID_list):
             x_batch[n,] = self.x1[i]
@@ -342,6 +382,7 @@ class DataGenerator(tf.keras.utils.Sequence):
     #         x_batch[i,] = self.x2[self.corpus_idx[i]]
     #     return(x_batch)
 
+print('Generator init')
 train_dataset = DataGenerator(x1=train_x1, x2=train_x2,y=train_y,n_inputs=n_inputs,
                               n_classes=n_classes,n_docs=n_docs,corpus_idx=train_corpus_idx,batch_size=batch_size)
 valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_inputs=n_inputs,
@@ -353,6 +394,7 @@ valid_dataset = DataGenerator(x1=test_x1, x2=train_x2,y=test_y,n_inputs=n_inputs
     # =============================================================================
     # Network 0 inputs (netvec & docvec)
     # =============================================================================
+print('Model preps')
 if n_inputs==0:
     # inputs_doc = tf.keras.Input(shape=(1,), name='input_2')
     # x_12 = tf.keras.layers.Embedding(n_docs,embedding_dim,input_length=1,name='doc_embedding')(inputs_doc)
@@ -552,9 +594,10 @@ if n_inputs==4:
     inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
     x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
     
-    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(200,return_sequences=False,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
-    # x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(100,return_sequences=False,name='token_LSTM_2'),name='token_bidirectional_2')(x_11bl)
-    x_11bl = tf.keras.layers.Dense(400,activation='relu',name='token_bl_dense_1')(x_11bl)
+    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(300,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
+    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(300,return_sequences=False,name='token_LSTM_2'),name='token_bidirectional_2')(x_11bl)
+    x_11bl = tf.keras.layers.Dropout(0.25)(x_11bl)
+    x_11bl = tf.keras.layers.Dense(600,activation='relu',name='token_bl_dense_1')(x_11bl)
 
     # x_11c = tf.keras.layers.Conv1D(128,5,activation='relu',name='conv_1')(x_11) # 128 neurons with kernel size of 5 words
     # x_11c = tf.keras.layers.GlobalMaxPooling1D()(x_11c)
@@ -562,9 +605,9 @@ if n_inputs==4:
 
     # x_11 = tf.keras.layers.concatenate([x_11bl, x_11c], name='token_concatenate')
     # x_11 = tf.keras.layers.Dense(100,activation='relu',name='token_dense')(x_11)
-    
-    x = tf.keras.layers.Dense(400,activation='relu',name='main_dense_1')(x_11bl)
-    # x = tf.keras.layers.Dense(400,activation='relu',name='main_dense_2')(x)
+    # x = tf.keras.layers.Dropout(0.25)(x_11bl)
+    x = tf.keras.layers.Dense(600,activation='relu',name='main_dense_1')(x_11bl)
+    x = tf.keras.layers.Dense(600,activation='relu',name='main_dense_2')(x)
     outputs = tf.keras.layers.Dense(n_classes, activation="softmax",name='final_dense')(x)
     
     model = keras.Model(inputs=inputs_seq, outputs=outputs)
