@@ -144,6 +144,10 @@ for i,pub in tqdm(enumerate(authors_j),total=len(authors_j)):
 data_for_authors = pd.DataFrame(data_for_authors,columns=['pub_id','first_name','last_name','orcid','current_organization_id','researcher_id']) 
 data_for_authors.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' authors',index=False) # Save year indices to disk for further use
 
+# =============================================================================
+# Journal/Book preparation
+# =============================================================================
+
 
 # =============================================================================
 # Save to disk
