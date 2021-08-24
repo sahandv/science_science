@@ -23,16 +23,19 @@ from sklearn.model_selection import train_test_split
 # !wget 'https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt'
 from tensorflow.keras import mixed_precision
 
-experiment_id = 'dim-019-12-lr=adam-300D'
+experiment_id = 'dim-019-12-lr=adam-100D-noshuffle'
 
+shuffle = False
+preprocess = 'numpy'
+split_rate = 0.8 #train ratio
 tokenizer = 'word'
-embedding_dim = 300
+embedding_dim = 100
 num_epochs = 50
 vocab_limit = 40000
-min_paragraph_len = 40  #percentage of each paragraph
-sampling_steps = [2,4,6]
+min_paragraph_len = 30  #percentage of each paragraph
+sampling_steps = [4,6,8]
 n_inputs = 4 #network type selection
-batch_size = 400
+batch_size = 500
 percentile = 85 # corpus length percentile of word length to cover
 # =============================================================================
 # Prepare GPU
@@ -68,7 +71,7 @@ net_vecs = pd.DataFrame([])#pd.read_csv(dir_root+'embeddings/n2v 300-70-20 p1q05
 # net_vecs.columns = ['net_cid_'+str(x) for x in range(len(net_vecs.columns))]
 
 data_path_rel = dir_root+'clean/abstract_title pure US with id'
-data = pd.read_csv(data_path_rel,names=['abstract','id'])
+data = pd.read_csv(data_path_rel,names=['abstract','id']).sample(frac=1).reset_index(drop=True)
 data = data[data['id'].isin(corpus_idx)]
     # =============================================================================
     # Load and tokenize text
@@ -165,8 +168,6 @@ if tokenizer=='bert':
 ##################
     tokenizer = BertWordPieceTokenizer("data/vocabs/bert-base-uncased-vocab.txt", lowercase=True)
 
-
-
     # =============================================================================
     # Prepare sequences
     # =============================================================================
@@ -184,87 +185,99 @@ gc.collect()
     # =============================================================================
     # Prepare model inputs and outputs - pandas way, memory inefficient
     # =============================================================================
-print('Preparing model inputs and outputs')
-# create X and Y
-X,labels = input_sequences[:,:-1],input_sequences[:,-1]
-input_df = pd.DataFrame(X)
-input_df['Y'] = labels
-input_df['corpus_index'] = input_sequences_doc_id
-input_df_sample = input_df.sample(10)
-# x2 = net_vecs.values
-gc.collect()
-
-np.random.seed(10)
-# index = list(input_df.index)
-# random.shuffle(index)
-# input_df = input_df.values
-
-# shuffle dataset
-print('shuffling dataset')
-input_df = input_df.sample(frac=1).reset_index(drop=True) # fast,  but twice memory is used
-
-# split train test
-print('splitting data')
-msk = np.random.rand(len(input_df)) < 0.8
-train = input_df[msk]
-test = input_df[~msk]
-
-print('preparing test and train X and Y')
-train_corpus_idx = train['corpus_index'].values
-train_y = train['Y'].values
-# train_y_cat = tf.keras.utils.to_categorical(train_y, num_classes=n_classes)
-train_x1 = train[list(range(max_seq_len-1))].values
-train_x2 = pd.DataFrame(train['corpus_index']).reset_index(drop=True)
-train_x2.columns = ['index']
-train_x2 = train_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
-
-test_corpus_idx = test['corpus_index'].values
-test_y = test['Y'].values
-# test_y_cat = tf.keras.utils.to_categorical(test_y, num_classes=n_classes)
-test_x1 = test[list(range(max_seq_len-1))].values
-# test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
-test_x2 = pd.DataFrame(test['corpus_index']).reset_index(drop=True)
-test_x2.columns = ['index']
-test_x2 = test_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
-
-# corpus_idx = train_corpus_idx
-# y = train_y
-
-# Xtrain, Xtest, Labeltrain, Labeltest = train_test_split(X, labels, test_size=0.2, random_state=100,shuffle=True)
-# ys = tf.keras.utils.to_categorical(labels,num_classes=total_words) # Not suitable for large data
-
-# del train, test, msk, input_df, X, x2
+if preprocess!='numpy':
+    print('Preparing model inputs and outputs')
+    # create X and Y
+    X,labels = input_sequences[:,:-1],input_sequences[:,-1]
+    input_df = pd.DataFrame(X)
+    input_df['Y'] = labels
+    input_df['corpus_index'] = input_sequences_doc_id
+    input_df_sample = input_df.sample(10)
+    # x2 = net_vecs.values
+    gc.collect()
+    
+    np.random.seed(10)
+    # index = list(input_df.index)
+    # random.shuffle(index)
+    # input_df = input_df.values
+    
+    # shuffle dataset
+    if shuffle:
+        print('shuffling dataset')
+        input_df = input_df.sample(frac=1).reset_index(drop=True) # fast,  but twice memory is used
+    
+    # split train test
+    print('splitting data')
+    # msk = np.random.rand(len(input_df)) < 0.8 # sub-sequence shuffle and split
+    msk = pd.DataFrame(np.zeros(input_sequences_doc_id.shape[0]))
+    msk[:int(split_rate*input_sequences_doc_id.shape[0])] = True
+    msk[int(split_rate*input_sequences_doc_id.shape[0]):] = False
+    msk = np.array(list(msk[0].values))
+    
+    train = input_df[msk]
+    test = input_df[~msk]
+    
+    print('preparing test and train X and Y')
+    train_corpus_idx = train['corpus_index'].values
+    train_y = train['Y'].values
+    # train_y_cat = tf.keras.utils.to_categorical(train_y, num_classes=n_classes)
+    train_x1 = train[list(range(max_seq_len-1))].values
+    train_x2 = pd.DataFrame(train['corpus_index']).reset_index(drop=True)
+    train_x2.columns = ['index']
+    train_x2 = train_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
+    
+    test_corpus_idx = test['corpus_index'].values
+    test_y = test['Y'].values
+    # test_y_cat = tf.keras.utils.to_categorical(test_y, num_classes=n_classes)
+    test_x1 = test[list(range(max_seq_len-1))].values
+    # test_x2 = pd.DataFrame(test['corpus_index']).reset_index().merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).drop('corpus_index',axis=1).values
+    test_x2 = pd.DataFrame(test['corpus_index']).reset_index(drop=True)
+    test_x2.columns = ['index']
+    test_x2 = test_x2.merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
+    
+    # corpus_idx = train_corpus_idx
+    # y = train_y
+    
+    # Xtrain, Xtest, Labeltrain, Labeltest = train_test_split(X, labels, test_size=0.2, random_state=100,shuffle=True)
+    # ys = tf.keras.utils.to_categorical(labels,num_classes=total_words) # Not suitable for large data
+    
+    # del train, test, msk, input_df, X, x2
 # =============================================================================
 # Prepare model inputs and outputs - pandas way, memory inefficient
 # =============================================================================
-print('Preparing model inputs and outputs')
-# create X and Y
-X,labels = input_sequences[:,:-1],input_sequences[:,-1]
-input_sequences_doc_id = np.array(input_sequences_doc_id)
-
-print('shuffling dataset')
-rng_state = np.random.get_state()
-np.random.shuffle(X)
-np.random.set_state(rng_state)
-np.random.shuffle(labels)
-np.random.set_state(rng_state)
-np.random.shuffle(input_sequences_doc_id)
-
-
-# split train test
-print('splitting data')
-msk = np.random.rand(X.shape[0]) < 0.8
-
-train_corpus_idx = input_sequences_doc_id[msk]
-train_y = labels[msk]
-train_x1 = X[msk]
-train_x2 = pd.DataFrame(train_corpus_idx,columns=['index']).merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
-
-test_corpus_idx = input_sequences_doc_id[~msk]
-test_y = labels[~msk]
-test_x1 = X[~msk]
-test_x2 = pd.DataFrame(test_corpus_idx,columns=['index']).merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
-
+if preprocess=='numpy':
+    print('Preparing model inputs and outputs')
+    # create X and Y
+    X,labels = input_sequences[:,:-1],input_sequences[:,-1]
+    input_sequences_doc_id = np.array(input_sequences_doc_id)
+    
+    if shuffle:
+        print('shuffling dataset')
+        rng_state = np.random.get_state()
+        np.random.shuffle(X)
+        np.random.set_state(rng_state)
+        np.random.shuffle(labels)
+        np.random.set_state(rng_state)
+        np.random.shuffle(input_sequences_doc_id)
+    
+    # split train test
+    print('splitting data')
+    # msk = np.random.rand(X.shape[0]) < 0.8 # sub-sequence shuffle and split
+    msk = pd.DataFrame(np.zeros(input_sequences_doc_id.shape[0]))
+    msk[:int(split_rate*input_sequences_doc_id.shape[0])] = True
+    msk[int(split_rate*input_sequences_doc_id.shape[0]):] = False
+    msk = list(msk[0].values)
+    msk = np.array(msk)
+    
+    train_corpus_idx = input_sequences_doc_id[msk]
+    train_y = labels[msk]
+    train_x1 = X[msk]
+    train_x2 = pd.DataFrame(train_corpus_idx,columns=['index']).merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
+    
+    test_corpus_idx = input_sequences_doc_id[~msk]
+    test_y = labels[~msk]
+    test_x1 = X[~msk]
+    test_x2 = pd.DataFrame(test_corpus_idx,columns=['index']).merge(net_vecs.reset_index(),on='index',how='left').drop('index',axis=1).values
 
 ##################
 # Generator object - updated - reference https://medium.com/analytics-vidhya/write-your-own-custom-data-generator-for-tensorflow-keras-1252b64e41c3
@@ -594,8 +607,8 @@ if n_inputs==4:
     inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
     x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)
     
-    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(300,return_sequences=True,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
-    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(300,return_sequences=False,name='token_LSTM_2'),name='token_bidirectional_2')(x_11bl)
+    x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(300,return_sequences=False,name='token_LSTM_1'),name='token_bidirectional_1')(x_11)
+    # x_11bl = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(300,return_sequences=False,name='token_LSTM_2'),name='token_bidirectional_2')(x_11bl)
     x_11bl = tf.keras.layers.Dropout(0.25)(x_11bl)
     x_11bl = tf.keras.layers.Dense(600,activation='relu',name='token_bl_dense_1')(x_11bl)
 
