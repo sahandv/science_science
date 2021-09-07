@@ -28,6 +28,9 @@ nltk.download('punkt')
 year_from = 1960
 year_to = 2021
 
+abstract_length_min = 300 #character lower bound
+abstract_length_min_w = 60 # word lower bound
+
 MAKE_SENTENCE_CORPUS = False
 MAKE_SENTENCE_CORPUS_ADVANCED_KW = False
 MAKE_SENTENCE_CORPUS_ADVANCED = False
@@ -39,11 +42,14 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/all dimensions AI articles-proceedings.csv'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/all dimensions AI articles-proceedings.csv'
+data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/AI kw merged'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
-# data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/AI ALL 1900-2019 - reformat'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/clean/publication idx'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_full_relevant = pd.read_csv(data_path_rel,index_col=0)
+# data_full_relevant = pd.read_csv(data_path_rel,names=['abstract'])
+
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
 sample = data_full_relevant.sample(4)
@@ -65,6 +71,10 @@ data_full_relevant['SO'] = data_full_relevant['publisher']
 # data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
 sample = data_full_relevant.sample(4)
 
+# path = '/home/sahand/GoogleDrive/Data/'
+# pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/publication idx')
+# data_full_relevant = data_full_relevant[data_full_relevant['id'].isin(pub_idx['id'].values.tolist())]
+
 # =============================================================================
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
@@ -76,8 +86,13 @@ data_filtered = data_filtered[data_filtered['PY'].astype('int')>year_from-1]
 data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
 
 # Remove columns without keywords/abstract list 
-data_with_keywords = data_filtered[pd.notnull(data_filtered['DE'])]
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['title'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['authors'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['year'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['reference_ids'])]
 
 # =============================================================================
 # remove repeating ids
@@ -86,7 +101,6 @@ data_with_abstract = data_with_abstract.drop_duplicates(subset=['id']).reset_ind
 
 del data_full_relevant
 del data_filtered
-del data_with_keywords
 
 # =============================================================================
 # Further cleaning - optional
@@ -96,6 +110,8 @@ data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'e.g.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'i.e.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
@@ -111,6 +127,30 @@ for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
 data_with_abstract['AB'] = abstracts.copy()
 del  abstracts
 gc.collect()
+
+# =============================================================================
+# Clean bad data based on abstracts
+# =============================================================================
+short_abstracts = []
+lens = []
+word_len = []
+percentile = 5
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    leng = len(row['abstract'])
+    w_leng = len(row['AB'].split())
+    word_len.append([len(ab) for ab in row['AB'].split()])
+    lens.append(leng)
+    if leng < abstract_length_min or w_leng < abstract_length_min_w:
+        short_abstracts.append(i)
+
+word_len_f = [j for sub in word_len for j in sub]
+median_word_len = np.median(word_len_f)
+mean_word_len = np.mean(word_len_f)
+
+max_paragraph_len = int(np.percentile(lens, percentile)) # take Nth percentile as the sentence length threshold
+short_abstract_papers = data_with_abstract.iloc[short_abstracts]['id']
+data_with_abstract = data_with_abstract[~data_with_abstract['id'].isin(list(short_abstract_papers))]
+data_with_abstract[['id']].to_csv(root_dir+subdir+'mask',index=False)
 
 # =============================================================================
 # Author preparation
@@ -142,39 +182,228 @@ for i,pub in tqdm(enumerate(authors_j),total=len(authors_j)):
         pass
 
 data_for_authors = pd.DataFrame(data_for_authors,columns=['pub_id','first_name','last_name','orcid','current_organization_id','researcher_id']) 
-data_for_authors.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' authors',index=False) # Save year indices to disk for further use
+data_for_authors = data_for_authors[data_for_authors['researcher_id']!='']
+data_for_authors.to_csv(root_dir+subdir+'authors with research_id',index=False) # Save year indices to disk for further use
+
+pubs_with_r_id = list(data_for_authors.groupby('pub_id').groups.keys())
+# =============================================================================
+# filter data by id from reviously created filters-- optional
+# =============================================================================
+id_filter = pd.read_csv(root_dir+subdir+'publication idx')['id'].values.tolist()
+
+data_with_abstract = data_with_abstract[data_with_abstract['id'].isin(id_filter)]
+data_with_abstract = data_with_abstract[data_with_abstract['id'].isin(pubs_with_r_id)]
+data_with_abstract = data_with_abstract.reset_index(drop=True)
+
+
+
+# filtered_abstracts_lem = pd.read_csv(root_dir+subdir+'abstract_title deflemm',names=['abstract'])
+# filtered_abstracts_lem['id'] = data_with_abstract['id']
+# filtered_abstracts_lem = filtered_abstracts_lem[filtered_abstracts_lem['id'].isin(id_filter)]
+# filtered_abstracts_lem.to_csv(root_dir+subdir+'abstract_title deflemm',index=False)
+
+# filtered_abstracts_pure = pd.read_csv(root_dir+subdir+'abstract_title pure',names=['abstract'])
+# filtered_abstracts_pure['id'] = data_with_abstract['id']
+# filtered_abstracts_pure = filtered_abstracts_pure[filtered_abstracts_pure['id'].isin(id_filter)]
+# filtered_abstracts_pure.to_csv(root_dir+subdir+'abstract_title pure',index=False)
+
+# filtered_abstracts = pd.read_csv(root_dir+subdir+'abstract_title pure US with id',names=['abstract','id'])
+# filtered_abstracts = filtered_abstracts[filtered_abstracts['id'].isin(id_filter)]
+# filtered_abstracts.to_csv(root_dir+subdir+'abstract_title pure US with id',index=False)
+
+# filtered_cats_masked = pd.read_csv(root_dir+subdir+'categories_masked_clean')
+# filtered_cats_masked['id'] = data_with_abstract['id']
+# filtered_cats_masked = filtered_cats_masked[filtered_cats_masked['id'].isin(id_filter)]
+# filtered_cats_masked.to_csv(root_dir+subdir+'categories_masked_clean',index=False)
+
+# filtered_cats_processed = pd.read_csv(root_dir+subdir+'categories_processed')
+# filtered_cats_processed['id'] = data_with_abstract['id']
+# filtered_cats_processed = filtered_cats_processed[filtered_cats_processed['id'].isin(id_filter)]
+# filtered_cats_processed.to_csv(root_dir+subdir+'categories_processed',index=False)
+
+# filtered_refs = pd.read_csv(root_dir+subdir+'corpus references')
+# filtered_refs['id'] = data_with_abstract['id']
+# filtered_refs = filtered_refs[filtered_refs['id'].isin(id_filter)]
+# filtered_refs.to_csv(root_dir+subdir+'corpus references',index=False)
+
+# filtered_so = pd.read_csv(root_dir+subdir+'corpus sources')
+# filtered_so['id'] = data_with_abstract['id']
+# filtered_so = filtered_so[filtered_so['id'].isin(id_filter)]
+# filtered_so.to_csv(root_dir+subdir+'corpus sources',index=False)
+
+# filtered_py = pd.read_csv(root_dir+subdir+'corpus years')
+# filtered_py['id'] = data_with_abstract['id']
+# filtered_py = filtered_py[filtered_py['id'].isin(id_filter)]
+# filtered_py.to_csv(root_dir+subdir+'corpus years',index=False)
 
 # =============================================================================
-# Journal/Book preparation
+# Journal/Book category preparation and check -- optional
 # =============================================================================
+types = []
+sources = []
+errors = []
+journal_title = []
+journal_id = []
+conference_title = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    try:
+        output = json.loads(data_with_abstract['journal'][i].replace("{'",'{"').replace("'}",'"}').replace("':",'":').replace("' :",'" :').replace(":'",':"').replace(": '",': "').replace(",'",',"').replace(", '",', "').replace("',",'",').replace("' ,",'" ,').replace('None','""').replace('True','"True"').replace('False','"False"'))
+        types.append('j')
+        journal_title.append(output['title'])
+        journal_id.append(output['id'])
+        conference_title.append(np.nan)
+    except:
+        try:
+            output = data_with_abstract['proceedings_title'][i].replace("{'",'{"').replace("'}",'"}').replace("':",'":').replace("' :",'" :').replace(":'",':"').replace(": '",': "').replace(",'",',"').replace(", '",', "').replace("',",'",').replace("' ,",'" ,').replace('None','""').replace('True','"True"').replace('False','"False"')
+            types.append('c')
+            journal_title.append(np.nan)
+            journal_id.append(np.nan)
+            conference_title.append(output)
+        except:
+            output = np.nan
+            errors.append([i,row])
+            types.append('u')
+            journal_title.append(np.nan)
+            journal_id.append(np.nan)
+            conference_title.append(np.nan)
+            
+    sources.append(output)
+
+data_with_abstract['journal_title'] = journal_title
+data_with_abstract['journal_id'] = journal_id
+data_with_abstract['conference_title'] = conference_title
+
+journal_groups = data_with_abstract.groupby('journal_title').groups
+journal_groups_keys = journal_groups.keys()
+
+cat_check = data_with_abstract.iloc[list(journal_groups['Технология и конструирование в электронной аппаратуре'])]
+
 
 
 # =============================================================================
 # Save to disk
 # =============================================================================
+data_with_abstract.to_csv(root_dir+subdir+'data with abstract',index=False)
+
 references = pd.DataFrame(data_with_abstract['reference_ids'].values.tolist(),columns=['reference_ids'])
-references.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus references',index=False) # Save year indices to disk for further use
+references.to_csv(root_dir+subdir+'corpus references',index=False) # Save year indices to disk for further use
 
 source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
-source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
+source_list.to_csv(root_dir+subdir+'corpus sources',index=False) # Save year indices to disk for further use
 
 class_list = pd.DataFrame(data_with_abstract['category_for'].values.tolist(),columns=['category_for'])
-class_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus category_for',index=False) # Save year indices to disk for further use
+class_list.to_csv(root_dir+subdir+'corpus category_for',index=False) # Save year indices to disk for further use
 
 id_list = pd.DataFrame(data_with_abstract['id'].values.tolist(),columns=['id'])
-id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' publication idx',index=False) # Save year indices to disk for further use
+id_list.to_csv(root_dir+subdir+'publication idx',index=False) # Save year indices to disk for further use
 
 id_list = pd.DataFrame(list(data_with_abstract.index),columns=['index'])
-id_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus idx',index=False) # Save year indices to disk for further use
+id_list.to_csv(root_dir+subdir+'corpus idx',index=False) # Save year indices to disk for further use
 
 year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
-year_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus years',index=False) # Save year indices to disk for further use
+year_list.to_csv(root_dir+subdir+'corpus years',index=False) # Save year indices to disk for further use
 gc.collect()
 
 year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
 year_list.shape
 
 sample = data_with_abstract.sample(5)
+
+# =============================================================================
+# Simple pre-process (method a) -- optional -- preferred for deep learning of documents
+# =============================================================================
+data_with_abstract['TI_AB'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
+abstracts = [re.sub('[^A-Za-z0-9 .?,!()]','',ab) for ab in data_with_abstract['TI_AB']]
+abstracts = [strip_multiple_whitespaces(ab).strip().lower() for ab in abstracts]
+tmp = []
+errors = []
+for i,abstract in tqdm(enumerate(abstracts),total=len(abstracts)):
+    try:
+        tmp.append(kw.replace_british_american(kw.replace_british_american(strip_multiple_whitespaces(abstract),kd.gb2us),kd.gb2us))
+    except:
+        tmp.append('')
+        errors.append(i)
+corpus_abstract_pure = tmp
+
+
+thesaurus = [
+    [' 1)',', '],
+    [' 2)',', '],
+    [' 3)',', '],
+    [' 4)',', '],
+    [' 5)',', '],
+    [' 6)',', '],
+    [' 7)',', '],
+    [' 8)',', '],
+    [' 9)',', '],
+    [' a)',', '],
+    [' b)',', '],
+    [' c)',', '],
+    [' d) ',', '],
+    [' e)',', '],
+    [' f)',', '],
+    [' g)',', '],
+    [' h)',', '],
+    [' a. ',', '],
+    [' b. ',', '],
+    [' c. ',', '],
+    [' d. ',', '],
+    [' e. ',', '],
+    [' f. ',', '],
+    [' g. ',', '],
+    [' h. ',', '],
+    [' i)',', '],
+    [' ii)',', '],
+    [' iii)',', '],
+    [' iv)',', '],
+    [' v)',', '],
+    [' vi)',', '],
+    [' vii)',', '],
+    [' viii)',', '],
+    [' ix)',', '],
+    [' x)',', '],
+    [' xi)',', '],
+    [' xii)',', '],
+    [' i. ',', '],
+    [' ii. ',', '],
+    [' iii. ',', '],
+    [' iv. ',', '],
+    [' v. ',', '],
+    [' vi. ',', '],
+    [' vii. ',', '],
+    [' viii. ',', '],
+    [' ix. ',', '],
+    [' x. ',', '],
+    [' xi. ',', '],
+    [' xii. ',', '],
+    [' i.e.',', '],
+    [' ie.',', '],
+    [' eg.',', '],
+    [' e.g.',', ']
+    ]
+
+tmp = []
+for paragraph in tqdm(corpus_abstract_pure):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    tmp.append(paragraph)
+corpus_abstract_pure_final = tmp
+
+corpus_abstract_pure_final = [strip_multiple_whitespaces(ab).strip().lower() for ab in corpus_abstract_pure_final]
+
+thesaurus = [
+    [',,',',']
+    ]
+
+tmp = []
+for paragraph in tqdm(corpus_abstract_pure_final):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    tmp.append(paragraph)
+corpus_abstract_pure_final = tmp
+
+corpus_abstract_pure_df = pd.DataFrame(corpus_abstract_pure_final,columns=['abstract'])
+corpus_abstract_pure_df['id'] = data_with_abstract['id']
+corpus_abstract_pure_df.to_csv(root_dir+subdir+'abstract_title method_a',index=False)
+
 # =============================================================================
 # Sentence maker
 # =============================================================================
@@ -214,7 +443,7 @@ if MAKE_SENTENCE_CORPUS is True:
     
     sentence_corpus = pd.DataFrame(sentence_corpus,columns=['article_index','sentence','year'])
     
-    sentence_corpus.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
+    sentence_corpus.to_csv(root_dir+subdir+' corpus sentences abstract-title',index=False,header=True)
 
 gc.collect()
 # =============================================================================
@@ -238,7 +467,8 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     for index,row in tqdm(data_fresh.iterrows(),total=data_fresh.shape[0]):
         abstract_str = row['TI_AB']
         year = row['PY']
-        abstract_sentences = re.split('\. |\? |\\n',abstract_str)
+        abstract_sentences = re.split('\. |\? |\\n|\!',abstract_str)
+        abstract_sentences = [x for x in abstract_sentences if x!='']
         length = len(abstract_sentences)
         
         sentences.extend(abstract_sentences)
@@ -292,7 +522,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     sentence_df = pd.DataFrame(indices,columns=['article_index'])
     sentence_df['sentence'] = sentences
     sentence_df['year'] = years
-    sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
+    sentence_df.to_csv(root_dir+subdir+'corpus sentences abstract-title',index=False,header=True)
     
 # =============================================================================
 # Keyword Extractor
@@ -301,6 +531,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED_KW is True:
     data_with_abstract['TI_AB'] = data_with_abstract.AB
     data_fresh = data_with_abstract[['TI_AB','PY']].copy()
     data_fresh['TI_AB'] = data_fresh['TI_AB'].str.lower()
+    # data_fresh['TI_AB'] = corpus_abstract_pure_final
     
     del data_with_abstract
     gc.collect()
@@ -382,7 +613,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED_KW is True:
     sentence_df = pd.DataFrame(indices,columns=['article_index'])
     sentence_df['sentence'] = sentences
     sentence_df['year'] = years
-    sentence_df.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sentences abstract-title',index=False,header=True)
+    sentence_df.to_csv(root_dir+subdir+' corpus sentences abstract-title',index=False,header=True)
     
 
 if MAKE_REGULAR_CORPUS is False:
@@ -395,7 +626,7 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
     import numpy as np
     from tqdm import tqdm
     
-    file = root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus abstract-title'#'/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
+    file = root_dir+subdir+' corpus abstract-title'#'/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/corpus/AI ALL/1900-2019 corpus sentences abstract-title'
     file = pd.read_csv(file)
     size = 500000
     unique = []
@@ -416,6 +647,7 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
     unique.columns = ['words']
     unique = list(unique.words.unique())
     len(unique)
+
 
 # =============================================================================
 # Tokenize (Author Keywords and Abstracts+Titles)
@@ -733,9 +965,9 @@ corpus_abstract_pure = pd.DataFrame(corpus_abstract_pure,columns=['words'])
 # corpus_keywords_index = pd.DataFrame(corpus_keywords_index,columns=['words'])
 # corpus_keywords_index_tr = pd.DataFrame(corpus_keywords_index_tr,columns=['words'])
 
-corpus_abstract.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' abstract_title deflemm',index=False,header=False)
-# corpus_abstract_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title_keys-terms_removed' ,index=False,header=False)
-corpus_abstract_pure.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' abstract_title pure',index=False,header=False)
+corpus_abstract.to_csv(root_dir+subdir+'abstract_title deflemm',index=False,header=False)
+# corpus_abstract_tr.to_csv(root_dir+subdir+''+' abstract_title_keys-terms_removed' ,index=False,header=False)
+corpus_abstract_pure.to_csv(root_dir+subdir+'abstract_title pure',index=False,header=False)
 # corpus_abstract_pure_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' abstract_title-terms_removed',index=False,header=False)
 # corpus_keywords.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords',index=False,header=False)
 # corpus_keywords_tr.to_csv(root_dir+subdir+''+str(year_from)+'-'+str(year_to-1)+' keywords-terms_removed',index=False,header=False)
