@@ -479,7 +479,7 @@ class CK_Means:
                         
             self.verbose(2,debug='Initial assignment completed for T'+str(t)+' in iteration '+str(iteration))
             
-            # update centroids using time-aware weighting scheme
+            # update centroids using time-dependant weighting scheme
             prev_centroids = dict(self.centroids)
             self.centroids_history.append(prev_centroids)
             for i in self.classifications.groupby('class').groups:
