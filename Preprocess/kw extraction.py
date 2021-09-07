@@ -69,6 +69,7 @@ r.get_ranked_phrases()
 # =============================================================================
 import numpy as np
 import pandas as pd
+import re
 from tqdm import tqdm
 from sciosci.assets import text_assets as kw
 from sciosci.assets import keyword_dictionaries as kd
@@ -83,16 +84,18 @@ stop_words = list(set(stopwords.words("english")))+stops
 path = '/home/sahand/GoogleDrive/Data/'
 
 keywords = list(set(pd.read_csv(path+'Corpus/Taxonomy/TAI Taxonomy.csv',sep='===',names=['keyword'])['keyword'].values.tolist()))
-keywords = keywords+list(set(pd.read_csv(path+'Corpus/Taxonomy/1980-2019 300k n-gram author keyword taxonomy - 95percentile and cleaned.csv')['keywords'].values.tolist()))
+# keywords = keywords+list(set(pd.read_csv(path+'Corpus/Taxonomy/1980-2019 300k n-gram author keyword taxonomy - 95percentile and cleaned.csv')['keywords'].values.tolist()))
+keywords = keywords+list(set(pd.read_csv(path+'Corpus/Taxonomy/CSO.3.3-taxonomy.csv')['keywords'].values.tolist()))
 
 keywords = [x for x in keywords if len(x)>2]
 keywords = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(keyword),kd.gb2us)),kd.gb2us) for keyword in keywords]
 keywords = [k.strip().lower() for k in keywords]
 keywords = np.array(keywords)
 
-pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/publication idx',names=['id'])[:]
-abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title pure US',names=['abstract'])[:]
+# pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/publication idx')[:]
+abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title method_a')[:]
 idx = abstracts.index
+pub_idx = abstracts[['id']]
 abstracts = abstracts['abstract'].values.tolist()
 # pd.DataFrame(keywords).to_csv(path+'Corpus/Taxonomy/AI kw merged US',index=False,header=False)
 # =============================================================================
@@ -103,9 +106,10 @@ abstracts = abstracts['abstract'].values.tolist()
 # matches = [keyword in abstract for keyword in keywords] 
 # selection = keywords[matches]
 # =============================================================================
-pool = Pool()
+abstracts_s = [strip_multiple_whitespaces(' '+(' '.join(re.split('( |,|\.|\!|\?|\(|\))',abstract)))+' ') for abstract in tqdm(abstracts)]
+keywords_s = [' '+keyword+' ' for keyword in tqdm(keywords)]
 
-def extract(abstracts):
+def extract(abstracts,keywords):
     pubkeywords = []
     errors = []
     for i,abstract in tqdm(enumerate(abstracts),total=len(abstracts)):
@@ -117,20 +121,95 @@ def extract(abstracts):
     print('errors:'+str(errors))
     return pubkeywords,errors
 
-extracted,errors = extract(abstracts)
+extracted,errors = extract(abstracts_s,keywords_s)
 extracted = list(extracted)
 extracted_df = [str(list(row))[1:-1] for row in extracted]
 extracted_df = pd.DataFrame(extracted_df)
 extracted_df.index = idx
-extracted_df.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US p1',header=False)
+extracted_df.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-10',header=True)
 
 
-# =============================================================================
+#%% ===========================================================================
 # # concat multiple parts
 # =============================================================================
-extracted_df_b = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US p2',index_col=0,header=None)
-extracted_df_b.columns = [0]
-extracted_df = extracted_df.append(extracted_df_b)
-pub_idx['data'] = extracted_df[0]
-pub_idx.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US',index=False)
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
 
+tqdm.pandas()
+path = '/home/sahand/GoogleDrive/Data/'
+
+def retract_check(string):
+    try:
+        if string.startswith('retracted'):
+            return True
+    except:
+        pass
+    return False
+
+abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title method_a')
+# abstracts['retracted'] = abstracts['abstract'].progress_apply(lambda x: retract_check(x))
+# bad_abstracts = abstracts[abstracts['retracted']==True][['id']]
+# bad_abstracts.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/_bad data',index=False)
+
+idx = abstracts.index
+pub_idx = abstracts[['id']]
+
+extracted_df = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-1',index_col=0)
+for i in range(2,11):
+    extracted_df_b = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-'+str(i),index_col=0)
+    extracted_df = extracted_df.append(extracted_df_b)
+
+extracted_df.columns = ['keywords']
+extracted_df[extracted_df.index.duplicated()] #check for duplicated index
+pub_idx['keywords'] = extracted_df['keywords']
+# pub_idx.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US',index=False)
+
+# clean, and prepare
+def clean_and_extract(words,join=None):
+    try:
+        if join==None:
+            return list(set([word.strip() for word in words[2:-2].split("', '")]))
+        else:
+            return join.join(list(set([word.strip() for word in words[2:-2].split("', '")])))
+    except:
+        return np.nan
+
+pub_idx['keywords'] = pub_idx['keywords'].progress_apply(lambda words: clean_and_extract(words,join=';;;'))
+pub_idx.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US - sco-tai',index=False)
+
+#%% ===========================================================================
+ # Check kw quality
+# =============================================================================
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+
+tqdm.pandas()
+path = '/home/sahand/GoogleDrive/Data/'
+file = 'keyword US - sco-tai' 
+# file = 'keyword US - scopus-sco-tai' 
+
+pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/'+file)
+
+bad_abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/_bad data')
+
+pub_idx = pub_idx[~pub_idx['id'].isin(bad_abstracts['id'].values.tolist())]
+pub_idx = pub_idx[pd.notnull(pub_idx['keywords'])]
+pub_idx = pub_idx[pd.notna(pub_idx['keywords'])]
+
+# pub_idx.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/'+file,index=False)
+
+print('>> NaN count in kw is:',pub_idx[pd.isna(pub_idx['keywords'])].shape[0])
+
+pub_idx = pub_idx[pd.notnull(pub_idx['keywords'])]
+pub_idx['keywords'] = pub_idx['keywords'].progress_apply(lambda x: x.split(';;;'))
+pub_idx['len'] = pub_idx['keywords'].progress_apply(lambda x: len(x))
+
+print(pub_idx['len'].mean())
+print(pub_idx['len'].median())
+print(pub_idx['len'].max())
+print(pub_idx['len'].std())
+pub_idx.hist('len',bins=pub_idx['len'].max(),figsize=(10,5))
+
+pub_idx
