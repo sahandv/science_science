@@ -388,7 +388,7 @@ def find_and_remove_c(text):
     text = text.replace('Rights reserved','')
     text = text.replace('rights reserved','')
     
-    return text
+    return text.strip()
 
 def find_and_remove_term(text,from_str,to_str=''):
 # =============================================================================
