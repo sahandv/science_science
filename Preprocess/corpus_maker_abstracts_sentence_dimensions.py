@@ -42,8 +42,8 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/all dimensions AI articles-proceedings.csv'
-data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/AI kw merged'
+data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/all dimensions AI articles-proceedings.csv'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/AI kw merged'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/clean/publication idx'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
@@ -52,7 +52,7 @@ data_full_relevant = pd.read_csv(data_path_rel,index_col=0)
 
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
-sample = data_full_relevant.sample(4)
+sample = data_full_relevant.sample(400)
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
@@ -82,8 +82,8 @@ sample = data_full_relevant.sample(4)
 data_filtered = data_full_relevant.copy()
 data_filtered = data_filtered[pd.notnull(data_filtered['PY'])]
 
-data_filtered = data_filtered[data_filtered['PY'].astype('int')>year_from-1]
-data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
+# data_filtered = data_filtered[data_filtered['PY'].astype('int')>year_from-1]
+# data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
 
 # Remove columns without keywords/abstract list 
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
@@ -119,19 +119,29 @@ data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 # gc.collect()
 abstracts = []
-for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
+ids = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    abstract = row['AB']
     numbers = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
     for number in numbers:
         abstract = kw.find_and_remove_term(abstract,number)
     abstracts.append(abstract)
-data_with_abstract['AB'] = abstracts.copy()
+    ids.append(row['id'])
+
+data_with_abstract['AB'] = abstracts
+data_with_abstract['id_n'] = ids
+
+assert data_with_abstract['id'].equals(data_with_abstract['id_n']), "Oh no! id mismatch here... Please fix it!"
+
 del  abstracts
 gc.collect()
+
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
 
 # =============================================================================
 # Clean bad data based on abstracts
 # =============================================================================
-short_abstracts = []
+long_abstracts = []
 lens = []
 word_len = []
 percentile = 5
@@ -140,16 +150,22 @@ for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0
     w_leng = len(row['AB'].split())
     word_len.append([len(ab) for ab in row['AB'].split()])
     lens.append(leng)
-    if leng < abstract_length_min or w_leng < abstract_length_min_w:
-        short_abstracts.append(i)
+    if leng > abstract_length_min and w_leng > abstract_length_min_w:
+        long_abstracts.append(row['id'])
 
 word_len_f = [j for sub in word_len for j in sub]
 median_word_len = np.median(word_len_f)
 mean_word_len = np.mean(word_len_f)
 
 max_paragraph_len = int(np.percentile(lens, percentile)) # take Nth percentile as the sentence length threshold
-short_abstract_papers = data_with_abstract.iloc[short_abstracts]['id']
-data_with_abstract = data_with_abstract[~data_with_abstract['id'].isin(list(short_abstract_papers))]
+data_with_abstract = data_with_abstract[data_with_abstract['id'].isin(long_abstracts)]
+data_with_abstract = data_with_abstract[data_with_abstract['id']!='']
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
+data_with_abstract = data_with_abstract.drop(['id_n','AB_n'],axis=1)
+
+data_with_abstract = data_with_abstract.reset_index(drop=True)
+
 data_with_abstract[['id']].to_csv(root_dir+subdir+'mask',index=False)
 
 # =============================================================================
@@ -187,7 +203,7 @@ data_for_authors.to_csv(root_dir+subdir+'authors with research_id',index=False) 
 
 pubs_with_r_id = list(data_for_authors.groupby('pub_id').groups.keys())
 # =============================================================================
-# filter data by id from reviously created filters-- optional
+# filter data by id from previously created filters-- optional
 # =============================================================================
 id_filter = pd.read_csv(root_dir+subdir+'publication idx')['id'].values.tolist()
 
@@ -308,6 +324,92 @@ year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
 year_list.shape
 
 sample = data_with_abstract.sample(5)
+
+# =============================================================================
+# Simple pre-process (method b) -- optional -- preferred for kw extraction
+# =============================================================================
+data_with_abstract['TI_AB'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
+abstracts = [re.sub('[^A-Za-z0-9 .?,!()]','',ab) for ab in data_with_abstract['TI_AB']]
+abstracts = [strip_multiple_whitespaces(ab).strip().lower() for ab in tqdm(abstracts)]
+
+thesaurus = [
+    [' 1)',', '],
+    [' 2)',', '],
+    [' 3)',', '],
+    [' 4)',', '],
+    [' 5)',', '],
+    [' 6)',', '],
+    [' 7)',', '],
+    [' 8)',', '],
+    [' 9)',', '],
+    [' a)',', '],
+    [' b)',', '],
+    [' c)',', '],
+    [' d) ',', '],
+    [' e)',', '],
+    [' f)',', '],
+    [' g)',', '],
+    [' h)',', '],
+    [' a. ',', '],
+    [' b. ',', '],
+    [' c. ',', '],
+    [' d. ',', '],
+    [' e. ',', '],
+    [' f. ',', '],
+    [' g. ',', '],
+    [' h. ',', '],
+    [' i)',', '],
+    [' ii)',', '],
+    [' iii)',', '],
+    [' iv)',', '],
+    [' v)',', '],
+    [' vi)',', '],
+    [' vii)',', '],
+    [' viii)',', '],
+    [' ix)',', '],
+    [' x)',', '],
+    [' xi)',', '],
+    [' xii)',', '],
+    [' i. ',', '],
+    [' ii. ',', '],
+    [' iii. ',', '],
+    [' iv. ',', '],
+    [' v. ',', '],
+    [' vi. ',', '],
+    [' vii. ',', '],
+    [' viii. ',', '],
+    [' ix. ',', '],
+    [' x. ',', '],
+    [' xi. ',', '],
+    [' xii. ',', '],
+    [' i.e.',', '],
+    [' ie.',', '],
+    [' eg.',', '],
+    [' e.g.',', ']
+    ]
+
+tmp = []
+for paragraph in tqdm(abstracts):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    tmp.append(paragraph)
+abstracts = tmp
+
+abstracts = [strip_multiple_whitespaces(ab).strip().lower() for ab in tqdm(abstracts)]
+
+thesaurus = [
+    [',,',',']
+    ]
+
+tmp = []
+for paragraph in tqdm(abstracts):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    tmp.append(paragraph)
+abstracts = tmp
+abstracts = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tqdm(abstracts)]
+
+corpus_abstract_pure_df = pd.DataFrame(abstracts,columns=['abstract'])
+corpus_abstract_pure_df['id'] = data_with_abstract['id']
+corpus_abstract_pure_df.to_csv(root_dir+subdir+'abstract_title method_b',index=False)
 
 # =============================================================================
 # Simple pre-process (method a) -- optional -- preferred for deep learning of documents
