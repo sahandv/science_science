@@ -77,26 +77,40 @@ from gensim.parsing.preprocessing import strip_multiple_whitespaces
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from multiprocessing import Pool
-
+range_s,range_e = 200000,250000
 stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this','...']
 stop_words = list(set(stopwords.words("english")))+stops
 
 path = '/home/sahand/GoogleDrive/Data/'
 
 keywords = list(set(pd.read_csv(path+'Corpus/Taxonomy/TAI Taxonomy.csv',sep='===',names=['keyword'])['keyword'].values.tolist()))
-# keywords = keywords+list(set(pd.read_csv(path+'Corpus/Taxonomy/1980-2019 300k n-gram author keyword taxonomy - 95percentile and cleaned.csv')['keywords'].values.tolist()))
+keywords = keywords+list(set(pd.read_csv(path+'Corpus/Taxonomy/AI ALL Scopus n>2')['keywords'].values.tolist()))
 keywords = keywords+list(set(pd.read_csv(path+'Corpus/Taxonomy/CSO.3.3-taxonomy.csv')['keywords'].values.tolist()))
+# lemmatize
+keywords = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tqdm(keywords)]
 
-keywords = [x for x in keywords if len(x)>2]
-keywords = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(keyword),kd.gb2us)),kd.gb2us) for keyword in keywords]
-keywords = [k.strip().lower() for k in keywords]
+keywords = [x for x in tqdm(keywords) if len(x)>2]
+
+keywords = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(keyword),kd.gb2us)),kd.gb2us) for keyword in tqdm(keywords)]
+keywords = [k.strip().lower() for k in tqdm(keywords)]
 keywords = np.array(keywords)
 
 # pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/publication idx')[:]
-abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title method_a')[:]
+abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title method_b')[range_s:range_e]
+
 idx = abstracts.index
 pub_idx = abstracts[['id']]
 abstracts = abstracts['abstract'].values.tolist()
+tmp = []
+for ab in tqdm(abstracts):
+    try:
+        tmp.append(kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(ab),kd.gb2us)),kd.gb2us))
+    except:
+        tmp.append('')
+abstracts = tmp  
+# abstracts = [kw.replace_british_american(strip_multiple_whitespaces(kw.replace_british_american(strip_multiple_whitespaces(ab),kd.gb2us)),kd.gb2us) for ab in tqdm(abstracts)]
+
+
 # pd.DataFrame(keywords).to_csv(path+'Corpus/Taxonomy/AI kw merged US',index=False,header=False)
 # =============================================================================
 # abstract = word_tokenize(abstract)
@@ -125,8 +139,11 @@ extracted,errors = extract(abstracts_s,keywords_s)
 extracted = list(extracted)
 extracted_df = [str(list(row))[1:-1] for row in extracted]
 extracted_df = pd.DataFrame(extracted_df)
+
 extracted_df.index = idx
-extracted_df.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-10',header=True)
+extracted_df['id'] = pub_idx
+extracted_df.columns = ['kw','id']
+extracted_df.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-'+str(int(range_s/50000)),header=True)
 
 
 #%% ===========================================================================
@@ -147,7 +164,7 @@ def retract_check(string):
         pass
     return False
 
-abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title method_a')
+abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abstract_title method_b')
 # abstracts['retracted'] = abstracts['abstract'].progress_apply(lambda x: retract_check(x))
 # bad_abstracts = abstracts[abstracts['retracted']==True][['id']]
 # bad_abstracts.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/_bad data',index=False)
@@ -155,14 +172,16 @@ abstracts = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/abs
 idx = abstracts.index
 pub_idx = abstracts[['id']]
 
-extracted_df = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-1',index_col=0)
-for i in range(2,11):
+extracted_df = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-0',index_col=0)
+for i in range(1,10):
     extracted_df_b = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/kw/keyword US p-'+str(i),index_col=0)
     extracted_df = extracted_df.append(extracted_df_b)
 
-extracted_df.columns = ['keywords']
 extracted_df[extracted_df.index.duplicated()] #check for duplicated index
-pub_idx['keywords'] = extracted_df['keywords']
+extracted_df['id-n'] = pub_idx['id']
+assert extracted_df['id'].equals(extracted_df['id-n']), "Oh no! id mismatch here... Please fix it!"
+extracted_df = extracted_df.drop(['id-n'],axis=1)
+
 # pub_idx.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US',index=False)
 
 # clean, and prepare
@@ -175,8 +194,8 @@ def clean_and_extract(words,join=None):
     except:
         return np.nan
 
-pub_idx['keywords'] = pub_idx['keywords'].progress_apply(lambda words: clean_and_extract(words,join=';;;'))
-pub_idx.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US - sco-tai',index=False)
+extracted_df['kw'] = extracted_df['kw'].progress_apply(lambda words: clean_and_extract(words,join=';;;'))
+extracted_df.to_csv(path+'Corpus/Dimensions AI unlimited citations/clean/keyword US - sco-cso-tai',index=False)
 
 #%% ===========================================================================
  # Check kw quality
@@ -188,7 +207,7 @@ from tqdm import tqdm
 tqdm.pandas()
 path = '/home/sahand/GoogleDrive/Data/'
 file = 'keyword US - sco-tai' 
-# file = 'keyword US - scopus-sco-tai' 
+file = 'keyword US - scopus-sco-tai' 
 
 pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/'+file)
 
