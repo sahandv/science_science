@@ -317,15 +317,15 @@ class CK_Means:
             list of minimum bounding boxes for each cluster/class.
 
         """
-        self.ndbbox = []
+        self.ndbbox = {}
         labels = classifications.groupby('class').groups
         for i in labels:
             # i = np.array(classifications[i])
             vecs = classifications[classifications['class']==i][self.columns_vector].values
             try:
-                self.ndbbox.append(np.array([vecs.min(axis=0,keepdims=True)[0],vecs.max(axis=0,keepdims=True)[0]]))
+                self.ndbbox[i] = np.array([vecs.min(axis=0,keepdims=True)[0],vecs.max(axis=0,keepdims=True)[0]])
             except :
-                self.ndbbox.append(np.zeros((2,i.shape[1])))
+                self.ndbbox[i] = np.zeros((2,i.shape[1]))
                 self.verbose(2,warning='Class is empty! returning zero box.')
         return self.ndbbox
 
@@ -876,6 +876,9 @@ class CK_Means:
         
         self.verbose(1,debug='Checking classes for merging...')
         
+    def cluster_neighborhood(self,to_inspect:list,to_ignore:list=None):
+        pairs = list(itertools.combinations(to_inspect, 2))
+        
         
 #%% DIMENSIONS DATA        
 # =============================================================================
@@ -899,7 +902,7 @@ vectors = pd.read_csv(datapath+'Corpus/Dimensions All/embeddings/doc2vec 300D dm
 vectors['id'] = corpus_data['id']
 vectors = vectors[vectors['id'].isin(all_columns['id'])]
 vectors = vectors.merge(all_columns, on='id', how='left')
-vectors.PY.hist(bins=60)
+# vectors.PY.hist(bins=60)
 vectors['DE-n'] = vectors['DE-n'].str.split(';;;')
 vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 else x) # cut off to 6 keywors only
 
@@ -910,7 +913,7 @@ vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 els
 # pre index data
 # =============================================================================
 k0 = 6
-model = CK_Means(verbose=1,k=k0,distance_metric='cosine')
+model = CK_Means(verbose=1,k=k0,distance_metric='cosine') 
 model.v=3
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
@@ -925,11 +928,11 @@ del all_columns
 del model_AI
 gc.collect()
 
-start = 17000*8
+start = 17000*15
 end = start+17000
 
 distances = {}
-for i,vec in tqdm(enumerate(all_vecs[:]),total=len(all_vecs[start:end])):
+for i,vec in tqdm(enumerate(all_vecs[start:end]),total=len(all_vecs[start:end])):
     distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
     
 output_address = 'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
