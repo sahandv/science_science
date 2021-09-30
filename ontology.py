@@ -17,14 +17,14 @@ import pandas as pd
 import networkx as nx
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import plotly.express as px
-from plotly.offline import plot
+# import plotly.express as px
+# from plotly.offline import plot
 from random import randint
 from scipy import spatial
-from treelib import Node, Tree
+# from treelib import Node, Tree
 from sciosci.assets import text_assets as ta
 from sciosci.assets import keyword_dictionaries as kd
-from gensim.parsing.preprocessing import strip_multiple_whitespaces
+# from gensim.parsing.preprocessing import strip_multiple_whitespaces
 from networkx.drawing.nx_agraph import graphviz_layout,write_dot
 import matplotlib.pyplot as plt
 
@@ -232,9 +232,8 @@ nx.draw(G, pos, with_labels=True, arrows=True)
 
 
 solution = Solution('ROOT')
-solution.get_parent(G,'Child_1')
-solution.results
-
+solution.get_parent(G,'GGGreatgrandchild_1')
+set(solution.results)
 
     
     
@@ -289,7 +288,7 @@ for i,row in tqdm(relations_tree.iterrows(),total=relations_tree.shape[0]):
 # assert nx.is_connected(tree_graph), 'Tree is not connected. Fix it first!'
 
 class Solution:
-    def __init__(self,root='ROOT',limiter:int=30):
+    def __init__(self,root='ROOT',limiter:int=100):
         self.results = []
         self.root = root
         self.limiter = limiter
@@ -305,8 +304,10 @@ class Solution:
             self.get_parent(G,parent,level)
 
 solution = Solution('computer science')
-solution.get_parent(tree_graph,'passive tag')
+solution.get_parent(tree_graph,'rfid')
 results = list(set(solution.results))
+
+list(tree_graph.predecessors('neural network'))
 
 start = 0
 
@@ -324,8 +325,29 @@ output_address = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/'+str(start)+' c
 with open(output_address, 'w') as json_file:
     json.dump(results_all, json_file)
 
+# =============================================================================
+# DFS
+# =============================================================================
+all_concepts = list(set(relations.a.values.tolist()+relations.b.values.tolist()))
+if 'computer science' in all_concepts: all_concepts.remove('computer science')
 
+def extraxt(link):
+    if link[0]=='engineering':
+        return 'engineering'
+    if link[0]=='computer science':
+        return link[1]
+    return False
 
+results_all = {}
+for concept in tqdm(all_concepts):
+    result = list(nx.edge_dfs(tree_graph,concept, orientation='reverse'))
+    result = [extraxt(link) for link in result if extraxt(link)]
+    if len(result)>0:
+        results_all[concept] = result
+
+output_address = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/concept_parents lvl2 DFS'
+with open(output_address, 'w') as json_file:
+    json.dump(results_all, json_file)
 
 
 # for start in range(2000,11000,2000):

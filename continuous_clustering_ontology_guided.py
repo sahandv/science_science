@@ -219,7 +219,10 @@ class CK_Means:
     
     def set_ontology_tree(self,G):
         self.ontology_tree = G
-        
+    
+    def set_ontology_keyword_search_index(self,index):
+        self.ontology_search_index = index
+    
     def set_ontology_dict(self,ontology):
         self.ontology_dict_base = ontology
     
@@ -241,6 +244,13 @@ class CK_Means:
         Will return the most similar concept for a given keyword. Basically a search engine.
         """
         return list(self.ontology_dict.keys())[np.argmin(np.array([self.get_distance(self.vectorize_keyword(keyword),self.ontology_dict[i]['vector'],self.distance_metric) for i in self.ontology_dict]))]
+
+    def map_keyword_ontology_from_index(self,keyword):
+        """
+        Will return the most similar concept for a given keyword from a pre-indexed search dictionary.
+        """
+        return self.ontology_search_index[keyword]
+
 
     def return_root_doc_vec(self,root:str,clssifications_portion,ignores:list):
         for i,row in clssifications_portion.iterrows():
@@ -780,7 +790,13 @@ class CK_Means:
             clssifications_c = self.classifications[self.classifications['class']==c]
             
             self.verbose(2,debug=' -  - finding keywords in concepts.')
-            clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
+            try:
+                self.verbose(2,debug=' -  - using search index instead of search engine.')
+                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x])
+            except:
+                self.verbose(2,debug=' -  - using search engine. index not available. (It can be very slow!)')
+                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
+            
             
             self.verbose(2,debug=' -  - finding concept roots.')
             clssifications_c['roots'] = clssifications_c['kw'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
@@ -876,8 +892,44 @@ class CK_Means:
         
         self.verbose(1,debug='Checking classes for merging...')
         
-    def cluster_neighborhood(self,to_inspect:list,to_ignore:list=None):
+        
+    def cluster_neighborhood(self,to_inspect:list,to_ignore:list=None,epsilon:float=5.0):
+        """
+        Overlaps the bounding boxes to find the neighbouring clusters.
+
+        Parameters
+        ----------
+        to_inspect : list
+            list of wanted clusters.
+        to_ignore : list of sets, optional
+            List of unwanted cluster pairs. The default is None.
+        epsilon : float, optional
+            The epsilong to grow on each dimension for overlap creation. If>1.0, value will be used as percentage. The default is 0.05.
+
+        Returns
+        -------
+        List of neighboring cluster as list of pairs.
+
+        """
         pairs = list(itertools.combinations(to_inspect, 2))
+        self.get_class_min_bounding_box(self.classifications)
+        # self.ndbbox
+        self.ndbbox_overlapping = {}
+        for c in self.ndbbox.keys():
+            if epsilon>1.0:
+                epsilon_dim = (self.ndbbox[c][1,:]-self.ndbbox[c][0,:])*epsilon/100
+                self.ndbbox_overlapping[c] = np.array([self.ndbbox[c][0,:]-epsilon_dim,self.ndbbox[c][1,:]+epsilon_dim])
+            else:
+                self.ndbbox_overlapping[c] = np.array([self.ndbbox[c][0,:]-epsilon,self.ndbbox[c][1,:]+epsilon])
+        neighbours = []
+        for pair in pairs:
+            cond_a = (self.ndbbox_overlapping[pair[0]][0,:]<self.ndbbox_overlapping[pair[1]][1,:]).all()
+            cond_b = (self.ndbbox_overlapping[pair[0]][1,:]>self.ndbbox_overlapping[pair[1]][0,:]).all()
+
+            if cond_a and cond_b:
+                neighbours.append(set(pair))
+        neighbours = list(set([n for n in neighbours if n not in to_ignore]))
+        return neighbours
         
         
 #%% DIMENSIONS DATA        
