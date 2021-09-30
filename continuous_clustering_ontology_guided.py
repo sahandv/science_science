@@ -10,6 +10,7 @@ import time
 import gc
 import os
 import copy
+import random
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
@@ -190,6 +191,8 @@ class CK_Means:
         self.death_threshold = death_threshold
         self.growth_threshold_population = growth_threshold_population
         self.growth_threshold_radius = growth_threshold_radius
+        self.evolution_events = {}
+        self.evolution_event_counter = 0
         self.v = verbose
         
         if seed != None:
@@ -218,7 +221,7 @@ class CK_Means:
         self.ontology_tree = G
         
     def set_ontology_dict(self,ontology):
-        self.ontology_dict = ontology
+        self.ontology_dict_base = ontology
     
     def vectorize_keyword(self,keyword):
         return np.array([self.model_kw[key] for key in keyword.split(' ')]).mean(axis=0)
@@ -228,17 +231,16 @@ class CK_Means:
         Format the ontologies so each key will direct to its vector and level 2 parents efficiently
 
         """
-        tmp = {}
-        for key in tqdm(self.ontology_dict):
-            tmp[key]={'parents':self.ontology_dict[key],'vector':self.vectorize_keyword(key)}    
-        self.ontology_dict = tmp
+        self.ontology_dict = {}
+        for key in tqdm(self.ontology_dict_base):
+            self.ontology_dict[key]={'parents':self.ontology_dict_base[key],'vector':self.vectorize_keyword(key)}    
         return self.ontology_dict
     
     def map_keyword_ontology(self,keyword):
         """
         Will return the most similar concept for a given keyword. Basically a search engine.
         """
-        return list(self.ontology_dict.keys())[np.argmin(np.array([self.get_distance(vectorize_keyword(keyword),self.ontology_dict[i]['vector'],self.distance_metric) for i in self.ontology_dict]))]
+        return list(self.ontology_dict.keys())[np.argmin(np.array([self.get_distance(self.vectorize_keyword(keyword),self.ontology_dict[i]['vector'],self.distance_metric) for i in self.ontology_dict]))]
 
     def return_root_doc_vec(self,root:str,clssifications_portion,ignores:list):
         for i,row in clssifications_portion.iterrows():
@@ -246,7 +248,7 @@ class CK_Means:
                 if root in row['roots'].values.tolist():
                     return row[self.columns_vector].values,i
 
-    def graph_conponent_test(self,G,ratio_thresh:float=1/10,count_trhesh_low:int=10):
+    def graph_component_test(self,G,ratio_thresh:float=1/10,count_trhesh_low:int=10):
         if nx.number_connected_components(G)>1:
             self.verbose(2,debug=' -  -  - concept graph in class has '+str(nx.number_connected_components(G))+' connected components.')
             sub_graphs = list(G.subgraph(c) for c in nx.connected_components(G))
@@ -291,6 +293,7 @@ class CK_Means:
         self.classifications['kw'] = keywords
         self.classifications['t'] = 0
         self.class_radius = {}
+        
         for i in range(self.k):
             self.class_radius[i] = None
 
@@ -462,9 +465,9 @@ class CK_Means:
         classification = distances.index(min(distances)) #argmin: get the index of the closest centroid to this featureset/node
         return classification
     
-    def assign_clusters(self,classifications):
+    def assign_clusters(self,classifications,ignore:list=None):
         """
-        Assign clusters to the list. Not recommended for using on the self.classifications dataframe, as may mix up the indices.
+        Assign clusters to the list. Not recommended for using on the self.classifications dataframe, as may mix up the indices. If used, make sure to have the indices matched.
         Parameters
         ----------
         classifications: Pandas DataFrame
@@ -473,9 +476,9 @@ class CK_Means:
         """
         # for i,featureset in enumerate(data):
         for i,row in classifications[self.columns_vector].iterrows():
-            self.classifications['class'][i] = self.assign_cluster(row.values)
+            self.classifications['class'][i] = self.assign_cluster(row.values,ignore)
             
-    def assign_clusters_pandas(self,classifications,t:int=None,ignore:list=None):
+    def assign_clusters_pandas(self,t:int=None,ignore:list=None):
         """
     
         Parameters
@@ -513,7 +516,7 @@ class CK_Means:
             self.re_initialize_new_data_clusters(t)
             
             # Assign clusters
-            self.assign_clusters_pandas(self.classifications,t=t,ignore=ignore)
+            self.assign_clusters_pandas(t=t,ignore=ignore)
             
             # update centroids using time-dependant weighting scheme
             prev_centroids = dict(self.centroids)
@@ -533,7 +536,7 @@ class CK_Means:
             else:
                 patience_counter=0
 
-    def sub_cluster(self,t,n_iter,weights,ignore:list=None):
+    def sub_cluster(self,t:int,to_split:int,new_centroids:list,n_iter:int,sub_k:int=2):
         """
         Parameters
         ----------
@@ -548,26 +551,48 @@ class CK_Means:
     
         """
         patience_counter = 0
+        self.verbose(2, debug='Getting class='+str(to_split)+' rows at t='+str(t))
+        # select rows of the data to manipulate. index will be preserved so it can overwrite the correct rows.
+        manipulation_classifcations = self.classifications[(self.classifications['class']==to_split) & (self.classifications['t']==t)]
+        # get the list of all prior clusters.
+        prev_clusters = list(dict(self.centroids).keys())
+        # all prior clusters and current clusters are now in ignore list. So the subclust won't dedicate anythign to them.
+        self.verbose(2, debug='Ignoring previous clusters and killing the old splitting cluster.')
+        ignore = prev_clusters
+        self.evolution_events[self.evolution_event_counter] = {'t':t,'c':to_split,'event':'death'}
+        self.evolution_event_counter+=1
+        # create new labels for the new proposed clusters
+        new_cluster_ids = list(range(max(prev_clusters)+1,max(prev_clusters)+1+sub_k))
+        self.verbose(2, debug='Initializeing centroids for new clusters: '+str(new_cluster_ids))
+        # sub-sample the new centroids, so we cut the centrods to the desired numver of sub_k
+        new_centroids = random.sample(new_centroids,sub_k)
+        
+        # initializing new centroids, hence new clusters
+        for i,c in enumerate(new_cluster_ids):
+            self.centroids[c] = new_centroids[i]
+            self.evolution_events[self.evolution_event_counter] = {'t':t,'c':c,'event':'birth'}
+            self.evolution_event_counter+=1
+            
+        self.verbose(2,debug='Starting the iterations...')
         for iteration in tqdm(range(n_iter),total=n_iter):
             # Re-initialize clusters
-            self.re_initialize_new_data_clusters(t)
+            # self.re_initialize_new_data_clusters(t)
             
             # Assign clusters
-            self.assign_clusters_pandas(self.classifications,t=t,ignore=ignore)
+            self.assign_clusters(manipulation_classifcations,ignore=ignore)
             
             # update centroids using time-dependant weighting scheme
             prev_centroids = dict(self.centroids)
             self.centroids_history.append(prev_centroids)
-            for i in self.classifications.groupby('class').groups:
+            for i in new_cluster_ids:
                 vecs = self.classifications[self.classifications['class']==i][self.columns_vector].values
-                vecs = (vecs.T*weights[self.classifications['class']==i].values.T).T
-                self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
+                self.centroids[i] = np.average(vecs,axis=0)
             
             # Compare centroid change to stop iteration
             if self.centroid_stable():
                 patience_counter+=1
                 if patience_counter>self.patience:
-                    self.verbose(1,debug='Centroids are stable within tolerance. Stopping.')
+                    self.verbose(1,debug='Centroids are stable within tolerance. Stopping sub-clustering for cluster '+str(to_split))
                     break
                 self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
             else:
@@ -584,6 +609,8 @@ class CK_Means:
 
         """
         # Initialize centroids
+        self.evolution_events[self.evolution_event_counter] = {'t':0,'c':None,'event':'birth'}
+        self.evolution_event_counter+=1
         self.verbose(1,debug='Initializing centroids using method: '+self.initializer)
         
         if self.initializer=='random_generated':
@@ -598,7 +625,7 @@ class CK_Means:
             self.initialize_clusters(data,keywords)
             
             # Iterate over data rows and assign clusters
-            self.assign_clusters_pandas(self.classifications)
+            self.assign_clusters_pandas()
                 
             # Update centroids
             prev_centroids = dict(self.centroids)
@@ -679,6 +706,8 @@ class CK_Means:
         if len(to_ignore) > 0:
             self.verbose(1,debug='Found dead clusters: '+str(to_ignore))
             self.verbose(1,debug='Clustering again with removal of the dead classes')
+            self.evolution_events[self.evolution_event_counter] = {'t':t,'c':to_ignore,'event':'death'}
+            self.evolution_event_counter +=1
             self.cluster(t,n_iter,weights,to_ignore)
             
         self.verbose(1,debug='Checking classes for death finalized.')
@@ -762,17 +791,7 @@ class CK_Means:
             flat_roots = list(itertools.chain.from_iterable(roots))
             counts = pd.Index(flat_roots).value_counts()
             class_concepts[c] = counts
-            
-            # centroid_proposals = []
-            # ignores = []
-            # self.verbose(2,debug=' -  - getting centroid proposals.')
-            # for root in list(counts.keys()):
-            #     centroid_proposal,ignore = self.return_root_doc_vec(root,clssifications_c,ignores)
-            #     centroid_proposals.append(centroid_proposal)
-            #     ignores.append(ignore)
-            # class_centroid_proposal[c] = centroid_proposals
-            
-            
+                        
             self.verbose(2,debug=' -  - finding classes with multiple concept roots and updating to_split list.')
             self.verbose(2,debug=' -  -  - generating concept graph in cluster')
             
@@ -790,36 +809,43 @@ class CK_Means:
             G.add_nodes_from(nodes)
             G.add_edges_from(edges)
             self.verbose(2,debug=' -  -  - checking for sub-graphs')
-            nodes_to_split = self.graph_conponent_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
             
-            if len(nodes_to_split)>0:
-                self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(nodes_to_split))
+            if len(concept_proposals)>0:
+                self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                 to_split[c] +=2
             else:
                 self.verbose(2,debug=' -  -  - performing edge erosion level 1')
                 to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
                 G.remove_edges_from(to_delete)
                 self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 1')
-                nodes_to_split = self.graph_conponent_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
                 
-                if len(nodes_to_split)>0:
-                    self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(nodes_to_split))
+                if len(concept_proposals)>0:
+                    self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                     to_split[c] +=1
                 else:
                     self.verbose(2,debug=' -  -  - performing edge erosion level 2')
                     to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
                     G.remove_edges_from(to_delete)
                     self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
-                    nodes_to_split = self.graph_conponent_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
                     
-                    if len(nodes_to_split)>0:
-                        self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(nodes_to_split))
+                    if len(concept_proposals)>0:
+                        self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                         to_split[c] +=0.5
                     else:
                         self.verbose(2,debug=' -  -  - cluster cannot be splitted')
-                        
-            class_centroid_proposal[c] = nodes_to_split
-        
+            
+            centroid_proposals = []
+            ignores = [] #docs to ignore, as already selected
+            self.verbose(2,debug=' -  - getting centroid proposals.')
+            for root in list(concept_proposals):
+                centroid_proposal,ignore = self.return_root_doc_vec(root,clssifications_c,ignores)
+                centroid_proposals.append(centroid_proposal)
+                ignores.append(ignore)
+            class_centroid_proposal[c] = centroid_proposals
+                    
         class_centroid_proposal = {k:v for k,v in class_centroid_proposal.items() if len(v)>=2}
 
         self.verbose(2,debug=' -  - sub-clustering the records in to_split classes.')
@@ -828,25 +854,25 @@ class CK_Means:
             print("Cluster split votes are as follows:")
             print(to_split)
             
-            user_input = input("Which cluster you want to re-cluster? (N: none, A: All, or from: "+str([k for k,v in class_centroid_proposal.items() if len(v) >= 2])+")\n")
+            user_input = input("Which cluster you want to re-cluster? (N: none, A: Auto, or from: "+str([k for k,v in class_centroid_proposal.items()])+")\n")
             if user_input=='N':
                 class_centroid_proposal = {}
             elif user_input=='A':
-                class_centroid_proposal = {}
+                for c,v in class_centroid_proposal.items():
+                    if to_split[c]>=2:
+                        self.vebose(1,debug=' -  -  sub clustering cluster '+str(c))
+                        to_recluster = int(c)
+                        centroid_vecs =  class_centroid_proposal[to_recluster]
+                        self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter)
+                        del class_centroid_proposal[to_recluster]
+                class_centroid_proposal = {}    
             else:
                 self.vebose(1,debug=' -  - sub clustering cluster '+str(user_input))
                 to_recluster = int(user_input)
+                centroid_vecs =  class_centroid_proposal[to_recluster]
+                self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter)
                 del class_centroid_proposal[to_recluster]
-                # re-assign the centoid to a concept point
                 
-                # assign new centroid(s) to other concept point(s)
-                # create ignore list for classes (all other classes except the new centroids)
-                
-                self.cluster(t,n_iter,weights,to_ignore)
-                
-        
-        # ontology fork check on the nominated classes
-        
         
         self.verbose(1,debug='Checking classes for merging...')
         
@@ -858,8 +884,9 @@ class CK_Means:
 datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
-gensim_model_address = datapath+'Corpus/Dimensions All/models/Fasttext/FastText100D-dim-scopus-update.model'
+gensim_model_address = datapath+'Corpus/Dimensions All/models/Fasttext/gensim381/FastText100D-dim-scopus-update.model'
 model_AI = fasttext_gensim.load(gensim_model_address)
+# model_AI.save(datapath+'Corpus/Dimensions All/models/Fasttext/FastText100D-dim-scopus-update-gensim383.model')
 
 with open(datapath+'Corpus/Taxonomy/concept_parents lvl2 - ontology_table') as f:
     ontology_table = json.load(f)
@@ -874,33 +901,67 @@ vectors = vectors[vectors['id'].isin(all_columns['id'])]
 vectors = vectors.merge(all_columns, on='id', how='left')
 vectors.PY.hist(bins=60)
 vectors['DE-n'] = vectors['DE-n'].str.split(';;;')
-vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:6] if len(x)>5 else x)
+vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 else x) # cut off to 6 keywors only
+
 # vectors.drop('id',axis=1,inplace=True)
+
+
+# =============================================================================
+# pre index data
+# =============================================================================
+k0 = 6
+model = CK_Means(verbose=1,k=k0,distance_metric='cosine')
+model.v=3
+model.set_ontology_dict(ontology_table)
+model.set_keyword_embedding_model(model_AI)
+ontology_dict = model.prepare_ontology()
+
+all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
+all_vecs = [model.vectorize_keyword(k) for k in tqdm(all_keywords)]
+
+del vectors
 del corpus_data
+del all_columns
+del model_AI
+gc.collect()
+
+start = 17000*8
+end = start+17000
+
+distances = {}
+for i,vec in tqdm(enumerate(all_vecs[:]),total=len(all_vecs[start:end])):
+    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
+    
+output_address = 'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+with open(output_address, 'w') as json_file:
+    json.dump(distances, json_file)
+
+
+#%%
+
+
 
 vectors_t0 = vectors[vectors.PY<2006]
 keywords = vectors_t0['DE-n'].values.tolist()
 vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
 
 # dendrogram = aa.fancy_dendrogram(sch.linkage(vectors_t0, method='ward'),truncate_mode='lastp',p=800,show_contracted=True,figsize=(15,9)) #single #average #ward
-k0 = 6
-model = CK_Means(verbose=1,k=k0,distance_metric='cosine')
+
 model.fit(vectors_t0.values,keywords)
 predicted_labels = model.predict(vectors_t0.values)
 pd.DataFrame(predicted_labels).hist(bins=6)
 
 
-
-
 model_backup = copy.deepcopy(model)
 vectors_t1 = vectors[vectors.PY==2006]
+keywords = vectors_t1['DE-n'].values.tolist()
 vectors_t1.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
 
-model_backup.v=3
-model_backup.a=1.0
-model_backup.fit_update(vectors_t1.values, 1)
-model.get_class_radius(model.classifications,model.centroids,model.distance_metric)
-model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
+
+model_backup.fit_update(vectors_t1.values, 1, keywords)
+
+# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
+# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
 
 
 #%% Play with ontology

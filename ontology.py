@@ -229,7 +229,6 @@ G.add_edge("Grandchild_1", "GGreatgrandchild_3")
 plt.title('draw_networkx')
 pos =graphviz_layout(G, prog='dot')
 nx.draw(G, pos, with_labels=True, arrows=True)
-plt.savefig('nx_test.png')
 
 
 solution = Solution('ROOT')

@@ -22,7 +22,11 @@ tqdm.pandas()
 
 classifications = pd.DataFrame({'t':[0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2],
                                 'class':[0,3,1,1,1,1,0,1,0,3,1,1,0,1,0,1,1,0,3,2,0,1]})
+classifications_new = classifications[classifications['class']==1]
 
+for i,row in classifications_new[['t','class']].iterrows():
+    classifications['class'][i] = row['t']*100
+    print(i)
 
 to_ignore = [3]
 t=2
@@ -141,7 +145,9 @@ list(itertools.chain.from_iterable(to_split))
 
 list(G.nodes())[0]
 
-
+# =============================================================================
+# 
+# =============================================================================
 
 class_centroid_proposal = {1:[1,2],2:[1,3],3:[4,5],4:[]}
 class_centroid_proposal = {k:v for k,v in class_centroid_proposal.items() if len(v)>=2}
@@ -167,16 +173,36 @@ while len(class_centroid_proposal)>0:
 
 
 
+# =============================================================================
+# 
+# =============================================================================
+from gensim.models import FastText as fasttext_gensim
+from scipy import spatial
+import numpy as np
+import time
 
 
+gensim_model_address_AI = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/models/Fasttext/gensim381-w10/FastText100D-dim-scopus-update-window10.model'
+gensim_model_address = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/models/Fasttext/gensim381/FastText100D-dim-scopus-update.model'
+model_AI = fasttext_gensim.load(gensim_model_address)
+model = fasttext_gensim.load(gensim_model_address)
+
+start = time.time()
+vec_a = np.array([model_AI.wv['machine'],model_AI.wv['learning']]).mean(axis=0)
+vec_b = np.array([model_AI.wv['deep'],model_AI.wv['learning']]).mean(axis=0)#(model_AI['data']+model_AI['science'])
+result = 1-spatial.distance.cosine(vec_a, vec_b)
+end = time.time()
 
 
+start = time.time()
+spatial.distance.cosine(all_vecs[0],ontology_dict['machine learning']['vector'])
+end = time.time()
+spent_time =float(end-start)
 
 
-
-
-
-
+vec_a = np.array([model.wv['machine'],model.wv['learning']]).mean(axis=0)
+vec_b = np.array([model.wv['deep'],model.wv['learning']]).mean(axis=0)#(model_AI['data']+model_AI['science'])
+1-spatial.distance.cosine(vec_a, vec_b)
 
 
 
