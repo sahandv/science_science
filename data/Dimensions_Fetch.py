@@ -7,6 +7,7 @@ This script is for fetching dimensions data
 
 @author: sahand
 """
+import os
 import gc
 from tqdm import tqdm
 import dimcli
@@ -34,15 +35,14 @@ for year in tqdm(years):
     #                             times_cited + altmetric + reference_ids +  year + category_for + journal + 
     #                            proceedings_title + publisher + research_orgs]""")
     data = dsl.query_iterative(r"""search publications in full_data for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\")"  where year="""+str(year)+
-                               """ and (type="article" or type="proceeding") and 
+                               """ and (type="article" or type="proceeding") and times_cited <1 and
                                (category_for.name="01 Mathematical Sciences" or category_for.name="09 Engineering" or category_for.name="11 Medical and Health Sciences" or 
                                 category_for.name="17 Psychology and Cognitive Sciences" or category_for.name="06 Biological Sciences" or 
                                 category_for.name="15 Commerce, Management, Tourism and Services" or category_for.name="10 Technology")
                                and abstract is not empty and reference_ids is not empty and title is not empty and category_for is not empty
                                return publications 
-                               [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + concepts_scores + pages + funders + authors_count + mesh_terms + terms +
-                                times_cited + altmetric + reference_ids +  year + category_for + category_bra + category_hra + category_rcdc + journal +  category_ua + FOR_first + FOR 
-                               ] sort by altmetric desc""") #for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\")"
+                               [id + authors + dimensions_url + doi + title + abstract + concepts_scores + authors_count + terms +
+                                times_cited + reference_ids +  year + category_for +  category_ua + journal] """) #for "(\"machine learning\" OR \"artificial intelligence\" OR \"deep learning\")"
 
 # [id + authors + researchers + linkout + dimensions_url + doi + title + abstract + concepts_scores + pages + funders + authors_count + mesh_terms + terms +
 #  times_cited + altmetric + reference_ids +  year + category_for + category_bra + category_hra + category_rcdc + journal +  category_ua + FOR_first + FOR +
@@ -51,7 +51,7 @@ for year in tqdm(years):
     # Process & Save
     # =============================================================================
     
-    output_address = '/home/sahand/GoogleDrive/Data/Corpus/Dimension All/'+str(year)+' dimensions AI articles-proceedings.json'
+    output_address = '/home/sahand/GoogleDrive/Data/Corpus/Dimension All/'+str(year)+' dimensions AI articles-proceedings cited<1.json'
     
     # data_json = json.dumps(data.publications)
 
@@ -103,10 +103,56 @@ csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-pr
 # =============================================================================
 # Read for test
 # =============================================================================
-address = '/home/sahand/GoogleDrive/Data/Corpus/Dimension All/2010 dimensions AI articles-proceedings.json'
+address = '/home/sahand/GoogleDrive/Data/Corpus/Dimension All/1961-2017 dimensions AI articles-proceedings.json'
 with open(address) as f:
     data = json.load(f)
 df = pd.DataFrame(data)
+df_small = df[['category_for','FOR','FOR_first','year','journal']]
+df_small['journal'] = df_small['journal'].apply(lambda x: {'id':np.nan,'title':np.nan} if pd.isnull(x) else x)
+df_small['journal_n'] = [x['id'] for x in df_small['journal'].values.tolist()]
+sample = df.sample(10000)
+columns = df.columns
+
+df_small_g = df_small.groupby('journal_n').groups
+df_small_g_k = list(df_small_g.keys())
+df_small_g_v = list(df_small_g.values())
+# To show that the journal data category is not FOR categories in this dataset, confirming the statement in the documentations.
+journal_x_data = df.loc[df_small_g_v[21]]
+journal_x_data.to_csv('/home/sahand/GoogleDrive/Data/Corpus/Dimension All/category_fro_proof.csv')
+# =============================================================================
+# Json combine by year 
+# =============================================================================
+all_data = []
+years = list(range(1961,2018))
+for year in tqdm(years):
+    with open('/home/sahand/GoogleDrive/Data/Corpus/Dimension All/'+str(year)+' dimensions AI articles-proceedings.json') as f:
+        data = json.load(f)
+    all_data = all_data+data
+    
+df = pd.DataFrame(all_data)
+sample = df.sample(1000)
+df['year'].hist(bins=50)
+
+with open('/home/sahand/GoogleDrive/Data/Corpus/Dimension All/1961-2017 dimensions AI articles-proceedings.json', 'w') as json_file:
+    json.dump(all_data, json_file)
+# =============================================================================
+# Json combine all 
+# =============================================================================
+list_dirs = os.listdir(path=r"/home/sahand/GoogleDrive/Data/Corpus/Dimension All/")
+list_dirs = [x for x in list_dirs if x.split('.')[-1]=='json']
+
+all_data = []
+for file in tqdm(list_dirs):
+    with open('/home/sahand/GoogleDrive/Data/Corpus/Dimension All/'+str(file)) as f:
+        data = json.load(f)
+    all_data = all_data+data
+    
+df = pd.DataFrame(all_data)
+sample = df.sample(1000)
+df['year'].hist(bins=60)
+
+with open('/home/sahand/GoogleDrive/Data/Corpus/Dimension All/1961-2020 dimensions AI articles-proceedings.json', 'w') as json_file:
+    json.dump(all_data, json_file)
 # =============================================================================
 # Drop randomly to reduce dataset size
 # =============================================================================
@@ -120,8 +166,8 @@ csv.to_csv('/mnt/16A4A9BCA4A99EAD/Dimensions/dimensions AI DL ML all articles-pr
 # =============================================================================
 # Data combine /mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Dimensions_new/
 # =============================================================================
-data = pd.read_csv('/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Dimensions_new/'+str(1960)+' dimensions AI articles-proceedings.csv',index_col=0)
-years = list(range(1961,2021))
+data = pd.read_csv('/home/sahand/GoogleDrive/Data/Corpus/Dimension All/'+str(1960)+' dimensions AI articles-proceedings.csv',index_col=0)
+years = list(range(1961,2018))
 for year in tqdm(years):
     tmp = pd.read_csv('/mnt/6016589416586D52/Users/z5204044/Documents/Dataset/Dimensions_new/'+str(year)+' dimensions AI articles-proceedings.csv',index_col=0)
     data = data.append(tmp,ignore_index=True)
