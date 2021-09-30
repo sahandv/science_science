@@ -8,6 +8,8 @@ Created on Wed Dec 23 14:56:06 2020
 import sys
 import gc
 import json
+import string
+
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
@@ -42,34 +44,46 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 nltk.download('stopwords')
 stop_words = list(set(stopwords.words("english")))+stops
 
-data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/all dimensions AI articles-proceedings.csv'
+# data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/clean/data with abstract'
+
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/AI kw merged'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 4k/scopus_4k.csv'
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/clean/publication idx'
 # data_path_rel = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
-data_full_relevant = pd.read_csv(data_path_rel,index_col=0)
+
+with open('/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/1961-2020 dimensions AI articles-proceedings.json') as f:
+    data = json.load(f)
+data_full_relevant = pd.DataFrame(data)
+del data
+gc.collect()
+
+# data_full_relevant = pd.read_csv(data_path_rel)
 # data_full_relevant = pd.read_csv(data_path_rel,names=['abstract'])
+
 
 # data_full_relevant = data_full_relevant[['dc:title','authkeywords','abstract','year']]
 # data_full_relevant.columns = ['TI','DE','AB','PY']
-sample = data_full_relevant.sample(400)
 
-root_dir = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions AI unlimited citations/'
+root_dir = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
 gc.collect()
 
 data_full_relevant['PY'] = data_full_relevant['year']
-data_full_relevant['AB'] = data_full_relevant['abstract']
-data_full_relevant['TI'] = data_full_relevant['title']
+data_full_relevant['AB'] = data_full_relevant['abstract'].str.lower()
+data_full_relevant['TI'] = data_full_relevant['title'].str.lower()
 data_full_relevant['DE'] = np.nan
 data_full_relevant['ID'] = ''
-data_full_relevant['SO'] = data_full_relevant['publisher']
+data_full_relevant['SO'] = data_full_relevant['journal']
 
 # data_filtered = pd.read_csv('/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/Corpus/Dimensions/abstract_title deflemm',names=['AB'])
 # data_wrong = data_full_relevant[data_full_relevant['AB'].str.contains("abstract available")].index
 # data_wrong = list(data_wrong)
 # data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
-sample = data_full_relevant.sample(4)
+sample = data_full_relevant.sample(400)
+# tmp_concept = data_full_relevant['concepts_scores'][287041]
+# tmp_abstract = data_full_relevant['abstract'][287041]
+# tmp_terms = data_full_relevant['terms'][287041]
+# tmp_for = data_full_relevant['category_for'][106041]
 
 # path = '/home/sahand/GoogleDrive/Data/'
 # pub_idx = pd.read_csv(path+'Corpus/Dimensions AI unlimited citations/clean/publication idx')
@@ -79,7 +93,11 @@ sample = data_full_relevant.sample(4)
 # Initial Pre-Processing : 
 #   Following tags requires WoS format. Change them otherwise.
 # =============================================================================
-data_filtered = data_full_relevant.copy()
+data_filtered = data_full_relevant[['category_for','PY','SO','AB','TI','reference_ids','authors','concepts_scores','id']]
+sample = data_filtered.sample(10000)
+
+
+# data_filtered = data_full_relevant.copy()
 data_filtered = data_filtered[pd.notnull(data_filtered['PY'])]
 
 # data_filtered = data_filtered[data_filtered['PY'].astype('int')>year_from-1]
@@ -88,18 +106,20 @@ data_filtered = data_filtered[pd.notnull(data_filtered['PY'])]
 # Remove columns without keywords/abstract list 
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
-data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['title'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['TI'])]
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['authors'])]
-data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['year'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['PY'])]
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['reference_ids'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['concepts_scores'])]
 
 # =============================================================================
 # remove repeating ids
 # =============================================================================
 data_with_abstract = data_with_abstract.drop_duplicates(subset=['id']).reset_index(drop=True)
 
-del data_full_relevant
+# del data_full_relevant
 del data_filtered
 
 # =============================================================================
@@ -107,6 +127,7 @@ del data_filtered
 # =============================================================================
 # Remove special chars and strings from abstracts
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
+data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
@@ -114,26 +135,104 @@ data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'i.e.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
+data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'\\usepackage') if pd.notnull(x) else np.nan)
+data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.find_and_remove_term(x,'\n',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'\n',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'λ','lambda') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'β','beta') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'η','eta') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'σ','delta') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'α','alpha') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'γ','y') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'é','e') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'š','s') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ı','i') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<mrow>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</mrow>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<annotation>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</annotation>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'p2p','peer to peer') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<mi>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</mi>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<mo>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</mo>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<msub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</msub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<semantics>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</semantics>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<math>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</math>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<sub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</sub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'+',' plus ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<p>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</p>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<italic>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</italic>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: re.sub(r'http\S+', ' ', x)if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'xmlns:xsi=',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'xmlns=',' ') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
 
+# num2words = {' 1 ': ' one ', '.1-': '.one-', ' 1-': ' one-', '-1 ': '-one ', '-1-': '-one-', 
+#              ' 2 ': ' two ',  '.2-': '.two-', ' 2-': ' two-', '-2 ': '-two ', '-2-': '-two-', 
+#              ' 3 ': ' three ',  '.3-': '.three-', ' 3-': ' three-', '-3 ': '-three ', '-3-': '-three-', 
+#              ' 4 ': ' four ',  '.4-': '.four-', ' 4-': ' four-', '-4 ': '-four ', '-4-': '-four-', 
+#              ' 5 ': ' five ',  '.5-': '.five-', ' 5-': ' five-', '-5 ': '-five ', '-5-': '-five-', 
+#              ' 6 ': ' six ',  '.6-': '.six-', ' 6-': ' six-', '-6 ': '-six ', '-6-': '-six-', 
+#              ' 7 ': ' seven ',  '.7-': '.seven-', ' 7-': ' seven-', '-7 ': '-seven ', '-7-': '-seven-', 
+#              ' 8 ': ' eight ',  '.8-': '.eight-', ' 8-': ' eight-', '-8 ': '-eight ', '-8-': '-eight-', 
+#              ' 9 ': ' nine ', '.9-': '.nine-', ' 9-': ' nine-', '-9 ': '-nine ', '-9-': '-nine-'}
+
+num2words = {'0':' zero ','1':' one ','2':' two ','3':' three ','4':' four ','5':' five ','6':' six ','7':' seven ','8':' eight ','9':' nine '}
+
+def replace_nums(string,dictionary,regex="(?<!\d)\d(?!\d)"):
+    while True:
+        try:
+            index = re.search(regex, string).start()
+            string_a = string[:index]
+            string_b = string[index+1:]
+            string_a = string_a + dictionary[string[index]]
+            string = string_a+string_b
+        except:
+            return string
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: replace_nums(x,num2words) if pd.notnull(x) else np.nan)
+
+
+# data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.multiple_replace(x,num2words) if pd.notnull(x) else np.nan)
+# data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.multiple_replace(x,num2words) if pd.notnull(x) else np.nan)
+
+# =============================================================================
+# 
+# =============================================================================
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 # gc.collect()
 abstracts = []
+titles = []
 ids = []
 for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
     abstract = row['AB']
-    numbers = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
-    for number in numbers:
+    title = row['TI']
+    numbers_ab = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
+    numbers_ti = re.findall(r"[-+]?\d*\.\d+|\d+", title)
+
+    for number in numbers_ab:
         abstract = kw.find_and_remove_term(abstract,number)
+    for number in numbers_ti:
+        title = kw.find_and_remove_term(title,number)
     abstracts.append(abstract)
+    titles.append(title)
     ids.append(row['id'])
 
 data_with_abstract['AB'] = abstracts
+data_with_abstract['TI'] = titles
 data_with_abstract['id_n'] = ids
 
 assert data_with_abstract['id'].equals(data_with_abstract['id_n']), "Oh no! id mismatch here... Please fix it!"
 
 del  abstracts
+del  titles
 gc.collect()
 
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
@@ -146,7 +245,7 @@ lens = []
 word_len = []
 percentile = 5
 for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
-    leng = len(row['abstract'])
+    leng = len(row['AB'])
     w_leng = len(row['AB'].split())
     word_len.append([len(ab) for ab in row['AB'].split()])
     lens.append(leng)
@@ -162,14 +261,121 @@ data_with_abstract = data_with_abstract[data_with_abstract['id'].isin(long_abstr
 data_with_abstract = data_with_abstract[data_with_abstract['id']!='']
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
 data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
-data_with_abstract = data_with_abstract.drop(['id_n','AB_n'],axis=1)
+data_with_abstract = data_with_abstract.drop(['id_n'],axis=1)
 
 data_with_abstract = data_with_abstract.reset_index(drop=True)
 
-data_with_abstract[['id']].to_csv(root_dir+subdir+'mask',index=False)
+# data_with_abstract[['id']].to_csv(root_dir+subdir+'mask',index=False)
 
 # =============================================================================
-# Author preparation
+# Language check
+# =============================================================================
+def isEnglish(s):
+    try:
+        s.encode(encoding='utf-8').decode('ascii')
+    except UnicodeDecodeError:
+        return False
+    else:
+        return True
+    
+# Fix titles
+other_langs = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    if not isEnglish(row['TI']):
+        other_langs.append(row['id'])
+
+corrected_text = data_with_abstract[data_with_abstract['id'].isin(other_langs)]['TI'].progress_apply(lambda text: ''.join(x for x in text if x in string.printable))
+data_with_abstract.loc[data_with_abstract['id'].isin(other_langs),'TI'] = corrected_text
+
+# Check Abstracts
+other_langs = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    if not isEnglish(row['AB']):
+        other_langs.append(row['id'])
+
+corrected_text = data_with_abstract[data_with_abstract['id'].isin(other_langs)]['AB'].progress_apply(lambda text: ''.join(x for x in text if x in string.printable))
+data_with_abstract.loc[data_with_abstract['id'].isin(other_langs),'AB'] = corrected_text
+# bad_data = data_with_abstract.loc[data_with_abstract['id'].isin(other_langs),'AB']
+# kw.find_and_remove_term(text,'\n',' ')
+# ''.join(x for x in text if x in string.printable)
+# =============================================================================
+# concept preparation from json
+# =============================================================================
+def extract_concepts(concepts):
+    try:
+        concepts_list = []
+        for concept in concepts:
+            try:
+                concepts_list.append(concept['concept']+':::'+str(concept['relevance']))
+            except:
+                pass
+                # print('oops! concept was empty...')
+        return ';;;'.join(concepts_list)
+    except:
+        print('oops!')
+        return np.nan
+data_with_abstract['DE'] = data_with_abstract['concepts_scores'].progress_apply(lambda x: extract_concepts(x))
+# =============================================================================
+# Ref preparation from json
+# =============================================================================
+def author_to_str(authors):
+    try:
+        return ';;;'.join(authors)
+    except:
+        return np.nan
+    
+data_with_abstract['reference_ids_str'] = data_with_abstract['reference_ids'].progress_apply(lambda x: author_to_str(x))
+data_with_abstract['reference_ids_str'][100]
+
+# =============================================================================
+# Journal preparation from json
+# =============================================================================
+data_with_abstract['SO'] = data_with_abstract['SO'].progress_apply(lambda x: {'id':np.nan,'title':np.nan} if pd.isnull(x) else x)
+data_with_abstract['journal_name'] = [x['title'] for x in tqdm(data_with_abstract['SO'].values.tolist())]
+data_with_abstract['journal_id'] = [x['id'] for x in tqdm(data_with_abstract['SO'].values.tolist())]
+# =============================================================================
+# category FOR preparation from json
+# =============================================================================
+def extract_cats(cats):
+    try:
+        cat_list = []
+        for cat in cats:
+            try:
+                cat_list.append(cat['id']+':::'+str(cat['name']))
+            except:
+                pass
+                # print('oops! concept was empty...')
+        return ';;;'.join(cat_list)
+    except:
+        print('oops!')
+        return np.nan
+data_with_abstract['FOR'] = data_with_abstract['category_for'].progress_apply(lambda x: extract_cats(x))
+
+# =============================================================================
+# Author preparation from json
+# =============================================================================
+def extract_authors(authors):
+    researcher_ids = []
+    try:
+        for author in authors:
+            try:
+                if author['researcher_id']!='':
+                    researcher_ids.append(author['researcher_id'])
+            except:
+                pass
+        return ';;;'.join(researcher_ids)
+    except:
+        return np.nan
+    
+data_with_abstract['reseearcher_ids'] = data_with_abstract['authors'].progress_apply(lambda x: extract_authors(x))
+
+# auhtor = data_with_abstract['authors'][176279]
+
+data_with_abstract = data_with_abstract.drop(['SO','category_for','reference_ids','authors','concepts_scores'],axis=1)
+sample = data_with_abstract.sample(100)
+
+# =============================================================================
+# Author preparation from csv
 # =============================================================================
 authors_j = []
 errors = []
@@ -294,42 +500,26 @@ journal_groups_keys = journal_groups.keys()
 
 cat_check = data_with_abstract.iloc[list(journal_groups['Технология и конструирование в электронной аппаратуре'])]
 
-
-
 # =============================================================================
-# Save to disk
+# keyword preparation
 # =============================================================================
-data_with_abstract.to_csv(root_dir+subdir+'data with abstract',index=False)
+data_with_abstract['DE-n'] = data_with_abstract['DE'].progress_apply(lambda x: x.split(';;;') if pd.notnull(x) else np.nan)
+data_with_abstract = data_with_abstract[data_with_abstract['DE-n'].notna()]
+data_with_abstract = data_with_abstract.reset_index(drop=True)
+data_with_abstract['DE-n'] = data_with_abstract['DE-n'].progress_apply(lambda x: [a.split(':::')[0] for a in x])
+# data_with_abstract['DE-terms'] =  data_with_abstract['DE-n'].progress_apply(lambda x: ','.join([a[0] for a in x]))
+data_with_abstract['DE-n'] = data_with_abstract['DE-n'].progress_apply(lambda x: [strip_multiple_whitespaces(a).strip().lower() for a in x])
+data_with_abstract['DE-n'] = data_with_abstract['DE-n'].progress_apply(lambda x: [kw.string_pre_processing(a,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for a in x])
+data_with_abstract['DE-n'] = data_with_abstract['DE-n'].progress_apply(lambda x: [kw.replace_british_american(a,kd.gb2us) for a in x]) # Optional step
+data_with_abstract['DE-n'] = data_with_abstract['DE-n'].progress_apply(lambda x: ';;;'.join(x)) # Optional step
 
-references = pd.DataFrame(data_with_abstract['reference_ids'].values.tolist(),columns=['reference_ids'])
-references.to_csv(root_dir+subdir+'corpus references',index=False) # Save year indices to disk for further use
 
-source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
-source_list.to_csv(root_dir+subdir+'corpus sources',index=False) # Save year indices to disk for further use
-
-class_list = pd.DataFrame(data_with_abstract['category_for'].values.tolist(),columns=['category_for'])
-class_list.to_csv(root_dir+subdir+'corpus category_for',index=False) # Save year indices to disk for further use
-
-id_list = pd.DataFrame(data_with_abstract['id'].values.tolist(),columns=['id'])
-id_list.to_csv(root_dir+subdir+'publication idx',index=False) # Save year indices to disk for further use
-
-id_list = pd.DataFrame(list(data_with_abstract.index),columns=['index'])
-id_list.to_csv(root_dir+subdir+'corpus idx',index=False) # Save year indices to disk for further use
-
-year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
-year_list.to_csv(root_dir+subdir+'corpus years',index=False) # Save year indices to disk for further use
-gc.collect()
-
-year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
-year_list.shape
-
-sample = data_with_abstract.sample(5)
 
 # =============================================================================
 # Simple pre-process (method b) -- optional -- preferred for kw extraction
 # =============================================================================
-data_with_abstract['TI_AB'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
-abstracts = [re.sub('[^A-Za-z0-9 .?,!()]','',ab) for ab in data_with_abstract['TI_AB']]
+data_with_abstract['TI_AB_b'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
+abstracts = [re.sub('[^A-Za-z0-9 .?,!()]','',ab) for ab in data_with_abstract['TI_AB_b']]
 abstracts = [strip_multiple_whitespaces(ab).strip().lower() for ab in tqdm(abstracts)]
 
 thesaurus = [
@@ -405,12 +595,15 @@ for paragraph in tqdm(abstracts):
     paragraph = kw.filter_string(paragraph,thesaurus)
     tmp.append(paragraph)
 abstracts = tmp
+# data_with_abstract['TI_AB_b'] = abstracts
+# abstracts = data_with_abstract['TI_AB_b'].values.tolist()
 abstracts = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tqdm(abstracts)]
 
+data_with_abstract['TI_AB_b'] = abstracts
 corpus_abstract_pure_df = pd.DataFrame(abstracts,columns=['abstract'])
 corpus_abstract_pure_df['id'] = data_with_abstract['id']
-corpus_abstract_pure_df.to_csv(root_dir+subdir+'abstract_title method_b',index=False)
-
+corpus_abstract_pure_df.to_csv(root_dir+subdir+'abstract_title method_b_3',index=False)
+sample = corpus_abstract_pure_df.sample(100)
 # =============================================================================
 # Simple pre-process (method a) -- optional -- preferred for deep learning of documents
 # =============================================================================
@@ -501,10 +694,73 @@ for paragraph in tqdm(corpus_abstract_pure_final):
     paragraph = kw.filter_string(paragraph,thesaurus)
     tmp.append(paragraph)
 corpus_abstract_pure_final = tmp
+ch = '.'
+corpus_abstract_pure_final = [x.lstrip(ch).lstrip(ch).lstrip(ch).lstrip(ch) for x in corpus_abstract_pure_final]
+corpus_abstract_pure_final = [x.lstrip(ch).lstrip(ch).lstrip(ch).lstrip(ch) for x in corpus_abstract_pure_final]
 
+
+data_with_abstract['TI_AB'] = corpus_abstract_pure_final
 corpus_abstract_pure_df = pd.DataFrame(corpus_abstract_pure_final,columns=['abstract'])
 corpus_abstract_pure_df['id'] = data_with_abstract['id']
+
 corpus_abstract_pure_df.to_csv(root_dir+subdir+'abstract_title method_a',index=False)
+
+# =============================================================================
+# Save to disk
+# =============================================================================
+data_with_abstract.to_csv(root_dir+subdir+'data with abstract',index=False)
+
+references = pd.DataFrame(data_with_abstract['reference_ids'].values.tolist(),columns=['reference_ids'])
+references.to_csv(root_dir+subdir+'corpus references',index=False) # Save year indices to disk for further use
+
+source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
+source_list.to_csv(root_dir+subdir+'corpus sources',index=False) # Save year indices to disk for further use
+
+class_list = pd.DataFrame(data_with_abstract['category_for'].values.tolist(),columns=['category_for'])
+class_list.to_csv(root_dir+subdir+'corpus category_for',index=False) # Save year indices to disk for further use
+
+id_list = pd.DataFrame(data_with_abstract['id'].values.tolist(),columns=['id'])
+id_list.to_csv(root_dir+subdir+'publication idx',index=False) # Save year indices to disk for further use
+
+id_list = pd.DataFrame(list(data_with_abstract.index),columns=['index'])
+id_list.to_csv(root_dir+subdir+'corpus idx',index=False) # Save year indices to disk for further use
+
+year_list = pd.DataFrame(data_with_abstract['PY'].values.tolist(),columns=['year'])
+year_list.to_csv(root_dir+subdir+'corpus years',index=False) # Save year indices to disk for further use
+gc.collect()
+
+year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
+year_list.shape
+
+sample = data_with_abstract.sample(5)
+
+# =============================================================================
+# Clean bad data based on abstracts - round 2
+# =============================================================================
+data_with_abstract['TI_AB'] = corpus_abstract_pure_final
+
+long_abstracts = []
+lens = []
+word_len = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    leng = len(row['TI_AB'])
+    w_leng = len(row['TI_AB'].split())
+    word_len.append([len(ab) for ab in row['TI_AB'].split()])
+    lens.append(leng)
+    if leng > abstract_length_min and w_leng > abstract_length_min_w:
+        long_abstracts.append(row['id'])
+
+word_len_f = [j for sub in word_len for j in sub]
+median_word_len = np.median(word_len_f)
+mean_word_len = np.mean(word_len_f)
+
+max_paragraph_len = int(np.percentile(lens, percentile)) # take Nth percentile as the sentence length threshold
+data_with_abstract = data_with_abstract[data_with_abstract['id'].isin(long_abstracts)]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['TI_AB'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
+data_with_abstract = data_with_abstract.drop(['id_n'],axis=1)
+
+data_with_abstract = data_with_abstract.reset_index(drop=True)
 
 # =============================================================================
 # Sentence maker
@@ -553,8 +809,8 @@ gc.collect()
 # =============================================================================
 if MAKE_SENTENCE_CORPUS_ADVANCED is True:    
     data_with_abstract['TI_AB'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
-    data_fresh = data_with_abstract[['TI_AB','PY']].copy()
-    data_fresh['TI_AB'] = data_fresh['TI_AB'].str.lower()
+    data_fresh = data_with_abstract[['TI_AB_b','PY']].copy()
+    data_fresh['TI_AB_b'] = data_fresh['TI_AB_b'].str.lower()
     
     # del data_with_abstract
     gc.collect()
@@ -567,7 +823,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     years = []
     indices = []
     for index,row in tqdm(data_fresh.iterrows(),total=data_fresh.shape[0]):
-        abstract_str = row['TI_AB']
+        abstract_str = row['TI_AB_b']
         year = row['PY']
         abstract_sentences = re.split('\. |\? |\\n|\!',abstract_str)
         abstract_sentences = [x for x in abstract_sentences if x!='']
@@ -624,7 +880,7 @@ if MAKE_SENTENCE_CORPUS_ADVANCED is True:
     sentence_df = pd.DataFrame(indices,columns=['article_index'])
     sentence_df['sentence'] = sentences
     sentence_df['year'] = years
-    sentence_df.to_csv(root_dir+subdir+'corpus sentences abstract-title',index=False,header=True)
+    sentence_df.to_csv(root_dir+subdir+'corpus sentences abstract-title-2',index=False,header=True)
     
 # =============================================================================
 # Keyword Extractor
