@@ -9,7 +9,9 @@ import pandas as pd
 from tqdm import tqdm
 from sciosci.assets import text_assets as ta
 from sciosci.assets import keyword_dictionaries as kd
+from gensim.parsing.preprocessing import strip_multiple_whitespaces
 tqdm.pandas()
+stops = ['a','an','we','result','however','yet','since','previously','although','propose','proposed','this','...']
 
 taxonomy = pd.read_csv('/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/1980-2019 300k n-gram author keyword taxonomy.csv')
 
@@ -48,6 +50,11 @@ cso.loc[cso['relation'].str.contains("relatedLink"),'relation'] = 'link'
 
 #1 replace by human readable labels
 label_dict = cso[cso['relation']=='readable-label'][['a','b']].reset_index(drop=True).values
+label_dict = [[x[0],x[1].replace('@en .','')] for x in tqdm(label_dict.tolist())]
+label_dict = [[x[0],ta.replace_british_american(strip_multiple_whitespaces(ta.replace_british_american(strip_multiple_whitespaces(x[1]),kd.gb2us)),kd.gb2us)] for x in tqdm(label_dict)]
+# lemmatization not really needed. Because it already has all versions
+label_dict = [[x[0],ta.string_pre_processing(x[1],stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False)] for x in tqdm(label_dict)]
+
 
 tmp = {}
 for row in tqdm(label_dict):
@@ -73,4 +80,11 @@ cso_taxonomy['keywords'] = cso_taxonomy['keywords'].str.replace('@en .','')
 cso_taxonomy['keywords'] = cso_taxonomy['keywords'].progress_apply(lambda x: ta.replace_british_american(x,kd.gb2us)) # Optional step
 cso_taxonomy.to_csv('/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/CSO.3.3-taxonomy-US.csv',index=False)
 
+
+# 3 text pre-process the labeled data
+cso = pd.read_csv('/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/CSO.3.3-with-labels.csv')
+cso.a = cso.a.str.replace('@en .','')
+cso.b = cso.b.str.replace('@en .','')
+cso.a = cso.a.progress_apply(lambda x: ta.replace_british_american(x,kd.gb2us)) # Optional step
+cso.a = cso.a.progress_apply(lambda x: ta.replace_british_american(x,kd.gb2us)) # Optional step
 
