@@ -354,12 +354,22 @@ def multiple_replace(string, rep_dict):
     import re
     pattern = re.compile("|".join([re.escape(k) for k in sorted(rep_dict,key=len,reverse=True)]), flags=re.DOTALL)
     return pattern.sub(lambda x: rep_dict[x.group(0)], string)
+    
+
 
 def find_and_remove_c(text):
-# =============================================================================
-# Text preprocessing 
-#    removal of copyright credits from abstract
-# =============================================================================
+    """
+    Text preprocessing 
+    removal of copyright credits from abstract
+    Parameters
+    ----------
+    text : string
+
+    Returns
+    -------
+    string.
+
+    """
     import re
     
     if text.startswith('Copyright ') or text.startswith('copyright '):
