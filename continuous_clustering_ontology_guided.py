@@ -1122,8 +1122,8 @@ model = OGC(verbose=1,k=k0,distance_metric='cosine')
 model.v=3
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
-model.set_ontology_keyword_search_index()
-ontology_dict = model.prepare_ontology(ont_index)
+model.set_ontology_keyword_search_index(ont_index)
+ontology_dict = model.prepare_ontology()
 
 
 vectors_t0 = vectors[vectors.PY<2006]
@@ -1131,7 +1131,6 @@ keywords = vectors_t0['DE-n'].values.tolist()
 vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
 
 # dendrogram = aa.fancy_dendrogram(sch.linkage(vectors_t0, method='ward'),truncate_mode='lastp',p=800,show_contracted=True,figsize=(15,9)) #single #average #ward
-
 model.fit(vectors_t0.values,keywords)
 predicted_labels = model.predict(vectors_t0.values)
 pd.DataFrame(predicted_labels).hist(bins=6)
@@ -1142,9 +1141,7 @@ vectors_t1 = vectors[vectors.PY==2006]
 keywords = vectors_t1['DE-n'].values.tolist()
 vectors_t1.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
 
-
 model_backup.fit_update(vectors_t1.values, 1, keywords)
-
 # model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
 # model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
 
