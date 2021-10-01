@@ -376,7 +376,44 @@ class CK_Means:
                 self.verbose(2,warning='Exception handled. During radius calculation for class '+str(i)+' an error occuured, so minimum radius was assigned for it.')
         return self.radius
     
-
+    def cluster_neighborhood(self,to_inspect:list,to_ignore:list=None,epsilon:float=5.0):
+            """
+            Overlaps the bounding boxes to find the neighbouring clusters.
+    
+            Parameters
+            ----------
+            to_inspect : list
+                list of wanted clusters.
+            to_ignore : list of sets, optional
+                List of unwanted cluster pairs. The default is None.
+            epsilon : float, optional
+                The epsilong to grow on each dimension for overlap creation. If>1.0, value will be used as percentage. The default is 0.05.
+    
+            Returns
+            -------
+            List of neighboring cluster as list of pairs.
+    
+            """
+            pairs = list(itertools.combinations(to_inspect, 2))
+            self.get_class_min_bounding_box(self.classifications)
+            # self.ndbbox
+            self.ndbbox_overlapping = {}
+            for c in self.ndbbox.keys():
+                if epsilon>1.0:
+                    epsilon_dim = (self.ndbbox[c][1,:]-self.ndbbox[c][0,:])*epsilon/100
+                    self.ndbbox_overlapping[c] = np.array([self.ndbbox[c][0,:]-epsilon_dim,self.ndbbox[c][1,:]+epsilon_dim])
+                else:
+                    self.ndbbox_overlapping[c] = np.array([self.ndbbox[c][0,:]-epsilon,self.ndbbox[c][1,:]+epsilon])
+            neighbours = []
+            for pair in pairs:
+                cond_a = (self.ndbbox_overlapping[pair[0]][0,:]<self.ndbbox_overlapping[pair[1]][1,:]).all()
+                cond_b = (self.ndbbox_overlapping[pair[0]][1,:]>self.ndbbox_overlapping[pair[1]][0,:]).all()
+    
+                if cond_a and cond_b:
+                    neighbours.append(set(pair))
+            neighbours = list(set([n for n in neighbours if n not in to_ignore]))
+            return neighbours
+        
     def add_to_clusters(self,data,t,keywords:list=None):
         """
         Update self.classifications using the new 2D data
@@ -557,7 +594,8 @@ class CK_Means:
     
         Returns
         -------
-        None.
+        new_cluster_ids: list
+            New cluster IDs.
     
         """
         patience_counter = 0
@@ -607,6 +645,8 @@ class CK_Means:
                 self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
             else:
                 patience_counter=0
+                
+        return new_cluster_ids
                 
     def fit(self,data,keywords:list=None):
         """
@@ -783,6 +823,7 @@ class CK_Means:
         self.verbose(2,debug=' -  - vectorizing concepts.')
         self.prepare_ontology()
         
+        class_centroid_proposal_concepts = {}
         class_centroid_proposal = {}
         class_concepts = {}
         for c in classifications_populations['class'].values.tolist(): 
@@ -861,11 +902,13 @@ class CK_Means:
                 centroid_proposals.append(centroid_proposal)
                 ignores.append(ignore)
             class_centroid_proposal[c] = centroid_proposals
+            class_centroid_proposal_concepts[c] = concept_proposals
                     
         class_centroid_proposal = {k:v for k,v in class_centroid_proposal.items() if len(v)>=2}
 
         self.verbose(2,debug=' -  - sub-clustering the records in to_split classes.')
         
+        sub_clustered = [] #sub clustered pairs
         while len(class_centroid_proposal)>0:
             print("Cluster split votes are as follows:")
             print(to_split)
@@ -879,57 +922,37 @@ class CK_Means:
                         self.vebose(1,debug=' -  -  sub clustering cluster '+str(c))
                         to_recluster = int(c)
                         centroid_vecs =  class_centroid_proposal[to_recluster]
-                        self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter)
+                        sub_clustered.append(self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter))
                         del class_centroid_proposal[to_recluster]
                 class_centroid_proposal = {}    
             else:
-                self.vebose(1,debug=' -  - sub clustering cluster '+str(user_input))
-                to_recluster = int(user_input)
-                centroid_vecs =  class_centroid_proposal[to_recluster]
-                self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter)
+                cluster_sub_k_input = input("Proposed concepts to split are: "+str(class_centroid_proposal_concepts[int(user_input)])+". How many sub_clusters do you prefer? (N: None and skip sub_clustering, D: Default, or an integer number number)\n")
+                if cluster_sub_k_input!="N":
+                    self.vebose(1,debug=' -  - sub clustering cluster '+str(user_input))
+                    to_recluster = int(user_input)
+                    centroid_vecs =  class_centroid_proposal[to_recluster]
+                    if cluster_sub_k_input=="D":
+                        sub_clustered.append(self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter))
+                    else:
+                        sub_clustered.append(self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter, sub_k = int(cluster_sub_k_input)))
                 del class_centroid_proposal[to_recluster]
                 
         
         self.verbose(1,debug='Checking classes for merging...')
+        new_classes = list(set(list(itertools.chain.from_iterable(sub_clustered))))
+        all_classes_t = classifications_populations['class'].values.tolist()+new_classes
+        clustered_pairs = []
+        for subs in sub_clustered :
+            clustered_pairs = clustered_pairs+[set(p) for p in list(itertools.combinations(subs, 2))]
         
+        neighbors = self.cluster_neighborhood(all_classes_t,clustered_pairs,epsilon=5)
+        to_merge = []
+        for pair in neighbors:
+            if True:
+                to_merge.append(pair)
+            
         
-    def cluster_neighborhood(self,to_inspect:list,to_ignore:list=None,epsilon:float=5.0):
-        """
-        Overlaps the bounding boxes to find the neighbouring clusters.
-
-        Parameters
-        ----------
-        to_inspect : list
-            list of wanted clusters.
-        to_ignore : list of sets, optional
-            List of unwanted cluster pairs. The default is None.
-        epsilon : float, optional
-            The epsilong to grow on each dimension for overlap creation. If>1.0, value will be used as percentage. The default is 0.05.
-
-        Returns
-        -------
-        List of neighboring cluster as list of pairs.
-
-        """
-        pairs = list(itertools.combinations(to_inspect, 2))
-        self.get_class_min_bounding_box(self.classifications)
-        # self.ndbbox
-        self.ndbbox_overlapping = {}
-        for c in self.ndbbox.keys():
-            if epsilon>1.0:
-                epsilon_dim = (self.ndbbox[c][1,:]-self.ndbbox[c][0,:])*epsilon/100
-                self.ndbbox_overlapping[c] = np.array([self.ndbbox[c][0,:]-epsilon_dim,self.ndbbox[c][1,:]+epsilon_dim])
-            else:
-                self.ndbbox_overlapping[c] = np.array([self.ndbbox[c][0,:]-epsilon,self.ndbbox[c][1,:]+epsilon])
-        neighbours = []
-        for pair in pairs:
-            cond_a = (self.ndbbox_overlapping[pair[0]][0,:]<self.ndbbox_overlapping[pair[1]][1,:]).all()
-            cond_b = (self.ndbbox_overlapping[pair[0]][1,:]>self.ndbbox_overlapping[pair[1]][0,:]).all()
-
-            if cond_a and cond_b:
-                neighbours.append(set(pair))
-        neighbours = list(set([n for n in neighbours if n not in to_ignore]))
-        return neighbours
+    
         
         
 #%% DIMENSIONS DATA        
