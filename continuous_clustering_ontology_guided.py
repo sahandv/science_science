@@ -186,6 +186,7 @@ class OGC:
         self.growth_threshold_population = growth_threshold_population
         self.growth_threshold_radius = growth_threshold_radius
         self.evolution_events = {}
+        self.ontology_search_index = {}
         self.evolution_event_counter = 0
         self.t = 0
         self.v = verbose
@@ -247,7 +248,8 @@ class OGC:
         try:
             return self.ontology_search_index[keyword]
         except:
-            self.vebrose(3,debug="Keyword does not exist in index: "+str(keyword))
+            self.verbose(3,debug="Keyword does not exist in index: "+str(keyword))
+            return False
 
     def return_root_doc_vec(self,root:str,clssifications_portion,ignores:list):
         for i,row in clssifications_portion.iterrows():
@@ -867,16 +869,18 @@ class OGC:
             clssifications_c = self.classifications[self.classifications['class']==c]
             
             self.verbose(2,debug=' -  - finding keywords in concepts.')
-            try:
+            # try:
+            if len(self.ontology_search_index)>0:
                 self.verbose(2,debug=' -  - using search index instead of search engine.')
                 clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x if self.map_keyword_ontology_from_index(key)!=False])
-            except:
+            # except:
+            else:
                 self.verbose(2,debug=' -  - using search engine. index not available. (It can be very slow!)')
                 clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
             
             
             self.verbose(2,debug=' -  - finding concept roots.')
-            clssifications_c['roots'] = clssifications_c['kw'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
+            clssifications_c['roots'] = clssifications_c['concepts'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
             clssifications_c['roots'] = clssifications_c['roots'].progress_apply(lambda x: list(chain.from_iterable(x)))
                 
             self.verbose(2,debug=' -  - generate document per concept ratios.')
@@ -955,7 +959,7 @@ class OGC:
             elif user_input=='A':
                 for c,v in class_centroid_proposal.items():
                     if to_split[c]>=2:
-                        self.vebose(1,debug=' -  -  sub clustering cluster '+str(c))
+                        self.verbose(1,debug=' -  -  sub clustering cluster '+str(c))
                         to_recluster = int(c)
                         centroid_vecs =  class_centroid_proposal[to_recluster]
                         sub_clustered.append(self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter))
@@ -964,7 +968,7 @@ class OGC:
             else:
                 cluster_sub_k_input = input("Proposed concepts to split are: "+str(class_centroid_proposal_concepts[int(user_input)])+". How many sub_clusters do you prefer? (N: None and skip sub_clustering, D: Default, or an integer number number)\n")
                 if cluster_sub_k_input!="N":
-                    self.vebose(1,debug=' -  - sub clustering cluster '+str(user_input))
+                    self.verbose(1,debug=' -  - sub clustering cluster '+str(user_input))
                     to_recluster = int(user_input)
                     centroid_vecs =  class_centroid_proposal[to_recluster]
                     if cluster_sub_k_input=="D":
@@ -998,26 +1002,28 @@ class OGC:
                 self.verbose(2,debug=" - pair are getting closer:"+str(pair))
         
         merge_vote = {}
-        pair_concepts = {}
+        # pair_concepts = {}
         for pair_id,pair in enumerate(to_merge):
             clssifications_c = self.classifications[self.classifications['class'].isin(list(pair))]
             self.verbose(2,debug=' -  - finding keywords in concepts.')
-            try:
+            # try:
+            if len(self.ontology_search_index)>0:
                 self.verbose(2,debug=' -  - using search index instead of search engine.')
                 clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x if self.map_keyword_ontology_from_index(key)!=False])
-            except:
+            # except:
+            else:
                 self.verbose(2,debug=' -  - using search engine. index not available. (It can be very slow!)')
                 clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
             
             self.verbose(2,debug=' -  - finding concept roots.')
-            clssifications_c['roots'] = clssifications_c['kw'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
+            clssifications_c['roots'] = clssifications_c['concepts'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
             clssifications_c['roots'] = clssifications_c['roots'].progress_apply(lambda x: list(chain.from_iterable(x)))
             
-            self.verbose(2,debug=' -  - generate document per concept ratios.')
-            roots = clssifications_c['roots'].values.tolist()
-            flat_roots = list(itertools.chain.from_iterable(roots))
-            counts = pd.Index(flat_roots).value_counts()
-            pair_concepts[pair_id] = counts
+            # self.verbose(2,debug=' -  - generate document per concept ratios.')
+            # roots = clssifications_c['roots'].values.tolist()
+            # flat_roots = list(itertools.chain.from_iterable(roots))
+            # counts = pd.Index(flat_roots).value_counts()
+            # pair_concepts[pair_id] = counts
                         
             self.verbose(2,debug=' -  - finding pairs with solid concept root components and updating to_merge list.')
             self.verbose(2,debug=' -  -  - generating concept graph in cluster')
@@ -1073,7 +1079,7 @@ class OGC:
             elif user_input=='A':
                 for k,v in merge_vote.items():
                     if merge_vote[k]>=2:
-                        self.vebose(1,debug=' -  -  merging '+str(to_merge[k]))
+                        self.verbose(1,debug=' -  -  merging '+str(to_merge[k]))
                         merged.append(self.merge_cluster(to_merge[k]))
                         del merge_vote[k]
                 merge_vote = {}    
@@ -1126,6 +1132,36 @@ model.set_ontology_keyword_search_index(ont_index)
 ontology_dict = model.prepare_ontology()
 
 
+start = 20000*14
+# all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
+# pd.DataFrame(all_keywords,columns=['keyword']).to_csv(datapath+'Corpus/Dimensions All/clean/kw ontology search/keywords flat',index=False)
+all_keywords = pd.read_csv(datapath+'Corpus/Dimensions All/clean/kw ontology search/keywords flat').fillna('')
+all_keywords = all_keywords['keyword'][start:start+20000].values.tolist()
+all_vecs = list(model.vectorize_keyword(k) for k in tqdm(all_keywords))
+
+# all_keywords.index('genetic algorithm')
+# all_keywords[147096]
+
+del vectors
+del corpus_data
+del all_columns
+del model_AI
+gc.collect()
+
+
+
+distances = {}
+for i,vec in tqdm(enumerate(all_vecs),total=len(all_vecs)):
+    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
+    
+output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+with open(output_address, 'w') as json_file:
+    json.dump(distances, json_file)
+    
+    
+
+
+#%%
 vectors_t0 = vectors[vectors.PY<2006]
 keywords = vectors_t0['DE-n'].values.tolist()
 vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
@@ -1151,31 +1187,20 @@ model_backup.fit_update(vectors_t1.values, 1, keywords)
 # =============================================================================
 # pre index data
 # =============================================================================
-start = 17000*0
 
-all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
-all_vecs = [model.vectorize_keyword(k) for k in tqdm(all_keywords)]
 
-del vectors
-del corpus_data
-del all_columns
-del model_AI
-gc.collect()
-
-distances = {}
-for i,vec in tqdm(enumerate(all_vecs),total=len(all_vecs)):
-    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
     
-output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
-with open(output_address, 'w') as json_file:
-    json.dump(distances, json_file)
     
-ont_index = {}
+    
+ont_index = []
 for i in tqdm(range(16)):
     start = 17000*i
-    output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+    output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/scattered kw search in ontology/'+str(start)+' keyword_search_pre-index.json'
     with open(output_address) as f:
-        ont_index.update(json.load(f))
+        ont_index.append(json.load(f))
+
+ont_index[0]['genetic algorithm']
+
 
 output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/keyword_search_pre-index.json'
 with open(output_address, 'w') as json_file:
