@@ -227,7 +227,7 @@ class CK_Means:
         self.ontology_dict_base = ontology
     
     def vectorize_keyword(self,keyword):
-        return np.array([self.model_kw[key] for key in keyword.split(' ')]).mean(axis=0)
+        return np.array([self.model_kw.wv[key] for key in keyword.split(' ')]).mean(axis=0)
     
     def prepare_ontology(self):
         """
