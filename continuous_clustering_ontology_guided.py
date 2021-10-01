@@ -985,7 +985,7 @@ end = start+17000
 
 distances = {}
 for i,vec in tqdm(enumerate(all_vecs[start:end]),total=len(all_vecs[start:end])):
-    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
+    distances[all_keywords[start:end][i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
     
 output_address = 'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
 with open(output_address, 'w') as json_file:
