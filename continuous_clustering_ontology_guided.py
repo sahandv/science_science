@@ -187,6 +187,7 @@ class OGC:
         self.growth_threshold_radius = growth_threshold_radius
         self.evolution_events = {}
         self.evolution_event_counter = 0
+        self.t = 0
         self.v = verbose
         
         if seed != None:
@@ -214,7 +215,7 @@ class OGC:
     def set_ontology_tree(self,G):
         self.ontology_tree = G
     
-    def set_ontology_keyword_search_index(self,index):
+    def set_ontology_keyword_search_index(self,index:dict):
         self.ontology_search_index = index
     
     def set_ontology_dict(self,ontology):
@@ -243,8 +244,10 @@ class OGC:
         """
         Will return the most similar concept for a given keyword from a pre-indexed search dictionary.
         """
-        return self.ontology_search_index[keyword]
-
+        try:
+            return self.ontology_search_index[keyword]
+        except:
+            self.vebrose(3,debug="Keyword does not exist in index: "+str(keyword))
 
     def return_root_doc_vec(self,root:str,clssifications_portion,ignores:list):
         for i,row in clssifications_portion.iterrows():
@@ -253,6 +256,20 @@ class OGC:
                     return row[self.columns_vector].values,i
 
     def graph_component_test(self,G,ratio_thresh:float=1/10,count_trhesh_low:int=10):
+        """
+        Parameters
+        ----------
+        G : networkx graph
+        ratio_thresh : float, optional
+            Ratio of populations to eachother to be considered significant. The default is 1/10.
+        count_trhesh_low : int, optional
+            Minimum number of population to be considered. The default is 10.
+
+        Returns
+        -------
+        concept_proposals : list
+            list of disjoint concepts to be considered for splitting.
+        """
         if nx.number_connected_components(G)>1:
             self.verbose(2,debug=' -  -  - concept graph in class has '+str(nx.number_connected_components(G))+' connected components.')
             sub_graphs = list(G.subgraph(c) for c in nx.connected_components(G))
@@ -264,6 +281,8 @@ class OGC:
             to_split_indices = [edges_counts.index(count) for count in to_split]
             concept_proposals = [list(sub_graphs[i].nodes())[0] for i in to_split_indices]
             return concept_proposals
+        else:
+            return []
 
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
@@ -576,7 +595,26 @@ class OGC:
                 self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
             else:
                 patience_counter=0
-
+    
+    def merge_cluster(self,pair:list):
+        self.verbose(2, debug='Getting class='+str(pair))
+        manipulation_classifcations = self.classifications[self.classifications['class'].isin(list(pair))]
+        # get the list of all prior clusters.
+        prev_clusters = list(dict(self.centroids).keys())
+        # all prior clusters and current clusters are now in ignore list. So the subclust won't dedicate anythign to them.
+        self.verbose(2, debug='Killing the old merging clusters.')
+        self.evolution_events[self.evolution_event_counter] = {'t':self.t,'c':pair[0],'event':'death'}
+        self.evolution_event_counter+=1
+        self.evolution_events[self.evolution_event_counter] = {'t':self.t,'c':pair[1],'event':'death'}
+        self.evolution_event_counter+=1
+        
+        new_cluster_id = max(prev_clusters)+1
+        vecs = manipulation_classifcations[self.columns_vector].values
+        self.centroids[new_cluster_id] = np.average(vecs,axis=0)
+        
+        return new_cluster_id
+        
+    
     def sub_cluster(self,t:int,to_split:int,new_centroids:list,n_iter:int,sub_k:int=2):
         """
         Parameters
@@ -709,7 +747,7 @@ class OGC:
         """
         
         initial_radius = self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
-        
+        self.t= t 
         if n_iter==None:
             n_iter = self.n_iter
         if a==None:
@@ -831,7 +869,7 @@ class OGC:
             self.verbose(2,debug=' -  - finding keywords in concepts.')
             try:
                 self.verbose(2,debug=' -  - using search index instead of search engine.')
-                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x])
+                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x if self.map_keyword_ontology_from_index(key)!=False])
             except:
                 self.verbose(2,debug=' -  - using search engine. index not available. (It can be very slow!)')
                 clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
@@ -959,33 +997,29 @@ class OGC:
                 to_merge.append(pair)
                 self.verbose(2,debug=" - pair are getting closer:"+str(pair))
         
+        merge_vote = {}
         pair_concepts = {}
-        for pair in to_merge:
-            self.verbose(2,debug=' -  - using search index instead of search engine.')
-            clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x])
-            self.verbose(2,debug=' -  - get records in this class.')
+        for pair_id,pair in enumerate(to_merge):
             clssifications_c = self.classifications[self.classifications['class'].isin(list(pair))]
-            
             self.verbose(2,debug=' -  - finding keywords in concepts.')
             try:
                 self.verbose(2,debug=' -  - using search index instead of search engine.')
-                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x])
+                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x if self.map_keyword_ontology_from_index(key)!=False])
             except:
                 self.verbose(2,debug=' -  - using search engine. index not available. (It can be very slow!)')
                 clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
             
-            
             self.verbose(2,debug=' -  - finding concept roots.')
             clssifications_c['roots'] = clssifications_c['kw'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
             clssifications_c['roots'] = clssifications_c['roots'].progress_apply(lambda x: list(chain.from_iterable(x)))
-                
+            
             self.verbose(2,debug=' -  - generate document per concept ratios.')
             roots = clssifications_c['roots'].values.tolist()
             flat_roots = list(itertools.chain.from_iterable(roots))
             counts = pd.Index(flat_roots).value_counts()
-            pair_concepts[pair] = counts
+            pair_concepts[pair_id] = counts
                         
-            self.verbose(2,debug=' -  - finding classes with multiple concept roots and updating to_split list.')
+            self.verbose(2,debug=' -  - finding pairs with solid concept root components and updating to_merge list.')
             self.verbose(2,debug=' -  -  - generating concept graph in cluster')
             
             self.verbose(2,debug=' -  -  - preparing edges')
@@ -1001,42 +1035,61 @@ class OGC:
             G = nx.Graph()
             G.add_nodes_from(nodes)
             G.add_edges_from(edges)
-            self.verbose(2,debug=' -  -  - checking for sub-graphs')
-            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
             
-            if len(concept_proposals)>0:
-                self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
-                to_split[c] +=2
+            G_tmp = G.copy()
+            self.verbose(2,debug=' -  -  - performing edge erosion level 2')
+            to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
+            G_tmp.remove_edges_from(to_delete)
+            G_tmp.remove_edges_from(to_delete)
+            self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
+            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+            if len(concept_proposals)==0:
+                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 2 :'+str(concept_proposals))
+                merge_vote[pair_id] +=2
             else:
-                self.verbose(2,debug=' -  -  - performing edge erosion level 1')
+                G_tmp = G.copy()
+                self.verbose(2,debug=' -  -  - performing edge erosion level 1')   
                 to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
-                G.remove_edges_from(to_delete)
+                G_tmp.remove_edges_from(to_delete)
                 self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 1')
                 concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-                
-                if len(concept_proposals)>0:
-                    self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
-                    to_split[c] +=1
+                if len(concept_proposals)==0:
+                    self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 1 :'+str(concept_proposals))
+                    merge_vote[pair_id] +=1
                 else:
-                    self.verbose(2,debug=' -  -  - performing edge erosion level 2')
-                    to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
-                    G.remove_edges_from(to_delete)
-                    self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
+                    self.verbose(2,debug=' -  -  - checking for sub-graphs')
                     concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-                    
-                    if len(concept_proposals)>0:
-                        self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
-                        to_split[c] +=0.5
-                    else:
-                        self.verbose(2,debug=' -  -  - cluster cannot be splitted')
+                    if len(concept_proposals)==0:
+                        self.verbose(2,debug=' -  -  - cluster can be merged (weak vote) as has single component:'+str(concept_proposals))
+                        merge_vote[pair_id] +=0.5
+
+        self.veroseb(0,debug="voting outcome for mergin is: "+str([[to_merge[k],v] for k,v in merge_vote.items()]))
         
-    
-        
-        
+        merged = [] #sub clustered pairs
+        while len(merge_vote)>0:
+            user_input = input("Which pair you want to merge? (N: none, A: Auto, or select id of the pair from: "+str([{k:to_merge[k]} for k,v in merge_vote.items()])+")\n")
+            if user_input=='N':
+                merge_vote = {}
+            elif user_input=='A':
+                for k,v in merge_vote.items():
+                    if merge_vote[k]>=2:
+                        self.vebose(1,debug=' -  -  merging '+str(to_merge[k]))
+                        merged.append(self.merge_cluster(to_merge[k]))
+                        del merge_vote[k]
+                merge_vote = {}    
+            else:
+                try:
+                    self.vebose(1,debug=' -  -  merging '+str(to_merge[int(user_input)]))
+                    merged.append(self.merge_cluster(to_merge[int(user_input)]))
+                    del merge_vote[int(user_input)]
+                except:
+                    self.vebose(1,debug=' -  -  input error. Please try again... '+str(to_merge[int(user_input)]))
+
 #%% DIMENSIONS DATA        
 # =============================================================================
 # Load data and init
 # =============================================================================
+
 datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
@@ -1044,9 +1097,11 @@ gensim_model_address = datapath+'Corpus/Dimensions All/models/Fasttext/gensim381
 model_AI = fasttext_gensim.load(gensim_model_address)
 # model_AI.save(datapath+'Corpus/Dimensions All/models/Fasttext/FastText100D-dim-scopus-update-gensim383.model')
 
-with open(datapath+'Corpus/Taxonomy/concept_parents lvl2 - ontology_table') as f:
+with open(datapath+'Corpus/Taxonomy/concept_parents lvl2 DFS') as f:
     ontology_table = json.load(f)
 
+with open(datapath+'Corpus/Dimensions All/clean/kw ontology search/keyword_search_pre-index.json') as f:
+    ont_index = json.load(f)
 
 
 all_columns = pd.read_csv(datapath+'Corpus/Dimensions All/clean/data with abstract - tech and comp')[['FOR_initials','PY','id','FOR','DE-n']]
@@ -1062,39 +1117,13 @@ vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 els
 # vectors.drop('id',axis=1,inplace=True)
 
 
-# =============================================================================
-# pre index data
-# =============================================================================
 k0 = 6
 model = OGC(verbose=1,k=k0,distance_metric='cosine') 
 model.v=3
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
-ontology_dict = model.prepare_ontology()
-
-start = 17000*15
-end = start+17000
-
-all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))[start:end]
-all_vecs = [model.vectorize_keyword(k) for k in tqdm(all_keywords)]
-
-del vectors
-del corpus_data
-del all_columns
-del model_AI
-gc.collect()
-
-distances = {}
-for i,vec in tqdm(enumerate(all_vecs),total=len(all_vecs)):
-    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
-    
-output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
-with open(output_address, 'w') as json_file:
-    json.dump(distances, json_file)
-
-
-#%%
-
+model.set_ontology_keyword_search_index()
+ontology_dict = model.prepare_ontology(ont_index)
 
 
 vectors_t0 = vectors[vectors.PY<2006]
@@ -1120,30 +1149,40 @@ model_backup.fit_update(vectors_t1.values, 1, keywords)
 # model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
 
 
-#%% Play with ontology
 
-def vectorize_keyword(keyword):
-    return np.array([model_AI.wv[key] for key in keyword.split(' ')]).mean(axis=0)
+#%% Index ontology search
+# =============================================================================
+# pre index data
+# =============================================================================
+start = 17000*0
 
-def prepare_ontology(ontology):
-    tmp = {}
-    for key in tqdm(ontology):
-        tmp[key]={'parents':ontology_table[key],'vector':vectorize_keyword(key)}    
-    ontology = tmp
-    return ontology
-ontology_table = prepare_ontology(ontology_table)
+all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
+all_vecs = [model.vectorize_keyword(k) for k in tqdm(all_keywords)]
 
-def distance(vec_a,vec_b):
-    return spatial.distance.cosine(vec_a, vec_b)
+del vectors
+del corpus_data
+del all_columns
+del model_AI
+gc.collect()
 
-keyword = 'odor recognition system'
-vector = vectorize_keyword(keyword)
-nearest = list(ontology_table.keys())[np.argmin(np.array([distance(vector,ontology_table[i]['vector']) for i in tqdm(ontology_table)]))]
-print(nearest,ontology_table[nearest])
+distances = {}
+for i,vec in tqdm(enumerate(all_vecs),total=len(all_vecs)):
+    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
+    
+output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+with open(output_address, 'w') as json_file:
+    json.dump(distances, json_file)
+    
+ont_index = {}
+for i in tqdm(range(16)):
+    start = 17000*i
+    output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+    with open(output_address) as f:
+        ont_index.update(json.load(f))
 
-
-
-
+output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/keyword_search_pre-index.json'
+with open(output_address, 'w') as json_file:
+    json.dump(ont_index, json_file)
 
 #%% Tinker with objects
 
@@ -1222,7 +1261,7 @@ print('k=',n_clusters)
 
 for fold in range(1):
     np.random.seed(randint(0,10**5))
-    model = CK_Means(verbose=1,k=n_clusters,distance_metric='cosine')
+    model = OGC(verbose=1,k=n_clusters,distance_metric='cosine')
     model.fit(X_0)
     predicted_labels = model.predict(X_0)
     
