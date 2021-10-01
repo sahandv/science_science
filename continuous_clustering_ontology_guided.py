@@ -971,7 +971,10 @@ model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
 ontology_dict = model.prepare_ontology()
 
-all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
+start = 17000*15
+end = start+17000
+
+all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))[start:end]
 all_vecs = [model.vectorize_keyword(k) for k in tqdm(all_keywords)]
 
 del vectors
@@ -980,14 +983,11 @@ del all_columns
 del model_AI
 gc.collect()
 
-start = 17000*15
-end = start+17000
-
 distances = {}
-for i,vec in tqdm(enumerate(all_vecs[start:end]),total=len(all_vecs[start:end])):
-    distances[all_keywords[start:end][i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
+for i,vec in tqdm(enumerate(all_vecs),total=len(all_vecs)):
+    distances[all_keywords[i]] = list(ontology_dict.keys())[np.argmin(np.array([spatial.distance.cosine(all_vecs[i],ontology_dict[o]['vector']) for o in ontology_dict]))]
     
-output_address = 'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
 with open(output_address, 'w') as json_file:
     json.dump(distances, json_file)
 
