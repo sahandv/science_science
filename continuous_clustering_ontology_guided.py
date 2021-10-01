@@ -1,3 +1,4 @@
+#%% Algorithm
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -5,10 +6,8 @@ Created on Wed Jun 23 08:33:08 2021
 
 @author: github.com/sahandv
 """
-import sys
 import time
 import gc
-import os
 import copy
 import random
 from multiprocessing import Pool
@@ -27,17 +26,12 @@ from itertools import chain
 from collections import Counter
 
 from sklearn.decomposition import PCA
-from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
+from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn import metrics
 from sklearn.metrics.cluster import silhouette_score,homogeneity_score,adjusted_rand_score
 from sklearn.metrics.cluster import normalized_mutual_info_score,adjusted_mutual_info_score
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.manifold import TSNE
-from sklearn.feature_extraction.text import TfidfTransformer , TfidfVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn import preprocessing
 from sklearn.neighbors import KernelDensity
-import scipy.cluster.hierarchy as sch
 from gensim.models import FastText as fasttext_gensim
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout,write_dot
@@ -95,7 +89,7 @@ def plot_3D(X,labels,predictions,opacity=0.7):
     fig = px.scatter_3d(X_df, x='x_ax', y='y_ax',z='z_ax', color='class', opacity=opacity,hover_name='labels') #.iloc[X_grouped[i]]
     plot(fig)
     
-class CK_Means:
+class OGC:
     """
         Initialization Parameters
         ----------
@@ -738,8 +732,10 @@ class CK_Means:
         # Cluster
         self.verbose(1,debug='Initial assignment...')
         self.cluster(t,n_iter,weights)
-
-        # Modify clusters
+        
+        # =============================================================================
+        # Death Check
+        # =============================================================================
         self.verbose(1,debug='Checking classes for death...')
         
         # cluster population check
@@ -774,7 +770,9 @@ class CK_Means:
             if new_radius[c]/old_radius < 1:
                 self.verbose(2,debug=' -  - Class '+str(c)+' is shrinking in radius.')
         
-        
+        # =============================================================================
+        # Splitting check
+        # =============================================================================
         self.verbose(1,debug='Checking classes for splitting...')
         # cluster population check
         self.verbose(2,debug=' - Checking classes for population proportion growth rates')
@@ -816,7 +814,7 @@ class CK_Means:
                 self.verbose(2,debug=' -  - Class '+str(c)+' has grown in radius more than the pre-defined threshold.')
                 
         # density check
-        # TBC
+        # TBC in neext revisions
         
         # Ontology matching and checkin        
         self.verbose(2,debug=' - Checking alive classes at time t='+str(t)+' for splitting by ontologies.')
@@ -842,7 +840,7 @@ class CK_Means:
             self.verbose(2,debug=' -  - finding concept roots.')
             clssifications_c['roots'] = clssifications_c['kw'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
             clssifications_c['roots'] = clssifications_c['roots'].progress_apply(lambda x: list(chain.from_iterable(x)))
-            
+                
             self.verbose(2,debug=' -  - generate document per concept ratios.')
             roots = clssifications_c['roots'].values.tolist()
             flat_roots = list(itertools.chain.from_iterable(roots))
@@ -937,7 +935,9 @@ class CK_Means:
                         sub_clustered.append(self.sub_cluster(t, to_recluster, centroid_vecs, self.n_iter, sub_k = int(cluster_sub_k_input)))
                 del class_centroid_proposal[to_recluster]
                 
-        
+        # =============================================================================
+        # Merging check
+        # =============================================================================
         self.verbose(1,debug='Checking classes for merging...')
         new_classes = list(set(list(itertools.chain.from_iterable(sub_clustered))))
         all_classes_t = classifications_populations['class'].values.tolist()+new_classes
@@ -948,9 +948,87 @@ class CK_Means:
         neighbors = self.cluster_neighborhood(all_classes_t,clustered_pairs,epsilon=5)
         to_merge = []
         for pair in neighbors:
-            if True:
-                to_merge.append(pair)
+            try:
+                previous_distance = self.get_distance(self.centroids_history[-1][pair[0]] ,self.centroids_history[-1][pair[1]] ,self.distance_metric)
+            except KeyError:
+                self.verbose(2,debug=" - pair not in history.")
+                previous_distance = -1000
+            current_distance = self.get_distance(self.centroids[pair[0]] ,self.centroids[pair[1]] ,self.distance_metric)
             
+            if current_distance<=previous_distance:
+                to_merge.append(pair)
+                self.verbose(2,debug=" - pair are getting closer:"+str(pair))
+        
+        pair_concepts = {}
+        for pair in to_merge:
+            self.verbose(2,debug=' -  - using search index instead of search engine.')
+            clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x])
+            self.verbose(2,debug=' -  - get records in this class.')
+            clssifications_c = self.classifications[self.classifications['class'].isin(list(pair))]
+            
+            self.verbose(2,debug=' -  - finding keywords in concepts.')
+            try:
+                self.verbose(2,debug=' -  - using search index instead of search engine.')
+                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology_from_index(key) for key in x])
+            except:
+                self.verbose(2,debug=' -  - using search engine. index not available. (It can be very slow!)')
+                clssifications_c['concepts'] = clssifications_c['kw'].progress_apply(lambda x: [self.map_keyword_ontology(key) for key in x])
+            
+            
+            self.verbose(2,debug=' -  - finding concept roots.')
+            clssifications_c['roots'] = clssifications_c['kw'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
+            clssifications_c['roots'] = clssifications_c['roots'].progress_apply(lambda x: list(chain.from_iterable(x)))
+                
+            self.verbose(2,debug=' -  - generate document per concept ratios.')
+            roots = clssifications_c['roots'].values.tolist()
+            flat_roots = list(itertools.chain.from_iterable(roots))
+            counts = pd.Index(flat_roots).value_counts()
+            pair_concepts[pair] = counts
+                        
+            self.verbose(2,debug=' -  - finding classes with multiple concept roots and updating to_split list.')
+            self.verbose(2,debug=' -  -  - generating concept graph in cluster')
+            
+            self.verbose(2,debug=' -  -  - preparing edges')
+            roots = [r for r in roots if len(r)>1] # docs with at least two roots
+            nodes = list(counts.keys())
+            edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(sets, 2))] for sets in roots])) # make pairs, hence the links
+
+            # edges_to_count = [[tuple(edge)] for edge in edges]
+            # keys = list(Counter(itertools.chain(*edges_to_count)).keys())
+            # vals = list(Counter(itertools.chain(*edges_to_count)).values())
+            
+            self.verbose(2,debug=' -  -  - constructing the graph')
+            G = nx.Graph()
+            G.add_nodes_from(nodes)
+            G.add_edges_from(edges)
+            self.verbose(2,debug=' -  -  - checking for sub-graphs')
+            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+            
+            if len(concept_proposals)>0:
+                self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
+                to_split[c] +=2
+            else:
+                self.verbose(2,debug=' -  -  - performing edge erosion level 1')
+                to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
+                G.remove_edges_from(to_delete)
+                self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 1')
+                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                
+                if len(concept_proposals)>0:
+                    self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
+                    to_split[c] +=1
+                else:
+                    self.verbose(2,debug=' -  -  - performing edge erosion level 2')
+                    to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
+                    G.remove_edges_from(to_delete)
+                    self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
+                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                    
+                    if len(concept_proposals)>0:
+                        self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
+                        to_split[c] +=0.5
+                    else:
+                        self.verbose(2,debug=' -  -  - cluster cannot be splitted')
         
     
         
@@ -988,7 +1066,7 @@ vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 els
 # pre index data
 # =============================================================================
 k0 = 6
-model = CK_Means(verbose=1,k=k0,distance_metric='cosine') 
+model = OGC(verbose=1,k=k0,distance_metric='cosine') 
 model.v=3
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
