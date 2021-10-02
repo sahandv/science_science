@@ -188,6 +188,7 @@ class OGC:
         self.evolution_events = {}
         self.ontology_search_index = {}
         self.evolution_event_counter = 0
+        self.temp_all = {}
         self.temp = {}
         self.classifications_log = {}
         self.t = 0
@@ -276,25 +277,31 @@ class OGC:
         """
         if nx.number_connected_components(G)>1:
             self.verbose(2,debug=' -  -  - concept graph in class has '+str(nx.number_connected_components(G))+' connected components.')
+            self.temp['G'] = {'data':G,'t':self.t}
             sub_graphs = list(G.subgraph(c) for c in nx.connected_components(G))
+            self.temp['sub_graphs'] = {'data':sub_graphs,'t':self.t}
             edges_counts = [c.number_of_edges() for c in sub_graphs]
+            self.temp['edges_counts'] = {'data':edges_counts,'t':self.t}
+            self.verbose(3,debug=' -  -  - concept subgraph edge counts are: '+str(edges_counts))
+            if all(v == 0 for v in edges_counts):
+                return list(G.nodes)
             edges_counts_l = [x for x in edges_counts if x>count_trhesh_low]
-            to_split = [x for x in list(itertools.combinations(edges_counts_l, 2)) if min(x[0],x[1])/max(x[0],x[1])>ratio_thresh]
+            to_split = [x for x in list(itertools.combinations(edges_counts_l, 2)) if min(x[0],x[1])/max(x[0],x[1])>=ratio_thresh]
             self.verbose(2,debug=' -  -  - found splittable components: '+str(len(list(itertools.chain.from_iterable(to_split)))))
             to_split = list(itertools.chain.from_iterable(to_split))
             to_split_indices = [edges_counts.index(count) for count in to_split]
             concept_proposals = [list(sub_graphs[i].nodes())[0] for i in to_split_indices]
-            return concept_proposals
+            return list(set(concept_proposals))
         else:
             return []
 
-    def erosion_component_test(self,G_tmp,nodes,level):
+    def erosion_component_test(self,G_tmp,nodes,level,ratio_thresh:float=1/10,count_trhesh_low:int=10):
         to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
         self.verbose(2,debug=' -  -  - performing edge erosion level '+str(level))
         for i in range(level):
             G_tmp.remove_edges_from(to_delete)
         self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level '+str(level))
-        concept_proposals = self.graph_component_test(G_tmp,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+        concept_proposals = self.graph_component_test(G_tmp,ratio_thresh=ratio_thresh,count_trhesh_low=count_trhesh_low)
         return concept_proposals
     
     
