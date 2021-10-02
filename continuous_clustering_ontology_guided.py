@@ -188,6 +188,7 @@ class OGC:
         self.evolution_events = {}
         self.ontology_search_index = {}
         self.evolution_event_counter = 0
+        self.temp = {}
         self.t = 0
         self.v = verbose
         
@@ -426,8 +427,19 @@ class OGC:
     
                 if cond_a and cond_b:
                     neighbours.append(set(pair))
-            neighbours = list(set([n for n in neighbours if n not in to_ignore]))
-            return neighbours
+            # neighbours = list(set([n for n in neighbours if list(n) not in to_ignore]))
+            
+            to_ignore = [set(i) for i in to_ignore]
+            neighbours_new = []
+            for elem in neighbours:
+                if elem not in to_ignore:
+                    neighbours_new.append(elem)
+            
+            self.temp['to_ignore'] = {'data':to_ignore,'t':self.t}
+            self.temp['neighbours'] = {'data':neighbours,'t':self.t}
+            self.temp['neighbours'] = {'data':neighbours,'t':self.t}
+            
+            return [list(i) for i in neighbours_new]
         
     def add_to_clusters(self,data,t,keywords:list=None):
         """
@@ -557,6 +569,15 @@ class OGC:
             self.classifications['class'] = self.classifications[self.columns_vector].apply(lambda x: self.assign_cluster(x,ignore),axis = 1)
         else:
             self.classifications.loc[self.classifications['t']==t,'class'] = self.classifications[self.classifications['t']==t][self.columns_vector].apply(lambda x: self.assign_cluster(x,ignore),axis = 1)
+
+    def erosion(self,G_tmp,nodes,level):
+        to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
+        self.verbose(2,debug=' -  -  - performing edge erosion level '+str(level))
+        for i in range(level):
+            G_tmp.remove_edges_from(to_delete)
+        self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level '+str(level))
+        concept_proposals = self.graph_component_test(G_tmp,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+        return concept_proposals
 
     def cluster(self,t,n_iter,weights,ignore:list=None):
         """
@@ -882,12 +903,15 @@ class OGC:
             self.verbose(2,debug=' -  - finding concept roots.')
             clssifications_c['roots'] = clssifications_c['concepts'].progress_apply(lambda x: [self.ontology_dict[key]['parents'] for key in x])
             clssifications_c['roots'] = clssifications_c['roots'].progress_apply(lambda x: list(chain.from_iterable(x)))
-                
+            
+            
             self.verbose(2,debug=' -  - generate document per concept ratios.')
             roots = clssifications_c['roots'].values.tolist()
             flat_roots = list(itertools.chain.from_iterable(roots))
             counts = pd.Index(flat_roots).value_counts()
             class_concepts[c] = counts
+            
+            self.temp['roots'] = {'data':roots,'t':t}
                         
             self.verbose(2,debug=' -  - finding classes with multiple concept roots and updating to_split list.')
             self.verbose(2,debug=' -  -  - generating concept graph in cluster')
@@ -895,8 +919,11 @@ class OGC:
             self.verbose(2,debug=' -  -  - preparing edges')
             roots = [r for r in roots if len(r)>1] # docs with at least two roots
             nodes = list(counts.keys())
-            edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(sets, 2))] for sets in roots])) # make pairs, hence the links
-
+            edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(list(set(sets)), 2))] for sets in roots])) # make pairs, hence the links
+            
+            self.temp['nodes'] = {'data':edges,'t':t}
+            self.temp['edges'] = {'data':edges,'t':t}
+            
             # edges_to_count = [[tuple(edge)] for edge in edges]
             # keys = list(Counter(itertools.chain(*edges_to_count)).keys())
             # vals = list(Counter(itertools.chain(*edges_to_count)).values())
@@ -905,34 +932,54 @@ class OGC:
             G = nx.Graph()
             G.add_nodes_from(nodes)
             G.add_edges_from(edges)
+            to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
             self.verbose(2,debug=' -  -  - checking for sub-graphs')
             concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-            
             if len(concept_proposals)>0:
                 self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                 to_split[c] +=2
             else:
                 self.verbose(2,debug=' -  -  - performing edge erosion level 1')
-                to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
                 G.remove_edges_from(to_delete)
                 self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 1')
                 concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-                
                 if len(concept_proposals)>0:
                     self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
-                    to_split[c] +=1
+                    to_split[c] +=1.75
                 else:
                     self.verbose(2,debug=' -  -  - performing edge erosion level 2')
-                    to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
                     G.remove_edges_from(to_delete)
                     self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
                     concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-                    
                     if len(concept_proposals)>0:
                         self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
-                        to_split[c] +=0.5
+                        to_split[c] +=1.5
                     else:
-                        self.verbose(2,debug=' -  -  - cluster cannot be splitted')
+                        self.verbose(2,debug=' -  -  - performing edge erosion level 3')
+                        G.remove_edges_from(to_delete)
+                        self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 3')
+                        concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                        if len(concept_proposals)>0:
+                            self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
+                            to_split[c] +=1
+                        else:
+                            self.verbose(2,debug=' -  -  - performing edge erosion level 4')
+                            G.remove_edges_from(to_delete)
+                            self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 4')
+                            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                            if len(concept_proposals)>0:
+                                self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
+                                to_split[c] +=0.75
+                            else:
+                                self.verbose(2,debug=' -  -  - performing edge erosion level 5')
+                                G.remove_edges_from(to_delete)
+                                self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 5')
+                                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                                if len(concept_proposals)>0:
+                                    self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
+                                    to_split[c] +=0.5
+                                else:
+                                    self.verbose(2,debug=' -  -  - cluster cannot be splitted')
             
             centroid_proposals = []
             ignores = [] #docs to ignore, as already selected
@@ -1031,7 +1078,7 @@ class OGC:
             self.verbose(2,debug=' -  -  - preparing edges')
             roots = [r for r in roots if len(r)>1] # docs with at least two roots
             nodes = list(counts.keys())
-            edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(sets, 2))] for sets in roots])) # make pairs, hence the links
+            edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(list(set(sets)), 2))] for sets in roots])) # make pairs, hence the links
 
             # edges_to_count = [[tuple(edge)] for edge in edges]
             # keys = list(Counter(itertools.chain(*edges_to_count)).keys())
@@ -1042,34 +1089,39 @@ class OGC:
             G.add_nodes_from(nodes)
             G.add_edges_from(edges)
             
-            G_tmp = G.copy()
-            self.verbose(2,debug=' -  -  - performing edge erosion level 2')
-            to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
-            G_tmp.remove_edges_from(to_delete)
-            G_tmp.remove_edges_from(to_delete)
-            self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
-            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-            if len(concept_proposals)==0:
-                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 2 :'+str(concept_proposals))
-                merge_vote[pair_id] +=2
-            else:
-                G_tmp = G.copy()
-                self.verbose(2,debug=' -  -  - performing edge erosion level 1')   
-                to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
-                G_tmp.remove_edges_from(to_delete)
-                self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 1')
-                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-                if len(concept_proposals)==0:
-                    self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 1 :'+str(concept_proposals))
-                    merge_vote[pair_id] +=1
-                else:
-                    self.verbose(2,debug=' -  -  - checking for sub-graphs')
-                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-                    if len(concept_proposals)==0:
-                        self.verbose(2,debug=' -  -  - cluster can be merged (weak vote) as has single component:'+str(concept_proposals))
-                        merge_vote[pair_id] +=0.5
 
-        self.veroseb(0,debug="voting outcome for mergin is: "+str([[to_merge[k],v] for k,v in merge_vote.items()]))
+            concept_proposals = self.erosion(G, nodes, 5)
+            if len(concept_proposals)==0:
+                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 5 :'+str(concept_proposals))
+                merge_vote[pair_id] =1.75
+            else:            
+                concept_proposals = self.erosion(G, nodes, 4)
+                if len(concept_proposals)==0:
+                    self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 4 :'+str(concept_proposals))
+                    merge_vote[pair_id] =1.5
+                else:
+                    concept_proposals = self.erosion(G, nodes, 3)
+                    if len(concept_proposals)==0:
+                        self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 3 :'+str(concept_proposals))
+                        merge_vote[pair_id] =1
+                    else:
+                        concept_proposals = self.erosion(G, nodes, 2)
+                        if len(concept_proposals)==0:
+                            self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 2 :'+str(concept_proposals))
+                            merge_vote[pair_id] =0.75
+                        else:
+                            concept_proposals = self.erosion(G, nodes, 1)
+                            if len(concept_proposals)==0:
+                                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 1 :'+str(concept_proposals))
+                                merge_vote[pair_id] =0.5
+                            else:
+                                self.verbose(2,debug=' -  -  - checking for sub-graphs')
+                                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                                if len(concept_proposals)==0:
+                                    self.verbose(2,debug=' -  -  - cluster can be merged (weak vote) as has single component:'+str(concept_proposals))
+                                    merge_vote[pair_id] =0.25
+
+        self.verbose(0,debug="voting outcome for mergin is: "+str([[to_merge[k],v] for k,v in merge_vote.items()]))
         
         merged = [] #sub clustered pairs
         while len(merge_vote)>0:
@@ -1090,6 +1142,9 @@ class OGC:
                     del merge_vote[int(user_input)]
                 except:
                     self.vebose(1,debug=' -  -  input error. Please try again... '+str(to_merge[int(user_input)]))
+
+
+    
 
 #%% DIMENSIONS DATA        
 # =============================================================================
@@ -1132,6 +1187,32 @@ model.set_ontology_keyword_search_index(ont_index)
 ontology_dict = model.prepare_ontology()
 
 
+
+vectors_t0 = vectors[vectors.PY<2006]
+keywords = vectors_t0['DE-n'].values.tolist()
+vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
+
+# dendrogram = aa.fancy_dendrogram(sch.linkage(vectors_t0, method='ward'),truncate_mode='lastp',p=800,show_contracted=True,figsize=(15,9)) #single #average #ward
+model.fit(vectors_t0.values,keywords)
+predicted_labels = model.predict(vectors_t0.values)
+pd.DataFrame(predicted_labels).hist(bins=6)
+
+
+model_backup = copy.deepcopy(model)
+vectors_t1 = vectors[vectors.PY==2006]
+keywords = vectors_t1['DE-n'].values.tolist()
+vectors_t1.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
+
+model_backup.fit_update(vectors_t1.values, 1, keywords)
+# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
+# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
+
+
+
+#%% Index ontology search
+# =============================================================================
+# pre index data
+# =============================================================================
 start = 20000*14
 # all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
 # pd.DataFrame(all_keywords,columns=['keyword']).to_csv(datapath+'Corpus/Dimensions All/clean/kw ontology search/keywords flat',index=False)
@@ -1161,45 +1242,24 @@ with open(output_address, 'w') as json_file:
     
 
 
-#%%
-vectors_t0 = vectors[vectors.PY<2006]
-keywords = vectors_t0['DE-n'].values.tolist()
-vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
-
-# dendrogram = aa.fancy_dendrogram(sch.linkage(vectors_t0, method='ward'),truncate_mode='lastp',p=800,show_contracted=True,figsize=(15,9)) #single #average #ward
-model.fit(vectors_t0.values,keywords)
-predicted_labels = model.predict(vectors_t0.values)
-pd.DataFrame(predicted_labels).hist(bins=6)
-
-
-model_backup = copy.deepcopy(model)
-vectors_t1 = vectors[vectors.PY==2006]
-keywords = vectors_t1['DE-n'].values.tolist()
-vectors_t1.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
-
-model_backup.fit_update(vectors_t1.values, 1, keywords)
-# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
-# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
-
-
-
-#%% Index ontology search
-# =============================================================================
-# pre index data
-# =============================================================================
-
+ont_index ={}
+for i in tqdm(range(15)):
+    start = 20000*i
+    output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
+    with open(output_address) as f:
+        ont_index.update(json.load(f))
 
     
     
     
 ont_index = []
-for i in tqdm(range(16)):
-    start = 17000*i
-    output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/scattered kw search in ontology/'+str(start)+' keyword_search_pre-index.json'
+for i in tqdm(range(15)):
+    start = 20000*i
+    output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/'+str(start)+' keyword_search_pre-index.json'
     with open(output_address) as f:
         ont_index.append(json.load(f))
 
-ont_index[0]['genetic algorithm']
+ont_index['genetic algorithm']
 
 
 output_address = datapath+'Corpus/Dimensions All/clean/kw ontology search/keyword_search_pre-index.json'
@@ -1315,7 +1375,7 @@ samples = list(classifications2[classifications2['t']==0].sample(n_samples).inde
 x_0_samples = X_0[samples]
 kde = KernelDensity(kernel='gaussian', bandwidth=2).fit(X_0)
 scores_gaussian = kde.score_samples(x_0_samples)
-scores_gaussian_f = np.exp(scores_gaussian)
+scores_gaussian_f = np.exp(scores_gaussian)    neighbours = list(set([n for n in neighbours if list(n) not in to_ignore]))
 # kde = KernelDensity(kernel='exponential', bandwidth=1.8).fit(X_0)
 # scores_exponential = kde.score_samples(x_0_samples)
 

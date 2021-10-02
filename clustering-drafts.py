@@ -204,10 +204,28 @@ vec_a = np.array([model.wv['machine'],model.wv['learning']]).mean(axis=0)
 vec_b = np.array([model.wv['deep'],model.wv['learning']]).mean(axis=0)#(model_AI['data']+model_AI['science'])
 1-spatial.distance.cosine(vec_a, vec_b)
 
+# =============================================================================
+# work with sets and etc. to remove duplications and etc.
+# =============================================================================
 
+edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(list(set(sets)), 2))] for sets in tmp['roots']['data']])) # make pairs, hence the links
 
+to_inspect = ['a','b','c']
+to_ignore = [('a','b')]
 
+neighbours = [[1, 2], [4], [5, 6, 2], [2, 1], [3], [4]]
+neighbours= [set(i) for i in neighbours]
 
+to_ignore = [[1,2]]
+to_ignore = [set(i) for i in to_ignore]
 
+neighbours_new = []
+for elem in neighbours:
+    if elem not in to_ignore:
+        neighbours_new.append(elem)
+
+neighbours = list(list(n) for n in neighbours)
+
+# prints [[1, 2], [4], [5, 6, 2], [3]]
 
 
