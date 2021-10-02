@@ -1194,7 +1194,7 @@ vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 els
 
 k0 = 6
 model = OGC(verbose=1,k=k0,distance_metric='cosine') 
-model.v=2
+model.v=3
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
 model.set_ontology_keyword_search_index(ont_index)
