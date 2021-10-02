@@ -189,6 +189,7 @@ class OGC:
         self.ontology_search_index = {}
         self.evolution_event_counter = 0
         self.temp = {}
+        self.classifications_log = {}
         self.t = 0
         self.v = verbose
         
@@ -287,6 +288,16 @@ class OGC:
         else:
             return []
 
+    def erosion_component_test(self,G_tmp,nodes,level):
+        to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
+        self.verbose(2,debug=' -  -  - performing edge erosion level '+str(level))
+        for i in range(level):
+            G_tmp.remove_edges_from(to_delete)
+        self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level '+str(level))
+        concept_proposals = self.graph_component_test(G_tmp,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+        return concept_proposals
+    
+    
     def initialize_rand_node_select(self,data):
         self.centroids = {}   
         for i in range(self.k):
@@ -570,14 +581,6 @@ class OGC:
         else:
             self.classifications.loc[self.classifications['t']==t,'class'] = self.classifications[self.classifications['t']==t][self.columns_vector].apply(lambda x: self.assign_cluster(x,ignore),axis = 1)
 
-    def erosion(self,G_tmp,nodes,level):
-        to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
-        self.verbose(2,debug=' -  -  - performing edge erosion level '+str(level))
-        for i in range(level):
-            G_tmp.remove_edges_from(to_delete)
-        self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level '+str(level))
-        concept_proposals = self.graph_component_test(G_tmp,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
-        return concept_proposals
 
     def cluster(self,t,n_iter,weights,ignore:list=None):
         """
@@ -748,9 +751,11 @@ class OGC:
                 self.verbose(2,debug='Centroids are stable within tolerance. Remaining patience:'+str(self.patience-patience_counter))
             else:
                 patience_counter=0
+        self.classifications_log[self.t] = self.classifications[['class','t']]
     
     
     def fit_update(self,additional_data,t,keywords:list=None,n_iter:int=None,weight=None,a:float=None):
+        
         """
         Used for updating classifications/clusters for new data. Will use the previous data as weights for centroid handling. 
         You can set a to -1 to remove previous data effectiveness.
@@ -1090,36 +1095,41 @@ class OGC:
             G.add_edges_from(edges)
             
 
-            concept_proposals = self.erosion(G, nodes, 5)
+            concept_proposals = self.erosion_component_test(G, nodes, 6)
             if len(concept_proposals)==0:
-                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 5 :'+str(concept_proposals))
-                merge_vote[pair_id] =1.75
+                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 6')
+                merge_vote[pair_id] =2
             else:            
-                concept_proposals = self.erosion(G, nodes, 4)
+                concept_proposals = self.erosion_component_test(G, nodes, 5)
                 if len(concept_proposals)==0:
-                    self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 4 :'+str(concept_proposals))
-                    merge_vote[pair_id] =1.5
-                else:
-                    concept_proposals = self.erosion(G, nodes, 3)
+                    self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 5 ')
+                    merge_vote[pair_id] =1.75
+                else:            
+                    concept_proposals = self.erosion_component_test(G, nodes, 4)
                     if len(concept_proposals)==0:
-                        self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 3 :'+str(concept_proposals))
-                        merge_vote[pair_id] =1
+                        self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 4 ')
+                        merge_vote[pair_id] =1.5
                     else:
-                        concept_proposals = self.erosion(G, nodes, 2)
+                        concept_proposals = self.erosion_component_test(G, nodes, 3)
                         if len(concept_proposals)==0:
-                            self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 2 :'+str(concept_proposals))
-                            merge_vote[pair_id] =0.75
+                            self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 3 ')
+                            merge_vote[pair_id] =1
                         else:
-                            concept_proposals = self.erosion(G, nodes, 1)
+                            concept_proposals = self.erosion_component_test(G, nodes, 2)
                             if len(concept_proposals)==0:
-                                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 1 :'+str(concept_proposals))
-                                merge_vote[pair_id] =0.5
+                                self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 2 ')
+                                merge_vote[pair_id] =0.75
                             else:
-                                self.verbose(2,debug=' -  -  - checking for sub-graphs')
-                                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                                concept_proposals = self.erosion_component_test(G, nodes, 1)
                                 if len(concept_proposals)==0:
-                                    self.verbose(2,debug=' -  -  - cluster can be merged (weak vote) as has single component:'+str(concept_proposals))
-                                    merge_vote[pair_id] =0.25
+                                    self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 1 ')
+                                    merge_vote[pair_id] =0.5
+                                else:
+                                    self.verbose(2,debug=' -  -  - checking for sub-graphs')
+                                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                                    if len(concept_proposals)==0:
+                                        self.verbose(2,debug=' -  -  - cluster can be merged (weak vote) as has single component')
+                                        merge_vote[pair_id] =0.25
 
         self.verbose(0,debug="voting outcome for mergin is: "+str([[to_merge[k],v] for k,v in merge_vote.items()]))
         
@@ -1137,20 +1147,19 @@ class OGC:
                 merge_vote = {}    
             else:
                 try:
-                    self.vebose(1,debug=' -  -  merging '+str(to_merge[int(user_input)]))
+                    self.verbose(1,debug=' -  -  merging '+str(to_merge[int(user_input)]))
                     merged.append(self.merge_cluster(to_merge[int(user_input)]))
                     del merge_vote[int(user_input)]
                 except:
-                    self.vebose(1,debug=' -  -  input error. Please try again... '+str(to_merge[int(user_input)]))
+                    self.verbose(1,debug=' -  -  input error. Please try again... '+str(to_merge[int(user_input)]))
+                    
+        self.classifications_log[self.t] = self.classifications[['class','t']]
 
-
-    
 
 #%% DIMENSIONS DATA        
 # =============================================================================
 # Load data and init
 # =============================================================================
-
 datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
 # datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
 
@@ -1164,7 +1173,6 @@ with open(datapath+'Corpus/Taxonomy/concept_parents lvl2 DFS') as f:
 with open(datapath+'Corpus/Dimensions All/clean/kw ontology search/keyword_search_pre-index.json') as f:
     ont_index = json.load(f)
 
-
 all_columns = pd.read_csv(datapath+'Corpus/Dimensions All/clean/data with abstract - tech and comp')[['FOR_initials','PY','id','FOR','DE-n']]
 corpus_data = pd.read_csv(datapath+'Corpus/Dimensions All/clean/abstract_title method_b_3')
 vectors = pd.read_csv(datapath+'Corpus/Dimensions All/embeddings/doc2vec 300D dm=1 window=10 b3')
@@ -1177,16 +1185,13 @@ vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 els
 
 # vectors.drop('id',axis=1,inplace=True)
 
-
 k0 = 6
 model = OGC(verbose=1,k=k0,distance_metric='cosine') 
-model.v=3
+model.v=2
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
 model.set_ontology_keyword_search_index(ont_index)
 ontology_dict = model.prepare_ontology()
-
-
 
 vectors_t0 = vectors[vectors.PY<2006]
 keywords = vectors_t0['DE-n'].values.tolist()
@@ -1196,7 +1201,6 @@ vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True
 model.fit(vectors_t0.values,keywords)
 predicted_labels = model.predict(vectors_t0.values)
 pd.DataFrame(predicted_labels).hist(bins=6)
-
 
 model_backup = copy.deepcopy(model)
 vectors_t1 = vectors[vectors.PY==2006]
