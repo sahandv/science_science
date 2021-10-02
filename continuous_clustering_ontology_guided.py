@@ -1158,7 +1158,7 @@ class OGC:
                     merged.append(self.merge_cluster(to_merge[int(user_input)]))
                     del merge_vote[int(user_input)]
                 except:
-                    self.verbose(1,debug=' -  -  input error. Please try again... '+str(to_merge[int(user_input)]))
+                    self.verbose(1,debug=' -  -  input error. Please try again... '+str(user_input))
                     
         self.classifications_log[self.t] = self.classifications[['class','t']]
 
