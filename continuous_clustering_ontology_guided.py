@@ -926,65 +926,65 @@ class OGC:
             nodes = list(counts.keys())
             edges = list(itertools.chain.from_iterable([[list(set(list(x))) for x in list(itertools.combinations(list(set(sets)), 2))] for sets in roots])) # make pairs, hence the links
             
-            self.temp['nodes'] = {'data':edges,'t':t}
+            self.temp['nodes'] = {'data':nodes,'t':t}
             self.temp['edges'] = {'data':edges,'t':t}
             
             # edges_to_count = [[tuple(edge)] for edge in edges]
             # keys = list(Counter(itertools.chain(*edges_to_count)).keys())
             # vals = list(Counter(itertools.chain(*edges_to_count)).values())
             
-            self.verbose(2,debug=' -  -  - constructing the graph')
-            G = nx.Graph()
+            self.verbose(2,debug=' -  - constructing the concept graph for class '+str(c))
+            G = nx.MultiGraph()
             G.add_nodes_from(nodes)
             G.add_edges_from(edges)
             to_delete = [list(x) for x in list(itertools.combinations(nodes, 2))]
             self.verbose(2,debug=' -  -  - checking for sub-graphs')
-            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
             if len(concept_proposals)>0:
                 self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                 to_split[c] +=2
             else:
-                self.verbose(2,debug=' -  -  - performing edge erosion level 1')
+                self.verbose(2,debug=' -  -  - performing edge erosion level 1 for class '+str(c))
                 G.remove_edges_from(to_delete)
                 self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 1')
-                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                 if len(concept_proposals)>0:
                     self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                     to_split[c] +=1.75
                 else:
-                    self.verbose(2,debug=' -  -  - performing edge erosion level 2')
+                    self.verbose(2,debug=' -  -  - performing edge erosion level 2 for class '+str(c))
                     G.remove_edges_from(to_delete)
                     self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 2')
-                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                     if len(concept_proposals)>0:
                         self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                         to_split[c] +=1.5
                     else:
-                        self.verbose(2,debug=' -  -  - performing edge erosion level 3')
+                        self.verbose(2,debug=' -  -  - performing edge erosion level 3 for class '+str(c))
                         G.remove_edges_from(to_delete)
                         self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 3')
-                        concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                        concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                         if len(concept_proposals)>0:
                             self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                             to_split[c] +=1
                         else:
-                            self.verbose(2,debug=' -  -  - performing edge erosion level 4')
+                            self.verbose(2,debug=' -  -  - performing edge erosion level 4 for class '+str(c))
                             G.remove_edges_from(to_delete)
                             self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 4')
-                            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                            concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                             if len(concept_proposals)>0:
                                 self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                                 to_split[c] +=0.75
                             else:
-                                self.verbose(2,debug=' -  -  - performing edge erosion level 5')
+                                self.verbose(2,debug=' -  -  - performing edge erosion level 5 for class '+str(c))
                                 G.remove_edges_from(to_delete)
                                 self.verbose(2,debug=' -  -  - checking for sub-graphs after erosion level 5')
-                                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                                concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                                 if len(concept_proposals)>0:
                                     self.verbose(2,debug=' -  -  - cluster can be splitted for these concepts as centoids:'+str(concept_proposals))
                                     to_split[c] +=0.5
                                 else:
-                                    self.verbose(2,debug=' -  -  - cluster cannot be splitted')
+                                    self.verbose(2,debug=' -  -  - cluster cannot be splitted for class '+str(c))
             
             centroid_proposals = []
             ignores = [] #docs to ignore, as already selected
@@ -1090,43 +1090,43 @@ class OGC:
             # vals = list(Counter(itertools.chain(*edges_to_count)).values())
             
             self.verbose(2,debug=' -  -  - constructing the graph')
-            G = nx.Graph()
+            G = nx.MultiGraph()
             G.add_nodes_from(nodes)
             G.add_edges_from(edges)
             
 
-            concept_proposals = self.erosion_component_test(G, nodes, 6)
+            concept_proposals = self.erosion_component_test(G, nodes, 6,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
             if len(concept_proposals)==0:
                 self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 6')
                 merge_vote[pair_id] =2
             else:            
-                concept_proposals = self.erosion_component_test(G, nodes, 5)
+                concept_proposals = self.erosion_component_test(G, nodes, 5,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                 if len(concept_proposals)==0:
                     self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 5 ')
                     merge_vote[pair_id] =1.75
                 else:            
-                    concept_proposals = self.erosion_component_test(G, nodes, 4)
+                    concept_proposals = self.erosion_component_test(G, nodes, 4,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                     if len(concept_proposals)==0:
                         self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 4 ')
                         merge_vote[pair_id] =1.5
                     else:
-                        concept_proposals = self.erosion_component_test(G, nodes, 3)
+                        concept_proposals = self.erosion_component_test(G, nodes, 3,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                         if len(concept_proposals)==0:
                             self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 3 ')
                             merge_vote[pair_id] =1
                         else:
-                            concept_proposals = self.erosion_component_test(G, nodes, 2)
+                            concept_proposals = self.erosion_component_test(G, nodes, 2,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                             if len(concept_proposals)==0:
                                 self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 2 ')
                                 merge_vote[pair_id] =0.75
                             else:
-                                concept_proposals = self.erosion_component_test(G, nodes, 1)
+                                concept_proposals = self.erosion_component_test(G, nodes, 1,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                                 if len(concept_proposals)==0:
                                     self.verbose(2,debug=' -  -  - clusters can be merged as the concepts are still connected at erosion lvl 1 ')
                                     merge_vote[pair_id] =0.5
                                 else:
                                     self.verbose(2,debug=' -  -  - checking for sub-graphs')
-                                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population,count_trhesh_low=self.death_threshold)
+                                    concept_proposals = self.graph_component_test(G,ratio_thresh=1/self.growth_threshold_population/5,count_trhesh_low=self.death_threshold)
                                     if len(concept_proposals)==0:
                                         self.verbose(2,debug=' -  -  - cluster can be merged (weak vote) as has single component')
                                         merge_vote[pair_id] =0.25
