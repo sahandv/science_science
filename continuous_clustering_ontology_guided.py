@@ -257,7 +257,7 @@ class OGC:
     def return_root_doc_vec(self,root:str,clssifications_portion,ignores:list):
         for i,row in clssifications_portion.iterrows():
             if i not in ignores:
-                if root in row['roots'].values.tolist():
+                if root in list(row['roots']):
                     return row[self.columns_vector].values,i
 
     def graph_component_test(self,G,ratio_thresh:float=1/10,count_trhesh_low:int=10):
@@ -275,9 +275,9 @@ class OGC:
         concept_proposals : list
             list of disjoint concepts to be considered for splitting.
         """
+        self.temp['G'] = {'data':G,'t':self.t}
         if nx.number_connected_components(G)>1:
             self.verbose(2,debug=' -  -  - concept graph in class has '+str(nx.number_connected_components(G))+' connected components.')
-            self.temp['G'] = {'data':G,'t':self.t}
             sub_graphs = list(G.subgraph(c) for c in nx.connected_components(G))
             self.temp['sub_graphs'] = {'data':sub_graphs,'t':self.t}
             edges_counts = [c.number_of_edges() for c in sub_graphs]
@@ -293,6 +293,7 @@ class OGC:
             concept_proposals = [list(sub_graphs[i].nodes())[0] for i in to_split_indices]
             return list(set(concept_proposals))
         else:
+            self.verbose(2,debug=' -  -  - concept graph in class has '+str(nx.number_connected_components(G))+' connected components. Skipping.')
             return []
 
     def erosion_component_test(self,G_tmp,nodes,level,ratio_thresh:float=1/10,count_trhesh_low:int=10):
@@ -536,7 +537,7 @@ class OGC:
         
         return 1/((a*t)+1)
 
-    def assign_cluster(self,vector,ignore:list):
+    def assign_cluster(self,vector,ignore:list,active:list=None):
         """
         Find the closes centroid to the vector and return the centroid index
     
@@ -553,7 +554,11 @@ class OGC:
         if ignore==None:
             distances = [self.get_distance(vector,self.centroids[centroid],self.distance_metric) for centroid in self.centroids]
         else:
-            distances = [self.get_distance(vector,self.centroids[centroid],self.distance_metric) for centroid in self.centroids if centroid not in ignore]
+            if active==None:
+                distances = [self.get_distance(vector,self.centroids[centroid],self.distance_metric) for centroid in self.centroids if centroid not in ignore]
+            else:
+                distances = [self.get_distance(vector,self.centroids[centroid],self.distance_metric) for centroid in self.centroids if centroid not in ignore and centroid in active]
+                
         classification = distances.index(min(distances)) #argmin: get the index of the closest centroid to this featureset/node
         return classification
     
@@ -570,7 +575,7 @@ class OGC:
         for i,row in classifications[self.columns_vector].iterrows():
             self.classifications['class'][i] = self.assign_cluster(row.values,ignore)
             
-    def assign_clusters_pandas(self,t:int=None,ignore:list=None):
+    def assign_clusters_pandas(self,t:int=None,ignore:list=None,active:list=None):
         """
     
         Parameters
@@ -586,7 +591,8 @@ class OGC:
         if t==None:
             self.classifications['class'] = self.classifications[self.columns_vector].apply(lambda x: self.assign_cluster(x,ignore),axis = 1)
         else:
-            self.classifications.loc[self.classifications['t']==t,'class'] = self.classifications[self.classifications['t']==t][self.columns_vector].apply(lambda x: self.assign_cluster(x,ignore),axis = 1)
+            self.classifications.loc[self.classifications['t']==t,'class'] = self.classifications[self.classifications['t']==t][self.columns_vector].apply(lambda x: self.assign_cluster(x,ignore,active),axis = 1)
+
 
 
     def cluster(self,t,n_iter,weights,ignore:list=None):
@@ -609,12 +615,13 @@ class OGC:
             self.re_initialize_new_data_clusters(t)
             
             # Assign clusters
-            self.assign_clusters_pandas(t=t,ignore=ignore)
+            self.assign_clusters_pandas(t=t,ignore=ignore,active=self.classes_t_start)
             
             # update centroids using time-dependant weighting scheme
             prev_centroids = dict(self.centroids)
             self.centroids_history.append(prev_centroids)
-            for i in self.classifications.groupby('class').groups:
+            # for i in self.classifications.groupby('class').groups:
+            for i in self.classes_t_start:
                 vecs = self.classifications[self.classifications['class']==i][self.columns_vector].values
                 vecs = (vecs.T*weights[self.classifications['class']==i].values.T).T
                 self.centroids[i] = sum(vecs)/sum(weights[self.classifications['class']==i])
@@ -667,6 +674,8 @@ class OGC:
         self.verbose(2, debug='Getting class='+str(to_split)+' rows at t='+str(t))
         # select rows of the data to manipulate. index will be preserved so it can overwrite the correct rows.
         manipulation_classifcations = self.classifications[(self.classifications['class']==to_split) & (self.classifications['t']==t)]
+        # manipulation_classifcations = self.classifications[(self.classifications['class']==to_split)]
+
         # get the list of all prior clusters.
         prev_clusters = list(dict(self.centroids).keys())
         # all prior clusters and current clusters are now in ignore list. So the subclust won't dedicate anythign to them.
@@ -790,7 +799,9 @@ class OGC:
         # self.update_assigned_labels = pd.DataFrame([],columns=[i for i in range(additional_data.shape[1])]+['label'])
         self.verbose(1,debug='Updating self.classifications with new data.')        
         self.add_to_clusters(additional_data,t,keywords)
-        
+        self.k_fit_update = len(self.classifications[self.classifications['t']==self.t-1]['class'].value_counts().keys())
+        self.classes_t_start = list(self.classifications[self.classifications['t']==self.t-1]['class'].value_counts().keys())
+
         delta_t = abs(self.classifications['t']-self.classifications['t'].values.max())
         if weight==None:
             weights = self.weight(a,delta_t)
@@ -828,9 +839,9 @@ class OGC:
             self.evolution_events[self.evolution_event_counter] = {'t':t,'c':to_ignore,'event':'death'}
             self.evolution_event_counter +=1
             self.cluster(t,n_iter,weights,to_ignore)
-            
+        
         self.verbose(1,debug='Checking classes for death finalized.')
-                
+        
         # intera-cluster distances check
         self.verbose(2,debug='Checking classes for radius growth rates')
         new_radius = self.get_class_radius(self.classifications,self.centroids,self.distance_metric)
@@ -885,7 +896,7 @@ class OGC:
                 else:
                     to_split[c] = 1
                 self.verbose(2,debug=' -  - Class '+str(c)+' has grown in radius more than the pre-defined threshold.')
-                
+        
         # density check
         # TBC in neext revisions
         
@@ -1194,7 +1205,7 @@ vectors['DE-n'] = vectors['DE-n'].progress_apply(lambda x: x[:5] if len(x)>4 els
 
 k0 = 6
 model = OGC(verbose=1,k=k0,distance_metric='cosine') 
-model.v=3
+model.v=0
 model.set_ontology_dict(ontology_table)
 model.set_keyword_embedding_model(model_AI)
 model.set_ontology_keyword_search_index(ont_index)
@@ -1210,10 +1221,12 @@ predicted_labels = model.predict(vectors_t0.values)
 pd.DataFrame(predicted_labels).hist(bins=6)
 
 model_backup = copy.deepcopy(model)
+
+
+model_backup.v=2
 vectors_t1 = vectors[vectors.PY==2006]
 keywords = vectors_t1['DE-n'].values.tolist()
 vectors_t1.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
-
 model_backup.fit_update(vectors_t1.values, 1, keywords)
 # model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
 # model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
