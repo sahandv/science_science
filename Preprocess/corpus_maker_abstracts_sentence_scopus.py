@@ -637,8 +637,15 @@ for paragraph in tqdm(abstracts):
 abstracts = tmp
 # data_with_abstract['TI_AB_b'] = abstracts
 # abstracts = data_with_abstract['TI_AB_b'].values.tolist()
+# from nltk.stem import WordNetLemmatizer
+# lemmatizer=WordNetLemmatizer()
+# def lem(s):
+#     s = [word for word in s if not word in stop_words] 
+#     return [lemmatizer.lemmatize(w) for w in s]
 
 abstracts = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tqdm(abstracts)]
+# abstracts = ['|'.join(lem(x.split(' | '))) for x in tqdm(abstracts)]
+
 # data_with_abstract['DE-n'] = abstracts
 # pd.DataFrame(abstracts,columns=['keyword']).to_csv('/home/sahand/GoogleDrive/Data/Corpus/Scopus new/clean/keywords flat b3',index=False)
 data_with_abstract['TI_AB_b'] = abstracts
