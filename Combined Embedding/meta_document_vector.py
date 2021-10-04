@@ -569,7 +569,7 @@ if n_inputs==3:
                               histogram_freq=1,
                               write_images=True
                             )
- 
+
 if n_inputs==4:
     # inputs_seq = tf.keras.Input(shape=(max_seq_len-1,), name='input_1')
     # x_11 = tf.keras.layers.Embedding(n_classes,embedding_dim,input_length=max_seq_len-1,name='token_embedding')(inputs_seq)

@@ -15,8 +15,9 @@ from tqdm import tqdm
 from itertools import chain
 from scipy import spatial,sparse,sign
 
-from_data = 100000
-to_data = 500000
+step = 6
+from_data = step*30000
+to_data = from_data+30000
 dir_root = '/home/sahand/GoogleDrive/Data/'
 # dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
 texts = pd.read_csv(dir_root+'Corpus/Scopus new/clean/abstract_title method_b_3')['abstract'].values.tolist()[from_data:to_data]
@@ -75,14 +76,14 @@ X_df.to_csv(dir_root+'Corpus/Dimensions All/embeddings/doc2vec 300D dm=1 window=
 # concat vecs
 # =============================================================================
 
-sections = ['200000','250000','300000','350000','400000','450000','500000']
+sections = ['30000','60000','90000','120000','150000','180000']
 
 data = pd.read_csv(dir_root+'Corpus/Dimensions All/embeddings/doc2vec 300D dm=1 window=10 b3 0')
 for section in tqdm(sections):
     data = data.append(pd.read_csv(dir_root+'Corpus/Dimensions All/embeddings/doc2vec 300D dm=1 window=10 b3 '+section),ignore_index=True)
 
 data = data.reset_index(drop=True)
-data.to_csv(dir_root+'Corpus/Dimensions All/embeddings/doc2vec 300D dm=1 window=10 b3',index=False)
+data.to_csv(dir_root+'Corpus/Scopus new/embeddings/doc2vec 300D dm=1 window=10 b3',index=False)
 
 # =============================================================================
 # Get keyword embedding
