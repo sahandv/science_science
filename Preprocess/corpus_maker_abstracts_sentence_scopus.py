@@ -104,26 +104,99 @@ data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
 
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
+data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'et al.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'eg.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ie.') if pd.notnull(x) else np.nan)
-data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'e.g.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'i.e.') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'vs.') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
+data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.find_and_remove_term(x,'ieee') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'\\usepackage') if pd.notnull(x) else np.nan)
+data_with_abstract['TI'] = data_with_abstract['TI'].progress_apply(lambda x: kw.find_and_remove_term(x,'\n',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'\n',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'λ','lambda') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'β','beta') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'η','eta') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'σ','delta') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'α','alpha') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'γ','y') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'é','e') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'š','s') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'ı','i') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<mrow>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</mrow>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<annotation>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</annotation>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'p2p','peer to peer') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<mi>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</mi>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<mo>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</mo>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<msub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</msub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<semantics>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</semantics>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<math>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</math>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<sub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</sub>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'+',' plus ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<p>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</p>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'<italic>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'</italic>',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: re.sub(r'http\S+', ' ', x)if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'xmlns:xsi=',' ') if pd.notnull(x) else np.nan)
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'xmlns=',' ') if pd.notnull(x) else np.nan)
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_term(x,'fig.','figure') if pd.notnull(x) else np.nan)
 data_with_abstract['id'] = data_with_abstract['id'].progress_apply(lambda x: kw.find_and_remove_term(x,'SCOPUS_ID:') if pd.notnull(x) else np.nan)
 sample = data_with_abstract.sample(100)
 
+num2words = {'0':' zero ','1':' one ','2':' two ','3':' three ','4':' four ','5':' five ','6':' six ','7':' seven ','8':' eight ','9':' nine '}
+num2words = {'0':' zero ','1':' one ','2':' two ','3':' three ','4':' four ','5':' five ','6':' six ','7':' seven ','8':' eight ','9':' nine '}
+
+def replace_nums(string,dictionary,regex="(?<!\d)\d(?!\d)"):
+    while True:
+        try:
+            index = re.search(regex, string).start()
+            string_a = string[:index]
+            string_b = string[index+1:]
+            string_a = string_a + dictionary[string[index]]
+            string = string_a+string_b
+        except:
+            return string
+data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: replace_nums(x,num2words) if pd.notnull(x) else np.nan)
+
+
 # gc.collect()
 abstracts = []
-for abstract in tqdm(data_with_abstract['AB'].values.tolist()):
-    numbers = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
-    for number in numbers:
+titles = []
+ids = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    abstract = row['AB']
+    title = row['TI']
+    numbers_ab = re.findall(r"[-+]?\d*\.\d+|\d+", abstract)
+    numbers_ti = re.findall(r"[-+]?\d*\.\d+|\d+", title)
+
+    for number in numbers_ab:
         abstract = kw.find_and_remove_term(abstract,number)
+    for number in numbers_ti:
+        title = kw.find_and_remove_term(title,number)
     abstracts.append(abstract)
-data_with_abstract['AB'] = abstracts.copy()
+    titles.append(title)
+    ids.append(row['id'])
+
+data_with_abstract['AB'] = abstracts
+data_with_abstract['TI'] = titles
+data_with_abstract['id_n'] = ids
+
+assert data_with_abstract['id'].equals(data_with_abstract['id_n']), "Oh no! id mismatch here... Please fix it!"
+
 del  abstracts
+del  titles
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
 
 # source_list = pd.DataFrame(data_with_abstract['SO'].values.tolist(),columns=['source'])
 # source_list.to_csv(root_dir+subdir+str(year_from)+'-'+str(year_to-1)+' corpus sources',index=False) # Save year indices to disk for further use
@@ -135,7 +208,7 @@ gc.collect()
 # =============================================================================
 # Clean bad data based on abstracts
 # =============================================================================
-short_abstracts = []
+long_abstracts = []
 lens = []
 word_len = []
 percentile = 5
@@ -144,16 +217,22 @@ for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0
     w_leng = len(row['AB'].split())
     word_len.append([len(ab) for ab in row['AB'].split()])
     lens.append(leng)
-    if leng < abstract_length_min or w_leng < abstract_length_min_w:
-        short_abstracts.append(i)
+    if leng > abstract_length_min and w_leng > abstract_length_min_w:
+        long_abstracts.append(row['id'])
 
 word_len_f = [j for sub in word_len for j in sub]
 median_word_len = np.median(word_len_f)
 mean_word_len = np.mean(word_len_f)
+
 max_paragraph_len = int(np.percentile(lens, percentile)) # take Nth percentile as the sentence length threshold
-short_abstract_papers = data_with_abstract.loc[short_abstracts]['id']
-data_with_abstract = data_with_abstract[~data_with_abstract['id'].isin(list(short_abstract_papers))]
-data_with_abstract[['id']].to_csv(root_dir+subdir+'mask',index=False)
+data_with_abstract = data_with_abstract[data_with_abstract['id'].isin(long_abstracts)]
+data_with_abstract = data_with_abstract[data_with_abstract['id']!='']
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['AB'])]
+data_with_abstract = data_with_abstract[pd.notnull(data_with_abstract['id'])]
+data_with_abstract = data_with_abstract.drop(['id_n'],axis=1)
+
+data_with_abstract = data_with_abstract.reset_index(drop=True)
+
 
 # =============================================================================
 # Save to disk
