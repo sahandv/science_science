@@ -76,15 +76,25 @@ root_dir = '/home/sahand/GoogleDrive/Data/Corpus/Scopus new/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
 gc.collect()
 
-
+data_full_relevant['PY'] = data_full_relevant['prism:coverDate'].str[:4]
 data_full_relevant['PY'] = data_full_relevant['year']
 data_full_relevant['AB'] = data_full_relevant['dc:description']
 data_full_relevant['TI'] = data_full_relevant['dc:title']
 data_full_relevant['DE'] = data_full_relevant['authkeywords']
 data_full_relevant['ID'] = ''
 data_full_relevant['SO'] = data_full_relevant['prism:publicationName']
+data_full_relevant['doi'] = data_full_relevant['prism:doi']
 data_full_relevant['id'] = data_full_relevant['dc:identifier']
-# 
+# data_full_relevant['eid'] = data_full_relevant['eid']
+
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['DE'])]
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['PY'])]
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['id'])]
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['eid'])]
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['AB'])]
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['TI'])]
+data_full_relevant = data_full_relevant[pd.notna(data_full_relevant['author'])]
+
 data_wrong = data_full_relevant[data_full_relevant['AB'].str.contains("abstract available")].index
 data_wrong = list(data_wrong)
 data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
@@ -94,6 +104,7 @@ data_full_relevant = data_full_relevant.drop(data_wrong,axis=0)
 # =============================================================================
 data_filtered = data_full_relevant.copy()
 data_filtered = data_filtered[pd.notnull(data_filtered['PY'])]
+data_filtered = data_full_relevant[['DE','PY','id','eid','AB','TI','author','citedby-count','doi']]
 
 # data_filtered = data_filtered[data_filtered['PY'].astype('int')>year_from-1]
 # data_filtered = data_filtered[data_filtered['PY'].astype('int')<year_to]
