@@ -11,9 +11,11 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import re
+import json
 from sciosci.assets import text_assets as kw
 from sciosci.assets import keyword_dictionaries as kd
 from itertools import chain
+from gensim.parsing.preprocessing import strip_multiple_whitespaces
 
 import nltk
 from nltk.corpus import stopwords
@@ -47,6 +49,7 @@ data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/Scopus new/TITLE-ABS-KEY A
 # data_path_rel = '/home/sahand/GoogleDrive/Data/Corpus/AI 300/merged - scopus_v2_relevant wos_v1_relevant - duplicate doi removed - abstract corrected - 05 Aug 2019.csv'
 data_path_rel_b = '/home/sahand/GoogleDrive/Data/Corpus/Scopus new/TITLE-ABS-KEY AND PUBYEAR AFTR 2018 - with kw - dup removed - 01 Aug 2021'
 
+data_full_relevant = pd.read_csv('/home/sahand/GoogleDrive/Data/Corpus/Scopus new/clean/data with abstract')
 data_full_relevant = pd.read_csv(data_path_rel)
 data_full_relevant_b = pd.read_csv(data_path_rel_b)
 data_full_relevant = data_full_relevant.append(data_full_relevant_b)
@@ -56,9 +59,10 @@ sample = data_full_relevant.sample(400)
 
 data_full_relevant = data_full_relevant[(data_full_relevant['subtype']=='cp') | (data_full_relevant['subtype']=='ar')]
 
-
+# =============================================================================
 # Keyword extraction from scopus
-kwords = data_full_relevant[pd.notnull(data_full_relevant['authkeywords'])]['authkeywords'].str.lower().values.tolist()
+# =============================================================================
+kwords = data_full_relevant[pd.notnull(data_full_relevant['DE'])]['DE'].str.lower().values.tolist()
 kwords = [x.split(" | ") for x in kwords]
 kwords_flatten = pd.DataFrame(list(chain.from_iterable(kwords)),columns=['DE'])
 kwords_flatten = kwords_flatten[pd.notnull(kwords_flatten['DE'])]
@@ -71,13 +75,16 @@ kwords_flatten_grouped = kwords_flatten_grouped[kwords_flatten_grouped['count']>
 kwords_unique = set(kwords_flatten_grouped['DE'].values.tolist())
 pd.DataFrame(kwords_unique).to_csv('/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/AI ALL Scopus n>2',index=False)
 
+# =============================================================================
+# 
+# =============================================================================
 
 root_dir = '/home/sahand/GoogleDrive/Data/Corpus/Scopus new/'
 subdir = 'clean/' # no_lemmatization_no_stopwords
 gc.collect()
 
 data_full_relevant['PY'] = data_full_relevant['prism:coverDate'].str[:4]
-data_full_relevant['PY'] = data_full_relevant['year']
+# data_full_relevant['PY'] = data_full_relevant['year']
 data_full_relevant['AB'] = data_full_relevant['dc:description']
 data_full_relevant['TI'] = data_full_relevant['dc:title']
 data_full_relevant['DE'] = data_full_relevant['authkeywords']
@@ -112,6 +119,7 @@ data_filtered = data_full_relevant[['DE','PY','id','eid','AB','TI','author','cit
 # Remove columns without keywords/abstract list 
 # data_with_keywords = data_filtered[pd.notnull(data_filtered['DE'])]
 data_with_abstract = data_filtered[pd.notnull(data_filtered['AB'])]
+# data_with_abstract = data_full_relevant.copy()
 
 # Remove numbers from abstracts to eliminate decimal points and other unnecessary data
 data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.find_and_remove_c(x) if pd.notnull(x) else np.nan).str.lower()
@@ -165,7 +173,6 @@ data_with_abstract['AB'] = data_with_abstract['AB'].progress_apply(lambda x: kw.
 data_with_abstract['id'] = data_with_abstract['id'].progress_apply(lambda x: kw.find_and_remove_term(x,'SCOPUS_ID:') if pd.notnull(x) else np.nan)
 sample = data_with_abstract.sample(100)
 
-num2words = {'0':' zero ','1':' one ','2':' two ','3':' three ','4':' four ','5':' five ','6':' six ','7':' seven ','8':' eight ','9':' nine '}
 num2words = {'0':' zero ','1':' one ','2':' two ','3':' three ','4':' four ','5':' five ','6':' six ','7':' seven ','8':' eight ','9':' nine '}
 
 def replace_nums(string,dictionary,regex="(?<!\d)\d(?!\d)"):
@@ -259,6 +266,41 @@ gc.collect()
 
 year_list.plot.hist(bins=60, alpha=0.5,figsize=(15,6))
 year_list.shape
+
+# =============================================================================
+# Author preparation from csv
+# =============================================================================
+authors_j = []
+errors = []
+for i,row in tqdm(data_with_abstract.iterrows(),total=data_with_abstract.shape[0]):
+    row_j = []
+    if pd.notna(data_with_abstract['authors'][i]):
+    # for line in data_with_abstract['authors'][i].replace('"','').replace('"','').replace('[','["').replace(']','"]').replace("'",'"').replace('"[','[').replace(']"',']').replace('None','""').replace('[""','["').replace('""]','"]').replace('["{','[{').replace('}"]','}]')[2:-2].split('}, {'):
+        try:
+            row = kw.remove_substring_content(data_with_abstract['authors'][i].replace("{'",'{"').replace("'}",'"}').replace("['",'["').replace("']",'"]').replace("':",'":').replace("' :",'" :').replace(":'",':"').replace(": '",': "').replace(",'",',"').replace(", '",', "').replace("',",'",').replace("' ,",'" ,').replace('None','""').replace('True','"True"').replace('False','"False"').replace('"[','[').replace(']"',']')[2:-2],a='[',b=']',replace='""')
+            for line in row.split('}, {'):
+                row_j.append(json.loads('{'+line+'}'))
+            authors_j.append(row_j)
+        except:
+            authors_j.append(np.nan)
+            errors.append(i)
+    else:
+        authors_j.append(np.nan)
+
+data_for_authors = []
+for i,pub in tqdm(enumerate(authors_j),total=len(authors_j)):
+    pub_id = data_with_abstract['id'][i]
+    try:
+        for auth in authors_j[i]:
+            data_for_authors.append([pub_id,auth['first_name'],auth['last_name'],auth['orcid'],auth['current_organization_id'],auth['researcher_id']])
+    except:
+        pass
+
+data_for_authors = pd.DataFrame(data_for_authors,columns=['pub_id','first_name','last_name','orcid','current_organization_id','researcher_id']) 
+data_for_authors = data_for_authors[data_for_authors['researcher_id']!='']
+data_for_authors.to_csv(root_dir+subdir+'authors with research_id',index=False) # Save year indices to disk for further use
+
+pubs_with_r_id = list(data_for_authors.groupby('pub_id').groups.keys())
 
 # =============================================================================
 # Sentence maker
@@ -502,6 +544,108 @@ if GET_WORD_FREQ_IN_SENTENCE is True:
     unique = list(unique.words.unique())
     len(unique)
 
+# =============================================================================
+# Simple pre-process (method b) -- optional -- preferred for kw extraction
+# =============================================================================
+data_with_abstract['TI_AB_b'] = data_with_abstract.TI.map(str) + ". " + data_with_abstract.AB
+abstracts = [re.sub('[^A-Za-z0-9 .?,!()]','',ab) for ab in data_with_abstract['TI_AB_b']]
+abstracts = [strip_multiple_whitespaces(ab).strip().lower() for ab in tqdm(abstracts)]
+# abstracts= pd.read_csv('/home/sahand/GoogleDrive/Data/Corpus/Scopus new/clean/keywords flat')['keyword'].values.tolist()
+tmp = []
+errors = []
+for i,abstract in tqdm(enumerate(abstracts),total=len(abstracts)):
+    try:
+        tmp.append(kw.replace_british_american(kw.replace_british_american(strip_multiple_whitespaces(abstract),kd.gb2us),kd.gb2us))
+    except:
+        tmp.append('')
+        errors.append(i)
+corpus_abstract_pure = tmp
+abstracts = corpus_abstract_pure
+
+thesaurus = [
+    [' 1)',', '],
+    [' 2)',', '],
+    [' 3)',', '],
+    [' 4)',', '],
+    [' 5)',', '],
+    [' 6)',', '],
+    [' 7)',', '],
+    [' 8)',', '],
+    [' 9)',', '],
+    [' a)',', '],
+    [' b)',', '],
+    [' c)',', '],
+    [' d) ',', '],
+    [' e)',', '],
+    [' f)',', '],
+    [' g)',', '],
+    [' h)',', '],
+    [' a. ',', '],
+    [' b. ',', '],
+    [' c. ',', '],
+    [' d. ',', '],
+    [' e. ',', '],
+    [' f. ',', '],
+    [' g. ',', '],
+    [' h. ',', '],
+    [' i)',', '],
+    [' ii)',', '],
+    [' iii)',', '],
+    [' iv)',', '],
+    [' v)',', '],
+    [' vi)',', '],
+    [' vii)',', '],
+    [' viii)',', '],
+    [' ix)',', '],
+    [' x)',', '],
+    [' xi)',', '],
+    [' xii)',', '],
+    [' i. ',', '],
+    [' ii. ',', '],
+    [' iii. ',', '],
+    [' iv. ',', '],
+    [' v. ',', '],
+    [' vi. ',', '],
+    [' vii. ',', '],
+    [' viii. ',', '],
+    [' ix. ',', '],
+    [' x. ',', '],
+    [' xi. ',', '],
+    [' xii. ',', '],
+    [' i.e.',', '],
+    [' ie.',', '],
+    [' eg.',', '],
+    [' e.g.',', ']
+    ]
+
+tmp = []
+for paragraph in tqdm(abstracts):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    tmp.append(paragraph)
+abstracts = tmp
+
+abstracts = [strip_multiple_whitespaces(ab).strip().lower() for ab in tqdm(abstracts)]
+
+thesaurus = [
+    [',,',',']
+    ]
+
+tmp = []
+for paragraph in tqdm(abstracts):
+    paragraph = kw.filter_string(paragraph,thesaurus)
+    tmp.append(paragraph)
+abstracts = tmp
+# data_with_abstract['TI_AB_b'] = abstracts
+# abstracts = data_with_abstract['TI_AB_b'].values.tolist()
+
+abstracts = [kw.string_pre_processing(x,stemming_method='None',lemmatization='DEF',stop_word_removal=True,stop_words_extra=stops,verbose=False,download_nltk=False) for x in tqdm(abstracts)]
+# data_with_abstract['DE-n'] = abstracts
+# pd.DataFrame(abstracts,columns=['keyword']).to_csv('/home/sahand/GoogleDrive/Data/Corpus/Scopus new/clean/keywords flat b3',index=False)
+data_with_abstract['TI_AB_b'] = abstracts
+corpus_abstract_pure_df = pd.DataFrame(abstracts,columns=['abstract'])
+corpus_abstract_pure_df['id'] = data_with_abstract['id']
+corpus_abstract_pure_df.to_csv(root_dir+subdir+'abstract_title method_b_3',index=False)
+sample = corpus_abstract_pure_df.sample(100)
 # =============================================================================
 # Tokenize (Author Keywords and Abstracts+Titles)
 # =============================================================================

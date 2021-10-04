@@ -15,20 +15,34 @@ from tqdm import tqdm
 from itertools import chain
 from scipy import spatial,sparse,sign
 
-from_data = 450000
+from_data = 100000
 to_data = 500000
 dir_root = '/home/sahand/GoogleDrive/Data/'
 # dir_root = '/mnt/16A4A9BCA4A99EAD/GoogleDrive/Data/'
-texts = pd.read_csv(dir_root+'Corpus/Dimensions All/clean/abstract_title method_b_3')['abstract'].values.tolist()[from_data:to_data]
+texts = pd.read_csv(dir_root+'Corpus/Scopus new/clean/abstract_title method_b_3')['abstract'].values.tolist()[from_data:to_data]
+# texts_b = pd.read_csv(dir_root+'Corpus/Dimensions All/clean/abstract_title method_b_3')['abstract'].values.tolist()[from_data:to_data]
 
-# shared_tags = pd.read_csv(dir_root+'Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05 DEC 500, 1000, 1000, 500, 10 k10 labels - 0')['label'].values.tolist()
-# =============================================================================
-# Train Model
-# =============================================================================
+
+# texts_b = texts+texts_b
+
+# # shared_tags = pd.read_csv(dir_root+'Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05 DEC 500, 1000, 1000, 500, 10 k10 labels - 0')['label'].values.tolist()
+# # =============================================================================
+# # Train Model
+# # =============================================================================
+# documents = [TaggedDocument(word_tokenize(doc.lower()), [i]) for i, doc in enumerate(texts_b)]
+# model = Doc2Vec(documents, vector_size=300, window=10, min_count=1, dm=1, workers=15, epochs=40)
+# fname = dir_root+'Corpus/Dimensions All/models/dim-scop doc2vec 300D dm=1 window=10 b3'
+# model.save(fname)
+
+# # shared_tags = pd.read_csv(dir_root+'Corpus/cora-classify/cora/embeddings/single_component_small_18k/n2v 300-70-20 p1q05 DEC 500, 1000, 1000, 500, 10 k10 labels - 0')['label'].values.tolist()
+# # =============================================================================
+# # Train Model
+# # =============================================================================
 # documents = [TaggedDocument(word_tokenize(doc.lower()), [i]) for i, doc in enumerate(texts)]
 # model = Doc2Vec(documents, vector_size=300, window=10, min_count=1, dm=1, workers=15, epochs=40)
-# fname = dir_root+'Corpus/Dimensions All/models/doc2vec 300D dm=1 window=10 b3'
+# fname = dir_root+'Corpus/Dimensions All/models/scop doc2vec 300D dm=1 window=10 b3'
 # model.save(fname)
+
 
 # =============================================================================
 # Train Model with Tags
@@ -42,7 +56,7 @@ texts = pd.read_csv(dir_root+'Corpus/Dimensions All/clean/abstract_title method_
 # =============================================================================
 # Test Model
 # =============================================================================
-fname = dir_root+'Corpus/Dimensions All/models/doc2vec 300D dm=1 window=10 b3'
+fname = dir_root+'Corpus/Dimensions All/models/scop doc2vec 300D dm=1 window=10 b3'
 model = Doc2Vec.load(fname)
 documents = [word_tokenize(doc.lower()) for doc in tqdm(texts)]
 # test_docs2 = [doc.lower().split() for doc in texts] # This is way faster than word_tokenize

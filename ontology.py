@@ -30,12 +30,16 @@ import matplotlib.pyplot as plt
 
 
 
-directory = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/clean/'
+# directory = '/home/sahand/GoogleDrive/Data/Corpus/Dimensions All/clean/'
+directory = '/home/sahand/GoogleDrive/Data/Corpus/Scopus new/clean/'
 
 # file_name = 'cora deflemm'#corpus abstract-title - with n-grams'
 file_name = 'data with abstract'#corpus abstract-title - with n-grams'
 corpus = pd.read_csv(directory+file_name)
-keywords = [item.lower().replace(';;;',' ') for sublist in corpus['DE-n'].values.tolist() for item in sublist.split()]
+keywords = [item for sublist in corpus['DE'].values.tolist() for item in sublist.split(' | ')]
+keywords = list(set(keywords))
+keywords = pd.DataFrame(keywords,columns=['keyword'])
+keywords.to_csv(directory+'keywords flat')
 sample = corpus.sample(100)
 
 
@@ -43,7 +47,7 @@ stops = ['a','an','we','result','however','yet','since','previously','although',
 
 # from DEC.DEC_keras import DEC_simple_run
 tqdm.pandas()
-
+sample = keywords[:100]
 # pd.options.mode.chained_assignment = None  # default='warn'
 
 # =============================================================================
@@ -206,7 +210,7 @@ with open(output_address, 'w') as json_file:
 # =============================================================================
 # Dummy data test
 # =============================================================================
-G = nx.DiGraph()
+G = nx.Graph()
 G.add_node("ROOT")
 for i in range(6):
     G.add_node("Child_%i" % i)
@@ -215,7 +219,7 @@ for i in range(6):
     G.add_node("GGreatgrandchild_%i" % i)
     G.add_node("GGGreatgrandchild_%i" % i)
 
-    G.add_edge("ROOT", "Child_%i" % i)
+    # G.add_edge("ROOT", "Child_%i" % i)
     G.add_edge("Child_%i" % i, "Grandchild_%i" % i)
     G.add_edge("Grandchild_%i" % i, "Greatgrandchild_%i" % i)
     G.add_edge("Greatgrandchild_%i" % i, "GGreatgrandchild_%i" % i)
@@ -229,7 +233,7 @@ G.add_edge("Grandchild_1", "GGreatgrandchild_3")
 plt.title('draw_networkx')
 pos =graphviz_layout(G, prog='dot')
 nx.draw(G, pos, with_labels=True, arrows=True)
-
+plt.savefig('result.svg')
 
 solution = Solution('ROOT')
 solution.get_parent(G,'GGGreatgrandchild_1')
@@ -237,14 +241,17 @@ set(solution.results)
 
     
     
+delta_t = abs(model_backup.classifications['t']-model_backup.classifications['t'].values.max())
+
     
+G = nx.Graph()
+# G.add_nodes_from(lohg['nodes'])
+G.add_edges_from(log['edges']['data'])
     
-    
-    
-    
-    
-    
-    
+log=model_backup.temp
+G = log['G']['data']
+
+list(G.nodes)
     
     
     
@@ -273,6 +280,7 @@ from sciosci.assets import keyword_dictionaries as kd
 from gensim.parsing.preprocessing import strip_multiple_whitespaces
 from networkx.drawing.nx_agraph import graphviz_layout,write_dot
 import matplotlib.pyplot as plt
+import itertools
 datapath = '/home/sahand/GoogleDrive/Data/Corpus/Taxonomy/'
 relations = pd.read_csv(datapath+'CSO.3.3-with-labels-US-lem.csv')
 

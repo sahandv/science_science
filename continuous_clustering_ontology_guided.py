@@ -260,6 +260,15 @@ class OGC:
                 if root in list(row['roots']):
                     return row[self.columns_vector].values,i
 
+    def multigraph_to_graph(self,M):
+        G = nx.Graph()
+        for u,v in M.edges():
+            if G.has_edge(u,v):
+                G[u][v]['weight'] += 1
+            else:
+                G.add_edge(u, v, weight=1)
+        return G
+
     def graph_component_test(self,G,ratio_thresh:float=1/10,count_trhesh_low:int=10):
         """
         Parameters
@@ -1174,6 +1183,64 @@ class OGC:
         self.classifications_log[self.t] = self.classifications[['class','t']]
 
 
+#%% SCOPUS DATA        
+# =============================================================================
+# Load data and init
+# =============================================================================
+datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+
+gensim_model_address = datapath+'Corpus/Dimensions All/models/Fasttext/gensim381/FastText100D-dim-scopus-update.model'
+model_AI = fasttext_gensim.load(gensim_model_address)
+# model_AI.save(datapath+'Corpus/Dimensions All/models/Fasttext/FastText100D-dim-scopus-update-gensim383.model')
+
+with open(datapath+'Corpus/Taxonomy/concept_parents lvl2 DFS') as f:
+    ontology_table = json.load(f)
+
+with open(datapath+'Corpus/Scopus new/clean/keyword_search_pre-index.json') as f:
+    ont_index = json.load(f)
+
+all_columns = pd.read_csv(datapath+'Corpus/Scopus new/clean/data with abstract - tech and comp')[['FOR_initials','PY','id','FOR','DE-n']]
+corpus_data = pd.read_csv(datapath+'Corpus/Scopus new/clean/abstract_title method_b_3')
+vectors = pd.read_csv(datapath+'Corpus/Scopus new/embeddings/doc2vec 300D dm=1 window=10 b3')
+vectors['id'] = corpus_data['id']
+vectors = vectors[vectors['id'].isin(all_columns['id'])]
+vectors = vectors.merge(all_columns, on='id', how='left')
+# vectors.PY.hist(bins=60)
+vectors['DE'] = vectors['DE'].str.split(';;;')
+vectors['DE'] = vectors['DE'].progress_apply(lambda x: x[:5] if len(x)>4 else x) # cut off to 6 keywors only
+
+# vectors.drop('id',axis=1,inplace=True)
+
+k0 = 6
+model = OGC(verbose=1,k=k0,distance_metric='cosine') 
+model.v=0
+model.set_ontology_dict(ontology_table)
+model.set_keyword_embedding_model(model_AI)
+model.set_ontology_keyword_search_index(ont_index)
+ontology_dict = model.prepare_ontology()
+
+vectors_t0 = vectors[vectors.PY<2006]
+keywords = vectors_t0['DE-n'].values.tolist()
+vectors_t0.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
+
+# dendrogram = aa.fancy_dendrogram(sch.linkage(vectors_t0, method='ward'),truncate_mode='lastp',p=800,show_contracted=True,figsize=(15,9)) #single #average #ward
+model.fit(vectors_t0.values,keywords)
+predicted_labels = model.predict(vectors_t0.values)
+pd.DataFrame(predicted_labels).hist(bins=6)
+
+model_backup = copy.deepcopy(model)
+
+
+model_backup.v=2
+vectors_t1 = vectors[vectors.PY==2006]
+keywords = vectors_t1['DE-n'].values.tolist()
+vectors_t1.drop(['FOR_initials','PY','id','FOR','DE-n','id'],axis=1,inplace=True)
+model_backup.fit_update(vectors_t1.values, 1, keywords)
+# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
+# model_backup.get_class_radius(model.classifications,model.centroids,model.distance_metric)
+
+
 #%% DIMENSIONS DATA        
 # =============================================================================
 # Load data and init
@@ -1237,19 +1304,69 @@ model_backup.fit_update(vectors_t1.values, 1, keywords)
 # =============================================================================
 # pre index data
 # =============================================================================
-start = 20000*14
+import gc
+import copy
+import random
+from multiprocessing import Pool
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import plotly.express as px
+from plotly.offline import plot
+from random import randint
+from scipy import spatial
+import logging
+import json
+import itertools
+from itertools import chain
+from collections import Counter
+
+from sklearn.decomposition import PCA
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn import metrics
+from sklearn.metrics.cluster import silhouette_score,homogeneity_score,adjusted_rand_score
+from sklearn.metrics.cluster import normalized_mutual_info_score,adjusted_mutual_info_score
+from sklearn.manifold import TSNE
+from sklearn.neighbors import KernelDensity
+from gensim.models import FastText as fasttext_gensim
+import networkx as nx
+from networkx.drawing.nx_agraph import graphviz_layout,write_dot
+
+from sciosci.assets import text_assets as ta
+from sciosci.assets import advanced_assets as aa
+
+start = 10000*0
+
+
+datapath = '/home/sahand/GoogleDrive/Data/' #Ryzen
+# datapath = '/mnt/6016589416586D52/Users/z5204044/GoogleDrive/GoogleDrive/Data/' #C1314
+
+gensim_model_address = datapath+'Corpus/Dimensions All/models/Fasttext/gensim381/FastText100D-dim-scopus-update.model'
+model_AI = fasttext_gensim.load(gensim_model_address)
+# model_AI.save(datapath+'Corpus/Dimensions All/models/Fasttext/FastText100D-dim-scopus-update-gensim383.model')
+
+with open(datapath+'Corpus/Taxonomy/concept_parents lvl2 DFS') as f:
+    ontology_table = json.load(f)
+
+
+
+k0 = 6
+model = OGC(verbose=1,k=k0,distance_metric='cosine') 
+model.v=0
+model.set_ontology_dict(ontology_table)
+model.set_keyword_embedding_model(model_AI)
+
+
 # all_keywords = list(set(list(itertools.chain.from_iterable(vectors['DE-n'].values.tolist()))))
 # pd.DataFrame(all_keywords,columns=['keyword']).to_csv(datapath+'Corpus/Dimensions All/clean/kw ontology search/keywords flat',index=False)
-all_keywords = pd.read_csv(datapath+'Corpus/Dimensions All/clean/kw ontology search/keywords flat').fillna('')
+all_keywords = pd.read_csv(datapath+'Corpus/Scopus new/clean/keywords flat b3').fillna('')
 all_keywords = all_keywords['keyword'][start:start+20000].values.tolist()
 all_vecs = list(model.vectorize_keyword(k) for k in tqdm(all_keywords))
 
 # all_keywords.index('genetic algorithm')
 # all_keywords[147096]
 
-del vectors
-del corpus_data
-del all_columns
 del model_AI
 gc.collect()
 
@@ -1264,7 +1381,7 @@ with open(output_address, 'w') as json_file:
     json.dump(distances, json_file)
     
     
-
+#%% 
 
 ont_index ={}
 for i in tqdm(range(15)):

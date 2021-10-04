@@ -22,6 +22,8 @@ tqdm.pandas()
 
 classifications = pd.DataFrame({'t':[0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2],
                                 'class':[0,3,1,1,1,1,0,1,0,3,1,1,0,1,0,1,1,0,3,2,0,1]})
+len(classifications[classifications['t']==0]['class'].value_counts().keys())
+
 classifications_new = classifications[classifications['class']==1]
 
 for i,row in classifications_new[['t','class']].iterrows():
